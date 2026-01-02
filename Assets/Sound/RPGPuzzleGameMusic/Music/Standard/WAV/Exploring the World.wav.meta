@@ -1,0 +1,28 @@
+fileFormatVersion: 2
+guid: 75715eea1fe41e743aac15b423d785e8
+timeCreated: 1432447266
+licenseType: Store
+AudioImporter:
+  serializedVersion: 6
+  defaultSettings:
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 44100
+    compressionFormat: 1
+    quality: 1
+    conversionMode: 0
+  platformSettingOverrides: {}
+  forceToMono: 0
+  preloadAudioData: 1
+  loadInBackground: 0
+  3D: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 37661
+  packageName: RPG & Puzzle Game Music (w/ Music Script)
+  packageVersion: Version 1
+  assetPath: Assets/RPGPuzzleGameMusic/Music/Standard/WAV/Exploring the World.wav
+  uploadId: 65067

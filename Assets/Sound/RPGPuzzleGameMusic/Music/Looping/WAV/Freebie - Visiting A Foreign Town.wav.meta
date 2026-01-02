@@ -1,0 +1,29 @@
+fileFormatVersion: 2
+guid: f671304f0a07e0b46af7e26606571fc0
+timeCreated: 1432450029
+licenseType: Store
+AudioImporter:
+  serializedVersion: 6
+  defaultSettings:
+    loadType: 0
+    sampleRateSetting: 0
+    sampleRateOverride: 44100
+    compressionFormat: 1
+    quality: 1
+    conversionMode: 0
+  platformSettingOverrides: {}
+  forceToMono: 0
+  preloadAudioData: 1
+  loadInBackground: 0
+  3D: 1
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 37661
+  packageName: RPG & Puzzle Game Music (w/ Music Script)
+  packageVersion: Version 1
+  assetPath: Assets/RPGPuzzleGameMusic/Music/Looping/WAV/Freebie - Visiting A Foreign
+    Town.wav
+  uploadId: 65067
