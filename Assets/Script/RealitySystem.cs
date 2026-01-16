@@ -1,55 +1,104 @@
 using UnityEngine;
 using UnityEngine.UI;
-using UnityEngine.SceneManagement; // ★ 씬 이동하려면 이거 필수!
+using UnityEngine.SceneManagement;
 
 public class RealitySystem : MonoBehaviour
 {
-    [Header("설정")]
-    public GameObject player; // 주인공을 드래그해서 넣어줘야 함!
-    public string nextSceneName = "DarkReality"; // 이동할 씬 이름 (정확해야 함!)
+    [Header("기본 설정")]
+    public string nextSceneName = "DarkWorld";
     public float maxTime = 10f;
     public float fillSpeed = 1f;
+
+    [Header("연출 설정")]
+    public float flashDuration = 0.5f;
 
     [Header("연결할 것들")]
     public Image overlayImage;
     public Slider realityGauge;
+    public GameObject player;
 
     private float currentReality = 0f;
-    private bool isTransitioning = false; // 중복 이동 방지용
+    private bool isTransitioning = false;
 
     void Start()
     {
-        currentReality = 0f;
-        if (realityGauge != null) realityGauge.maxValue = maxTime;
+        // ★ 1. 전투에서 돌아온 경우: 저장된 게이지 불러오기!
+        if (GameState.isComingFromBattle)
+        {
+            currentReality = GameState.savedGaugeValue;
+            GameState.isComingFromBattle = false; // 확인했으니 끄기 (중요!)
+        }
+        else
+        {
+            // 전투가 아니라 DarkWorld나 처음 시작이면 0부터
+            currentReality = 0f;
+        }
+
+        // 게이지 바 초기화
+        if (realityGauge != null)
+        {
+            realityGauge.maxValue = maxTime;
+            realityGauge.value = currentReality;
+        }
+        
+        // 화면 연출 초기화 (게이지가 꽉 찬 상태로 돌아왔을 수도 있으니 체크)
+        UpdateOverlay();
+
+        // 위치 불러오기
+        if (GameState.hasPositionSaved && player != null)
+        {
+            player.transform.position = GameState.lastPosition;
+        }
     }
 
     void Update()
     {
-        // 이미 이동 중이면 업데이트 멈춤
+        // ★ 2. 실시간 저장: 전투 걸릴 때를 대비해 항상 기록
+        GameState.savedGaugeValue = currentReality;
+
         if (isTransitioning) return;
 
-        // 1. 시간 흐름
+        // 시간 흐름
         currentReality += Time.deltaTime * fillSpeed;
 
-        // 2. 연출 업데이트
-        if (overlayImage != null) overlayImage.fillAmount = currentReality / maxTime;
         if (realityGauge != null) realityGauge.value = currentReality;
 
-        // 3. ★ 꽉 찼을 때 씬 이동!
+        // 화면 연출 함수로 분리함
+        UpdateOverlay();
+
+        // 꽉 차면 이동
         if (currentReality >= maxTime)
         {
-            isTransitioning = true; // "나 이동한다!" 표시 (중복 실행 방지)
-            Debug.Log("현실 세계로 진입합니다...");
-
-            // ★ 추가: 떠나기 전에 위치 저장!
+            isTransitioning = true;
+            
             if (player != null)
             {
                 GameState.lastPosition = player.transform.position;
                 GameState.hasPositionSaved = true;
             }
             
-            // 씬 이동 명령
-            SceneManager.LoadScene(DarkReality);
+            // ★ 중요: DarkWorld로 갈 때는 "전투 아님" 상태여야 함
+            GameState.isComingFromBattle = false; 
+
+            Debug.Log("현실 세계로 진입!");
+            SceneManager.LoadScene(nextSceneName);
+        }
+    }
+
+    void UpdateOverlay()
+    {
+        if (overlayImage != null)
+        {
+            float startFlashTime = maxTime - flashDuration;
+            if (currentReality >= startFlashTime)
+            {
+                float progress = (currentReality - startFlashTime) / flashDuration;
+                overlayImage.fillAmount = progress;
+            }
+            else
+            {
+                overlayImage.fillAmount = 0f;
+            }
         }
     }
 }

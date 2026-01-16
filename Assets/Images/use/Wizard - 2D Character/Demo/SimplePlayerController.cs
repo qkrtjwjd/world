@@ -146,15 +146,18 @@ namespace ClearSky
         }
         // 플레이어가 닿았을 때 실행됨
         private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Enemy"))
         {
-        // 부딪힌 게 플레이어인지 확인 (태그가 Player여야 함)
-            if (other.CompareTag("Enemy"))
-        {
-            // 현재 위치 저장 (나중에 돌아오기 위해 필요하지만 일단은 이동부터!)
-            Debug.Log("전투 시작! 3D 씬으로 이동합니다.");
+            Debug.Log("전투 시작!");
+
+            // ★ 추가: 현재 씬 이름을 저장해둠 (MapScene인지 DarkWorld인지 기억!)
+            GameState.returnSceneName = SceneManager.GetActiveScene().name;
             
-            // 씬 로드
-            SceneManager.LoadScene(sceneName);
+            // ★ 추가: "전투하러 간다"고 표시
+            GameState.isComingFromBattle = true;
+
+            SceneManager.LoadScene("BattleScene"); // 씬 이름은 설정한 대로
         }
     }
     }

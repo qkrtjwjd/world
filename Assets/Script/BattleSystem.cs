@@ -82,26 +82,20 @@ public class BattleSystem : MonoBehaviour
     {
         if (state == BattleState.WON)
         {
-            Debug.Log("승리! 2D 맵으로 돌아갑니다.");
-            
-            // 좀비 죽음 기록 (세미콜론 ; 포함)
+            Debug.Log("승리!");
             GameState.isZombieDefeated = true; 
-
-            // 2초 뒤 맵으로 이동
-            Invoke("ReturnToMap", 2f); 
+            Invoke("ReturnToMap", 2f);
         }
         else if (state == BattleState.LOST)
         {
-            Debug.Log("패배했습니다... 부상당한 채로 도망갑니다."); 
-            
-            // 패배해도 맵으로 이동
-            Invoke("ReturnToMap", 2f); 
+            Debug.Log("패배...");
+            Invoke("ReturnToMap", 2f);
         }
     }
 
-    // (참고) ReturnToMap 함수는 그대로 두거나 없으면 아래 내용 추가
     void ReturnToMap()
     {
-        UnityEngine.SceneManagement.SceneManager.LoadScene("MapScene");
+        // ★ 수정: 무조건 MapScene이 아니라, 아까 저장한 씬으로 이동!
+        UnityEngine.SceneManagement.SceneManager.LoadScene(GameState.returnSceneName);
     }
 }
