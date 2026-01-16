@@ -85,7 +85,7 @@ Rigidbody2D:
   m_Interpolate: 0
   m_SleepingMode: 1
   m_CollisionDetection: 0
-  m_Constraints: 0
+  m_Constraints: 4
 --- !u!114 &3711087730866622167
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -160,10 +160,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ShelterTeleport
   teleportKey: 104
-  shelterSceneName: ShelterScene
+  shelterSceneName: Shelter
   allowedScenes:
   - MapScene
   - DarkReality
+  - Home
 --- !u!1001 &7806009250454000519
 PrefabInstance:
   m_ObjectHideFlags: 0
