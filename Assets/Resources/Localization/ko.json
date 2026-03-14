@@ -1,0 +1,38 @@
+{
+    "items": {
+        "apple": "사과",
+        "red_potion": "빨간 포션"
+    },
+    "interaction": {
+        "pickup": "{0} 획득하기",
+        "feed": "밥 주기",
+        "talk": "대화하기"
+    },
+    "ui": {
+        "inventory": "가방",
+        "save": "저장",
+        "load": "불러오기",
+        "close": "닫기"
+    },
+    "messages": {
+        "inventory_full": "가방이 꽉 찼습니다!",
+        "item_get": "{0}을(를) 획득했습니다."
+    },
+    "battle": {
+        "attack": "공격",
+        "defend": "방어",
+        "escape": "도망",
+        "item": "아이템",
+        "win": "전투 승리!",
+        "lose": "패배했다...",
+        "wild_enemy_appear": "야생의 {0}이(가) 나타났다!",
+        "player_turn_prompt": "{0}의 턴: 무엇을 할까?",
+        "enemy_turn_action": "{0}의 공격!",
+        "escape_success": "도망에 성공했다!",
+        "escape_fail": "도망칠 수 없었다!",
+        "damage_dealt": "공격 성공! {0} 데미지를 입혔다.",
+        "damage_taken": "{0}은(는) {1} 데미지를 입었다!",
+        "heal": "{0}은(는) 체력을 회복했다!",
+        "defend_action": "{0}은(는) 방어 태세를 취했다."
+    }
+}

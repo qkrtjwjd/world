@@ -1,0 +1,38 @@
+{
+    "items": {
+        "apple": "リンゴ",
+        "red_potion": "赤いポーション"
+    },
+    "interaction": {
+        "pickup": "{0} を拾う",
+        "feed": "餌をやる",
+        "talk": "話す"
+    },
+    "ui": {
+        "inventory": "かばん",
+        "save": "セーブ",
+        "load": "ロード",
+        "close": "閉じる"
+    },
+    "messages": {
+        "inventory_full": "持ち物がいっぱいです！",
+        "item_get": "{0} を手に入れた。"
+    },
+    "battle": {
+        "attack": "攻撃",
+        "defend": "防御",
+        "escape": "逃げる",
+        "item": "道具",
+        "win": "勝利！",
+        "lose": "負けてしまった...",
+        "wild_enemy_appear": "野生の {0} が現れた！",
+        "player_turn_prompt": "{0} のターン：どうする？",
+        "enemy_turn_action": "{0} の攻撃！",
+        "escape_success": "逃げ切れた！",
+        "escape_fail": "逃げられなかった！",
+        "damage_dealt": "攻撃成功！ {0} のダメージを与えた。",
+        "damage_taken": "{0} は {1} のダメージを受けた！",
+        "heal": "{0} は体力を回復した！",
+        "defend_action": "{0} は防御の構えをとった。"
+    }
+}

@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2359787597560601097}
-  - component: {fileID: 3771782051257167998}
+  - component: {fileID: 3302598308208931437}
   m_Layer: 0
   m_Name: DarkRealitySystem
   m_TagString: Untagged
@@ -32,7 +32,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3771782051257167998
+--- !u!114 &3302598308208931437
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -41,13 +41,13 @@ MonoBehaviour:
   m_GameObject: {fileID: 473273251761154621}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f1fca89dbe65e0b49bfcf9fd949526c2, type: 3}
+  m_Script: {fileID: 11500000, guid: 4a6f7bfd4a8def349a8185a2c2bbbaa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DarkRealitySystem
   nextSceneName: MapScene
-  maxTime: 10
+  maxTime: 60
   drainSpeed: 1
-  clearDuration: 0
+  clearDuration: 0.5
   overlayImage: {fileID: 0}
   realityGauge: {fileID: 0}
   player: {fileID: 0}

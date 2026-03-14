@@ -1,45 +1,42 @@
 ﻿using UnityEngine;
-using UnityEngine.SceneManagement; // 씬 이동을 위해 필수!
+using UnityEngine.SceneManagement;
+using System.Collections;
 
 namespace ClearSky
 {
     public class SimplePlayerController : MonoBehaviour
     {
-        // 이동할 씬의 정확한 이름을 적어주세요 (대소문자 구분)
-        public string sceneName = "MainScene";
-        public float walkSpeed = 4f;          // 걷기 속도
-        public float runMultiplier = 1.8f;    // Shift를 누를 때 곱해줄 배율
+        public float walkSpeed = 4f;          
+        public float runMultiplier = 1.8f;    
         
         private Rigidbody2D rb;
         private Animator anim;
-        
-        // 방향 제어 변수
-        private int direction = 1;
-        private bool alive = true;
 
         void Start()
         {
             rb = GetComponent<Rigidbody2D>();
             anim = GetComponent<Animator>();
-
-            // 점프를 없애므로 중력은 0으로 유지 (탑다운 방식이라면 필수)
             rb.gravityScale = 0f;
-            if (GameState.hasPositionSaved)
+
+            // 저장된 위치가 있으면 그 자리로 이동 (배틀 씬이 아닐 때만 실행)
+            if (GameState.hasPositionSaved && SceneManager.GetActiveScene().name != "BattleScene")
             {
                 transform.position = GameState.lastPosition;
+                
+                // ★ 전투 직후 무적 시간 부여 (1초 뒤에 해제) ★
+                StartCoroutine(ResetBattleCooldown());
             }
+        }
+
+        private IEnumerator ResetBattleCooldown()
+        {
+            yield return new WaitForSeconds(1.0f);
+            GameState.isComingFromBattle = false;
         }
 
         private void Update()
         {
-            Restart();
-            if (alive)
-            {
-                Hurt();
-                Die();
-                Attack();
-                Run();
-            }
+            Run(); // 걷기는 계속 해야 함
         }
 
         void Run()
@@ -47,41 +44,33 @@ namespace ClearSky
             float horizontalInput = Input.GetAxisRaw("Horizontal");
             float verticalInput = Input.GetAxisRaw("Vertical");
 
-            // 유니티 버전에 따라 linearVelocity가 없을 수 있어 안전하게 velocity로 변경함
+            // velocity 문제 해결 (최신/구버전 호환)
             Vector2 moveVelocity = rb.linearVelocity; 
             
-            // Shift 키로 달리기 여부 판단
             bool isRunning = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             float currentSpeed = walkSpeed * (isRunning ? runMultiplier : 1f);
 
             bool isMoving = false; 
 
-            // --- [핵심 수정 부분: 좌우 이동 및 반전] ---
+            // 좌우 이동
             if (horizontalInput < 0)
             {
-                direction = -1;
                 moveVelocity.x = -currentSpeed;
                 isMoving = true;
-
-                // ★ 중요: flipX 대신 스케일을 -1로 변경 (뒤틀림 방지)
                 transform.localScale = new Vector3(-1, 1, 1);
             }
             else if (horizontalInput > 0)
             {
-                direction = 1;
                 moveVelocity.x = currentSpeed;
                 isMoving = true;
-
-                // ★ 중요: 스케일을 다시 1로 복구
                 transform.localScale = new Vector3(1, 1, 1);
             }
             else
             {
                 moveVelocity.x = 0; 
             }
-            // ---------------------------------------
 
-            // 위/아래 이동
+            // 상하 이동
             if (verticalInput > 0)
             {
                 moveVelocity.y = currentSpeed;
@@ -97,68 +86,38 @@ namespace ClearSky
                 moveVelocity.y = 0f;
             }
 
-            // 애니메이션 설정
+            // 애니메이션
             if (isMoving)
                 anim.SetBool("isRun", true);
             else
                 anim.SetBool("isRun", false);
 
-            rb.linearVelocity = moveVelocity; // 속도 적용
+            rb.linearVelocity = moveVelocity; 
         }
 
-        void Attack()
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha1))
-            {
-                anim.SetTrigger("attack");
-            }
-        }
-
-        void Hurt()
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha2))
-            {
-                anim.SetTrigger("hurt");
-                // 넉백 효과
-                if (direction == 1)
-                    rb.AddForce(new Vector2(-5f, 1f), ForceMode2D.Impulse);
-                else
-                    rb.AddForce(new Vector2(5f, 1f), ForceMode2D.Impulse);
-            }
-        }
-
-        void Die()
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha3))
-            {
-                anim.SetTrigger("die");
-                alive = false;
-            }
-        }
-
-        void Restart()
-        {
-            if (Input.GetKeyDown(KeyCode.Alpha0))
-            {
-                anim.SetTrigger("idle");
-                alive = true;
-            }
-        }
-        // 플레이어가 닿았을 때 실행됨
+        // ⭐ 핵심: 적과 닿으면 전투 화면으로 이동!
         private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.CompareTag("Enemy"))
         {
-            Debug.Log("전투 시작!");
+            // ★ 전투에서 방금 돌아온 상태라면 충돌 무시 ★
+            if (GameState.isComingFromBattle) return;
 
-            // ★ 추가: 현재 씬 이름을 저장해둠 (MapScene인지 DarkWorld인지 기억!)
-            GameState.returnSceneName = SceneManager.GetActiveScene().name;
-            
-            // ★ 추가: "전투하러 간다"고 표시
-            GameState.isComingFromBattle = true;
+            if (other.CompareTag("Enemy"))
+            {
+                Debug.Log("전투 시작!");
 
-            SceneManager.LoadScene("BattleScene"); // 씬 이름은 설정한 대로
+                // ★ 전투 진입 직후 락 걸기 (맵에 돌아오자마자 다시 전투되는 것 방지) ★
+                GameState.isComingFromBattle = true;
+
+                // 현재 위치 저장 (전투 끝나고 돌아올 자리)
+                GameState.lastPosition = transform.position;
+                GameState.hasPositionSaved = true;
+
+                // 돌아올 씬 이름 기억
+                GameState.returnSceneName = SceneManager.GetActiveScene().name;
+                
+                // 전투 씬으로 이동
+                SceneManager.LoadScene("BattleScene"); 
+            }
         }
-    }
     }
 }

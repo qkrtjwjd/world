@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 8542909785519503066}
   - component: {fileID: 3249434531685504890}
   - component: {fileID: 330191628020566567}
-  - component: {fileID: 2915383677649973041}
+  - component: {fileID: 6097251642249807298}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -30,7 +30,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
-  m_LocalScale: {x: 1, y: 1, z: -10}
+  m_LocalScale: {x: 0, y: 0, z: -10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -101,7 +101,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 49137313101908075}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
   m_Name: 
@@ -138,7 +138,7 @@ MonoBehaviour:
     m_VarianceClampScale: 0.9
     m_ContrastAdaptiveSharpening: 0
   m_Version: 2
---- !u!114 &2915383677649973041
+--- !u!114 &6097251642249807298
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -147,9 +147,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 49137313101908075}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c4622f783def6be48bf7b145ef3f1305, type: 3}
+  m_Script: {fileID: 11500000, guid: cf8b537d44ee8d84895ceb3669ac3c95, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow2D
+  m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 0}
-  offset: {x: 0, y: 0, z: -10}
   smoothTime: 0.15
+  offset: {x: 0, y: 0, z: -10}
+  currentBound: {fileID: 0}

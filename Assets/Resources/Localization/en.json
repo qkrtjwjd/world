@@ -1,0 +1,38 @@
+{
+    "items": {
+        "apple": "Apple",
+        "red_potion": "Red Potion"
+    },
+    "interaction": {
+        "pickup": "Pick up {0}",
+        "feed": "Feed",
+        "talk": "Talk"
+    },
+    "ui": {
+        "inventory": "Inventory",
+        "save": "Save",
+        "load": "Load",
+        "close": "Close"
+    },
+    "messages": {
+        "inventory_full": "Inventory is full!",
+        "item_get": "You got {0}."
+    },
+    "battle": {
+        "attack": "Attack",
+        "defend": "Defend",
+        "escape": "Run",
+        "item": "Item",
+        "win": "Victory!",
+        "lose": "Defeated...",
+        "wild_enemy_appear": "A wild {0} appeared!",
+        "player_turn_prompt": "{0}'s Turn: What will you do?",
+        "enemy_turn_action": "{0} attacks!",
+        "escape_success": "Got away safely!",
+        "escape_fail": "Couldn't escape!",
+        "damage_dealt": "Hit! Dealt {0} damage.",
+        "damage_taken": "{0} took {1} damage!",
+        "heal": "{0} recovered health!",
+        "defend_action": "{0} is defending."
+    }
+}
