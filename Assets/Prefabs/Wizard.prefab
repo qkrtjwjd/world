@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 2376888896039484991}
   - component: {fileID: 2915186114549421262}
   - component: {fileID: 4388174069741993559}
+  - component: {fileID: 8985718321403749677}
   - component: {fileID: 372680126210068970}
   - component: {fileID: 7881397838177194964}
   m_Layer: 0
@@ -92,6 +93,7 @@ MonoBehaviour:
   damage: 10
   maxHP: 100
   currentHP: 100
+  hpSlider: {fileID: 0}
   isDefending: 0
 --- !u!114 &2915186114549421262
 MonoBehaviour:
@@ -124,6 +126,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
   maxHealth: 100
   currentHealth: 0
+  allyMaxHP: 100
+  allyCurrentHP: 100
   maxMental: 100
   currentMental: 0
   maxHunger: 100
@@ -131,6 +135,31 @@ MonoBehaviour:
   maxPuppetization: 100
   currentPuppetization: 0
   hungerDecreaseRate: 1
+--- !u!114 &8985718321403749677
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2978924516392596811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 20b1e41731200bd4496b6ee795da6824, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RealityCombatController
+  attackRange: 5
+  attackDamage: 50
+  nonWeakPointMultiplier: 0.1
+  attackCooldown: 0.3
+  enemyLayer:
+    serializedVersion: 2
+    m_Bits: 8
+  traumaOnHit: 1
+  traumaOnKill: 5
+  puppetReductionOnCombat: 2
+  hitEffect: {fileID: 0}
+  critEffect: {fileID: 0}
+  knockbackForce: 3
 --- !u!50 &372680126210068970
 Rigidbody2D:
   serializedVersion: 5
