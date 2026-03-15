@@ -1,134 +1,144 @@
 using UnityEngine;
-using UnityEngine.InputSystem; // Input System 사용 가정
+using UnityEngine.InputSystem;
 
+/// <summary>
+/// 핵앤슬래시 플레이어 공격 컨트롤러.
+/// 마우스 클릭 방향으로 레이캐스트를 발사해 적을 공격합니다.
+/// HackSlashCombatManager 에 의해 활성화/비활성화됩니다.
+/// </summary>
 public class RealityCombatController : MonoBehaviour
 {
     [Header("■ 전투 설정")]
     [Tooltip("공격 사거리 (레이캐스트 길이)")]
     public float attackRange = 5f;
-    [Tooltip("기본 공격력 (약점 타격 시 이 데미지의 100% 적용)")]
+    [Tooltip("기본 공격력 (약점 타격 시 100% 적용)")]
     public float attackDamage = 50f;
+    [Tooltip("비약점 타격 시 데미지 배율 (기본 10%)")]
+    public float nonWeakPointMultiplier = 0.1f;
     [Tooltip("공격 쿨타임 (초)")]
-    public float attackCooldown = 0.5f;
+    public float attackCooldown = 0.3f;
     [Tooltip("적을 감지할 레이어")]
     public LayerMask enemyLayer;
 
-    [Header("■ 리스크 설정")]
-    [Tooltip("적 처치 시 증가할 트라우마(멘탈 감소량)")]
-    public float traumaOnKill = 5f;
+    [Header("■ 리스크")]
     [Tooltip("공격 적중 시 증가할 트라우마(멘탈 감소량)")]
     public float traumaOnHit = 1f;
+    [Tooltip("적 처치 시 증가할 트라우마")]
+    public float traumaOnKill = 5f;
     [Tooltip("전투 행동 시 감소할 인형화 수치")]
     public float puppetReductionOnCombat = 2f;
 
     [Header("■ 시각 효과")]
     [Tooltip("일반 타격 이펙트")]
     public GameObject hitEffect;
-    [Tooltip("약점(치명타) 타격 이펙트")]
-    public GameObject bloodEffect;
+    [Tooltip("약점 타격 이펙트")]
+    public GameObject critEffect;
 
-    private float lastAttackTime;
-    private PlayerStats stats;
-    private Camera mainCamera;
+    [Header("■ 넉백")]
+    [Tooltip("공격 시 적에게 가하는 넉백 힘")]
+    public float knockbackForce = 3f;
 
+    // ─────────────────────────────────────────────
+    //  내부 상태
+    // ─────────────────────────────────────────────
+    private float  _lastAttackTime = -999f;
+    private Camera _mainCamera;
+
+    // ─────────────────────────────────────────────
+    //  Unity
+    // ─────────────────────────────────────────────
     void Start()
     {
-        stats = GetComponent<PlayerStats>();
-        if (stats == null) stats = PlayerStats.Instance;
-        mainCamera = Camera.main;
+        _mainCamera = Camera.main;
+
+        // enemyLayer 가 0(Nothing)이면 Enemy 레이어 자동 설정
+        if (enemyLayer.value == 0)
+            enemyLayer = LayerMask.GetMask("Enemy");
+        // Enemy 레이어가 없으면 Default
+        if (enemyLayer.value == 0)
+            enemyLayer = ~0;
     }
 
     void Update()
     {
-        // 쿨타임 체크
-        if (Time.time < lastAttackTime + attackCooldown) return;
-
-        // 마우스 체크 (마우스가 없거나 연결 안 된 경우 방지)
+        if (Time.time < _lastAttackTime + attackCooldown) return;
         if (Mouse.current == null) return;
 
-        // 마우스 왼쪽 클릭 (New Input System or Legacy)
-        if (Mouse.current.leftButton.wasPressedThisFrame) 
-        {
+        if (Mouse.current.leftButton.wasPressedThisFrame)
             PerformAttack();
-        }
     }
 
+    // ─────────────────────────────────────────────
+    //  공격
+    // ─────────────────────────────────────────────
     void PerformAttack()
     {
-        lastAttackTime = Time.time;
-        
-        // 1. 마우스 방향 계산
-        Vector2 mousePos = Mouse.current.position.ReadValue();
-        Vector2 worldPoint = mainCamera.ScreenToWorldPoint(mousePos);
-        Vector2 origin = transform.position;
-        Vector2 direction = (worldPoint - origin).normalized;
+        _lastAttackTime = Time.time;
 
-        // 2. 레이캐스트 발사
+        if (_mainCamera == null) _mainCamera = Camera.main;
+
+        Vector2 mouseWorld = _mainCamera.ScreenToWorldPoint(
+            Mouse.current.position.ReadValue());
+        Vector2 origin     = transform.position;
+        Vector2 direction  = (mouseWorld - origin).normalized;
+
+        Debug.DrawRay(origin, direction * attackRange, Color.red, 0.3f);
+
         RaycastHit2D hit = Physics2D.Raycast(origin, direction, attackRange, enemyLayer);
-
-        // 디버그 라인
-        Debug.DrawRay(origin, direction * attackRange, Color.red, 0.5f);
-
         if (hit.collider != null)
-        {
-            HandleHit(hit);
-        }
+            HandleHit(hit, direction);
     }
 
-    void HandleHit(RaycastHit2D hit)
+    void HandleHit(RaycastHit2D hit, Vector2 attackDir)
     {
+        bool  isWeak      = false;
         float finalDamage = attackDamage;
-        bool isWeakPoint = false;
 
-        // 최적화: TryGetComponent 사용 (가비지 할당 감소)
-        if (hit.collider.TryGetComponent<WeakPoint>(out WeakPoint weakPoint))
+        // 약점 체크
+        WeakPoint wp = hit.collider.GetComponent<WeakPoint>();
+        if (wp == null) wp = hit.collider.GetComponentInParent<WeakPoint>();
+
+        if (wp != null)
         {
-            // 약점 명중!
-            isWeakPoint = true;
-            if (weakPoint.isCore)
-            {
-                Debug.Log("약점(핵) 명중! 치명타!");
-            }
-            else
-            {
-                // 약점 스크립트는 있지만 핵은 아님 (그냥 부위) -> 그래도 약점 배율 적용 가능
-                finalDamage *= weakPoint.damageMultiplier; 
-            }
+            isWeak      = true;
+            finalDamage *= wp.damageMultiplier;
         }
         else
         {
-            // 약점 아님 -> 90% 데미지 감소
-            finalDamage *= 0.1f;
-            Debug.Log($"빗나감... 데미지 90% 감소 ({finalDamage})");
+            finalDamage *= nonWeakPointMultiplier;
         }
 
-        // 적 체력 스크립트 찾기 (부모나 자신에게서)
-        EnemyHealth enemy = hit.collider.GetComponentInParent<EnemyHealth>();
-        if (enemy != null)
+        // ── EnemyHealth (현실 전투용) ──
+        EnemyHealth eh = hit.collider.GetComponentInParent<EnemyHealth>();
+        if (eh == null) eh = hit.collider.GetComponent<EnemyHealth>();
+        if (eh != null)
         {
-            enemy.TakeRealityDamage(finalDamage);
+            eh.TakeRealityDamage(finalDamage);
+            // 사망 통보
+            if (eh.currentHealth <= 0)
+                HackSlashCombatManager.Instance?.NotifyEnemyDead(eh.gameObject);
         }
+
+        // ── Unit (턴제 배틀 유닛이 씬에 있는 경우 폴백) ──
         else
         {
-             // 혹시 EnemyHealth가 없으면 기존 방식(SendMessage)으로 폴백
-             hit.collider.SendMessageUpwards("TakeRealityDamage", finalDamage, SendMessageOptions.DontRequireReceiver);
+            Unit unit = hit.collider.GetComponentInParent<Unit>();
+            if (unit != null)
+                unit.TakeDamage(Mathf.RoundToInt(finalDamage));
         }
 
-        // ■ 트라우마 증가 및 인형화 감소
-        if (stats != null)
-        {
-            stats.AddTrauma(traumaOnHit);
-            stats.ReducePuppetization(puppetReductionOnCombat);
-        }
+        // ── 넉백 ──
+        EnemyAI ai = hit.collider.GetComponentInParent<EnemyAI>();
+        if (ai == null) ai = hit.collider.GetComponent<EnemyAI>();
+        if (ai != null)
+            ai.ApplyKnockback(attackDir);
 
-        // 효과 재생
-        if (isWeakPoint && bloodEffect != null)
-        {
-            Instantiate(bloodEffect, hit.point, Quaternion.identity);
-        }
-        else if (hitEffect != null)
-        {
-            Instantiate(hitEffect, hit.point, Quaternion.identity);
-        }
+        // ── 스탯 영향 ──
+        PlayerStats.Instance?.AddTrauma(traumaOnHit);
+        PlayerStats.Instance?.ReducePuppetization(puppetReductionOnCombat);
+
+        // ── 이펙트 ──
+        GameObject fx = isWeak ? critEffect : hitEffect;
+        if (fx != null) Instantiate(fx, hit.point, Quaternion.identity);
     }
 }

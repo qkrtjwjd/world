@@ -2,29 +2,28 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 
+/// <summary>
+/// 적과 부딪혔을 때 "핵앤슬래시" vs "턴제 전투" 선택지를 표시합니다.
+/// 어느 씬이든 두 선택지 모두 제공합니다.
+/// </summary>
 public class EncounterManager : MonoBehaviour
 {
     public static EncounterManager Instance;
+
+    // ── 전투 씬 전달용 공개 변수 ──
     public static string currentEnemyID;
 
-    [Header("UI")]
+    [Header("UI 연결")]
     public GameObject encounterPanel;
     public Text       titleText;
-    public Button     realityBtn;
-    public Button     fantasyBtn;
+    public Button     hackSlashBtn;
+    public Button     turnBasedBtn;
+    public Text       hackSlashBtnText;
+    public Text       turnBasedBtnText;
 
-    [Header("버튼 텍스트")]
-    public Text realityBtnText;
-    public Text fantasyBtnText;
-
-    [Header("필요 아이템 이름")]
-    public string marshmallowItemName = "Marshmallow";
-    public string daggerItemName      = "Dagger";
-
-    private GameObject _currentEnemy;
-    public  GameObject enemyPrefabToSpawn;
-
-    private bool _isRealityScene;
+    // 현재 인카운터 대상
+    public  GameObject enemyPrefabToSpawn;   // BattleSystem 에서 읽음
+    private GameObject _currentEnemyObject;  // 씬에 존재하는 심볼/오브젝트
 
     void Awake()
     {
@@ -36,117 +35,94 @@ public class EncounterManager : MonoBehaviour
         if (encounterPanel != null) encounterPanel.SetActive(false);
     }
 
-    public void StartEncounter(GameObject enemy)
+    // ─────────────────────────────────────────────
+    //  외부 진입점
+    // ─────────────────────────────────────────────
+
+    /// <summary>씬 위에 있는 심볼 오브젝트와 부딪혔을 때 호출.</summary>
+    public void StartEncounter(GameObject enemyObject)
     {
-        _currentEnemy     = enemy;
-        currentEnemyID    = enemy.name;
-        enemyPrefabToSpawn = null;
-        SetupUI("적과 마주쳤다!");
+        _currentEnemyObject = enemyObject;
+        currentEnemyID      = enemyObject.name;
+        enemyPrefabToSpawn  = null;
+
+        // EnemySymbol 이 battleEnemyPrefab 을 갖고 있다면 읽어오기
+        var symbol = enemyObject.GetComponent<EnemySymbol>();
+        if (symbol != null) enemyPrefabToSpawn = symbol.battleEnemyPrefab;
+
+        ShowPanel($"적과 마주쳤다!\n({enemyObject.name})");
     }
 
+    /// <summary>랜덤 인카운터 (프리팹 직접 지정).</summary>
     public void StartRandomEncounter(GameObject prefab, string enemyName)
     {
-        _currentEnemy      = null;
-        enemyPrefabToSpawn = prefab;
-        SetupUI($"정체불명의 기척이 느껴진다... ({enemyName})");
+        _currentEnemyObject = null;
+        enemyPrefabToSpawn  = prefab;
+        currentEnemyID      = enemyName;
+        ShowPanel($"정체불명의 기척이 느껴진다...\n({enemyName})");
     }
 
-    void SetupUI(string title)
+    // ─────────────────────────────────────────────
+    //  패널 표시
+    // ─────────────────────────────────────────────
+    void ShowPanel(string title)
     {
-        _isRealityScene = SceneNames.IsRealityScene(SceneManager.GetActiveScene().name);
-        Time.timeScale  = 0f;
-        encounterPanel.SetActive(true);
-        titleText.text  = title + (_isRealityScene ? " [현실]" : " [환상]");
-        UpdateButtons();
+        Time.timeScale = 0f;
+
+        if (titleText        != null) titleText.text        = title;
+        if (hackSlashBtnText != null) hackSlashBtnText.text = "⚔ 핵앤슬래시 전투";
+        if (turnBasedBtnText != null) turnBasedBtnText.text = "🎲 턴제 전투";
+
+        if (hackSlashBtn != null) hackSlashBtn.interactable = true;
+        if (turnBasedBtn != null) turnBasedBtn.interactable = true;
+
+        if (encounterPanel != null) encounterPanel.SetActive(true);
     }
 
-    void UpdateButtons()
-    {
-        bool hasMarshmallow = InventoryManager.Instance.HasItem(marshmallowItemName);
-        bool hasDagger      = InventoryManager.Instance.HasItem(daggerItemName);
+    // ─────────────────────────────────────────────
+    //  버튼 콜백 (인스펙터에서 연결)
+    // ─────────────────────────────────────────────
 
-        if (_isRealityScene)
+    /// <summary>핵앤슬래시 선택.</summary>
+    public void OnChooseHackSlash()
+    {
+        ClosePanel();
+
+        // HackSlashCombatManager 에게 전투 시작 위임
+        if (HackSlashCombatManager.Instance != null)
         {
-            realityBtn.interactable = true;
-            realityBtnText.text     = "그대로 싸운다 (핵앤슬래시)";
-
-            fantasyBtn.interactable = hasMarshmallow;
-            fantasyBtnText.text     = hasMarshmallow
-                ? "마시멜로를 먹는다 (환상 모드 진입)"
-                : "마시멜로가 없다...";
+            HackSlashCombatManager.Instance.BeginCombat(_currentEnemyObject, enemyPrefabToSpawn);
         }
         else
         {
-            fantasyBtn.interactable = true;
-            fantasyBtnText.text     = "전투 개시 (탄막/턴제)";
-
-            realityBtn.interactable = hasDagger;
-            realityBtnText.text     = hasDagger
-                ? "단검을 든다 (현실 모드 진입)"
-                : "단검이 없다...";
+            Debug.LogWarning("[EncounterManager] HackSlashCombatManager 가 없습니다.");
         }
     }
 
-    public void OnChooseReality()
+    /// <summary>턴제 선택 → BattleScene 이동.</summary>
+    public void OnChooseTurnBased()
     {
-        ResumeGame();
-
-        if (_isRealityScene)
-        {
-            if (_currentEnemy == null && enemyPrefabToSpawn != null)
-                SpawnEnemyNearPlayer();
-            // 이미 있는 적이면 그냥 싸움 (아무것도 안 해도 됨)
-        }
-        else
-        {
-            // 환상 -> 현실: 씬 이동
-            SavePlayerPosition();
-            SceneManager.LoadScene(SceneNames.DarkReality);
-        }
-    }
-
-    public void OnChooseFantasy()
-    {
-        ResumeGame();
-
-        if (_isRealityScene)
-        {
-            // 마시멜로 소모
-            ItemData marshmallow = InventoryManager.Instance.inventoryItems
-                .Find(x => x != null && x.itemName == marshmallowItemName);
-            if (marshmallow != null)
-                InventoryManager.Instance.RemoveItem(marshmallow);
-        }
-
-        // 공통: 배틀씬 이동
+        ClosePanel();
         SavePlayerPosition();
         SceneManager.LoadScene(SceneNames.Battle);
+    }
+
+    // ─────────────────────────────────────────────
+    //  유틸
+    // ─────────────────────────────────────────────
+    void ClosePanel()
+    {
+        Time.timeScale = 1f;
+        if (encounterPanel != null) encounterPanel.SetActive(false);
     }
 
     void SavePlayerPosition()
     {
         GameObject p = GameObject.FindGameObjectWithTag("Player");
         if (p == null) return;
-        GameState.lastPosition     = p.transform.position;
-        GameState.hasPositionSaved = true;
+        GameState.lastPosition       = p.transform.position;
+        GameState.hasPositionSaved   = true;
         GameState.isComingFromBattle = true;
-    }
-
-    void SpawnEnemyNearPlayer()
-    {
-        GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p == null || enemyPrefabToSpawn == null) return;
-
-        Vector2 dir      = Random.insideUnitCircle.normalized;
-        float   distance = Random.Range(2f, 4f);
-        Instantiate(enemyPrefabToSpawn,
-                    p.transform.position + (Vector3)(dir * distance),
-                    Quaternion.identity);
-    }
-
-    void ResumeGame()
-    {
-        Time.timeScale = 1f;
-        encounterPanel.SetActive(false);
+        GameState.returnSceneName    = SceneManager.GetActiveScene().name;
     }
 }
