@@ -2,79 +2,69 @@ using UnityEngine;
 
 public class RoomTransfer : MonoBehaviour
 {
-    [Header("Configuration")]
-    public BoxCollider2D roomBound; // Drag the BoxCollider2D defining the room area here
+    [Header("카메라 바운드")]
+    public BoxCollider2D roomBound;
 
-    [Header("옵션")]
-    [Tooltip("이 방을 가리는 검은색 덮개(Sprite)를 연결하세요. 방에 들어가면 꺼지고, 나가면 켜집니다.")]
+    [Header("방 덮개 (방 밖에서 보이지 않게 가리는 스프라이트)")]
     public GameObject roomCover;
 
-    [Tooltip("체크하면 이 방에 있을 때 '현실 붕괴(Reality Gauge)'가 차오릅니다.")]
+    [Header("현실 게이지 설정")]
+    [Tooltip("이 방에서 현실 게이지가 차오르는지 여부")]
     public bool enableRealityGauge = false;
+    [Tooltip("체크하면 RealitySystem 의 씬 전체 설정을 따릅니다.")]
+    public bool useSceneDefault    = true;
 
-    [Header("씬 설정 따르기")]
-    [Tooltip("체크하면 위 설정(Enable Reality Gauge)을 무시하고, RealitySystem의 씬 전체 설정을 따릅니다.")]
-    public bool useSceneDefault = true;
+    public static RoomTransfer CurrentRoom { get; private set; }
 
-    // 현재 플레이어가 있는 방을 기억하는 변수 (모든 방이 공유함)
-    public static RoomTransfer currentActiveRoom;
-
+    // ─────────────────────────────────────────────
+    //  트리거
+    // ─────────────────────────────────────────────
     private void OnTriggerEnter2D(Collider2D other)
     {
-        // Check if the object entering is the Player
-        // Ensure "Player" tag is set on your player object
-        if (other.CompareTag("Player") && !other.isTrigger) 
-        {
-            EnterRoom(); // 방 입장 처리
+        if (!other.CompareTag("Player") || other.isTrigger) return;
 
-            // Find the CameraFollow script (Optimized with Singleton)
-            if (CameraFollow.Instance != null)
-            {
-                // Update the camera's clamping bounds to this room
-                CameraFollow.Instance.SetBound(roomBound);
-            }
-            else
-            {
-                Debug.LogWarning("CameraFollow Instance not found.");
-            }
-        }
+        EnterRoom();
+
+        if (CameraFollow.Instance != null)
+            CameraFollow.Instance.SetBound(roomBound);
     }
 
-    // 외부(Teleport.cs)에서 호출할 수 있게 public으로 변경
+    // ─────────────────────────────────────────────
+    //  방 입장 / 퇴장
+    // ─────────────────────────────────────────────
     public void EnterRoom()
     {
-        // 1. 이전에 있던 방이 있다면 닫아주기 (덮개 덮기)
-        if (currentActiveRoom != null && currentActiveRoom != this)
-        {
-            currentActiveRoom.ExitRoom();
-        }
+        // 이전 방 퇴장 처리
+        if (CurrentRoom != null && CurrentRoom != this)
+            CurrentRoom.ExitRoom();
 
-        // 2. 현재 방을 '활성 방'으로 등록
-        currentActiveRoom = this;
+        CurrentRoom = this;
+        SetCover(false); // 덮개 열기
 
-        // 3. 이 방의 덮개 열기 (방 보여주기)
-        if (roomCover != null)
-        {
-            roomCover.SetActive(false);
-        }
-
-        // 4. RealitySystem 제어 (게이지 켜기/끄기)
-        if (RealitySystem.Instance != null)
-        {
-            // 씬 기본값을 따를지, 이 방만의 설정을 쓸지 결정
-            bool finalState = useSceneDefault ? RealitySystem.Instance.sceneDefaultActive : enableRealityGauge;
-            
-            RealitySystem.Instance.isSystemActive = finalState;
-        }
+        ApplyRealityGauge();
     }
 
-    // 방에서 나갈 때(다른 방으로 갈 때) 호출됨
     public void ExitRoom()
     {
-        // 덮개 다시 덮기 (방 가리기)
-        if (roomCover != null)
-        {
-            roomCover.SetActive(true);
-        }
+        SetCover(true); // 덮개 닫기
+    }
+
+    // ─────────────────────────────────────────────
+    //  헬퍼
+    // ─────────────────────────────────────────────
+    void SetCover(bool active)
+    {
+        if (roomCover != null) roomCover.SetActive(active);
+    }
+
+    void ApplyRealityGauge()
+    {
+        if (RealitySystem.Instance == null) return;
+
+        bool finalState = useSceneDefault
+            ? RealitySystem.Instance.sceneDefaultActive
+            : enableRealityGauge;
+
+        RealitySystem.Instance.isSystemActive = finalState;
     }
 }

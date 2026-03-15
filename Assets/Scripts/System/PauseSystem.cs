@@ -3,128 +3,104 @@ using UnityEngine.SceneManagement;
 
 public class PauseSystem : MonoBehaviour
 {
-    [Header("메인 일시정지 패널")]
+    [Header("패널 연결")]
     public GameObject pauseMenuPanel;
+    public GameObject inventoryPanel;
+    public GameObject journalPanel;
+    public GameObject savePanel;
+    public GameObject loadPanel;
 
-    [Header("서브 메뉴 패널들 (새로 추가!)")]
-    public GameObject inventoryPanel; // 아이템창
-    public GameObject journalPanel;   // 기록창
-    public GameObject savePanel;      // 저장창
-    public GameObject loadPanel;      // 로드창 (추가됨)
+    private bool _isPaused = false;
 
-    private bool isPaused = false;
+    // 열려있는 서브 패널이 있는지
+    private bool IsSubPanelOpen =>
+        IsActive(inventoryPanel) ||
+        IsActive(journalPanel)   ||
+        IsActive(savePanel)      ||
+        IsActive(loadPanel);
+
+    static bool IsActive(GameObject go) => go != null && go.activeSelf;
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Backspace))
-        {
-            // 1. 서브 메뉴가 열려있는지 확인 (null 체크 안전하게 추가)
-            bool isSubPanelOpen = (inventoryPanel != null && inventoryPanel.activeSelf) ||
-                                  (journalPanel != null && journalPanel.activeSelf) ||
-                                  (savePanel != null && savePanel.activeSelf) ||
-                                  (loadPanel != null && loadPanel.activeSelf);
+        if (!Input.GetKeyDown(KeyCode.Escape) && !Input.GetKeyDown(KeyCode.Backspace))
+            return;
 
-            if (isSubPanelOpen)
-            {
-                // [수정됨] 만약 일시정지 상태였다면(메뉴에서 들어옴) -> 메인 메뉴로 뒤로가기
-                if (isPaused)
-                {
-                    OpenMainMenu(); 
-                }
-                // 만약 게임 중이었다면(상호작용으로 열림) -> 그냥 닫기
-                else
-                {
-                    ResumeGame();
-                }
-            }
-            // 2. 이미 일시정지 상태라면 -> 게임 재개 (메뉴 닫기)
-            else if (isPaused)
-            {
-                ResumeGame();
-            }
-            // 3. 게임 중이라면 -> 일시정지 (메뉴 열기)
-            else
-            {
-                // 백스페이스로는 일시정지 메뉴를 열지 않도록 (원하시면 추가 가능)
-                if (Input.GetKeyDown(KeyCode.Escape))
-                {
-                    PauseGame();
-                }
-            }
+        if (IsSubPanelOpen)
+        {
+            // 서브 패널이 열려있을 때
+            // - 일시정지 상태에서 열었으면 → 메인 메뉴로 뒤로가기
+            // - 게임 중에 열었으면 → 완전히 닫기
+            if (_isPaused) OpenMainMenu();
+            else           ResumeGame();
+        }
+        else if (_isPaused)
+        {
+            ResumeGame();
+        }
+        else if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            PauseGame();
         }
     }
 
-    // --- 기본 기능 ---
+    // ─────────────────────────────────────────────
+    //  기본 동작
+    // ─────────────────────────────────────────────
     public void ResumeGame()
     {
-        CloseAllPanels(); // 모든 창 닫기
+        CloseAll();
         Time.timeScale = 1f;
-        isPaused = false;
+        _isPaused      = false;
     }
 
     public void PauseGame()
     {
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(true); // 메인 메뉴 열기
+        SetOnly(pauseMenuPanel);
         Time.timeScale = 0f;
-        isPaused = true;
+        _isPaused      = true;
     }
 
     public void GoToMainMenu()
     {
         Time.timeScale = 1f;
-        SceneManager.LoadScene("TitleScene");
+        SceneManager.LoadScene(SceneNames.Title);
     }
 
-    // --- ★ 창 전환 기능 (여기 추가됨) ---
+    // ─────────────────────────────────────────────
+    //  패널 전환 (인스펙터 버튼 / 코드 양쪽에서 호출 가능)
+    // ─────────────────────────────────────────────
+    public void OpenMainMenu()   => SetOnly(pauseMenuPanel);
+    public void OpenInventory()  => SetOnly(inventoryPanel);
+    public void OpenJournal()    => SetOnly(journalPanel);
+    public void OpenSave()       => SetOnly(savePanel);
+    public void OpenLoad()       => SetOnly(loadPanel);
 
-    // 1. 메인 메뉴만 보여주는 함수 (뒤로가기 버튼용)
-    public void OpenMainMenu()
+    // ─────────────────────────────────────────────
+    //  헬퍼
+    // ─────────────────────────────────────────────
+
+    /// <summary>target 만 켜고 나머지는 모두 끕니다.</summary>
+    void SetOnly(GameObject target)
     {
-        // 서브 창들은 다 끄고 (null 체크)
-        if (inventoryPanel != null) inventoryPanel.SetActive(false);
-        if (journalPanel != null) journalPanel.SetActive(false);
-        if (savePanel != null) savePanel.SetActive(false);
-        if (loadPanel != null) loadPanel.SetActive(false);
-
-        // 메인 메뉴만 켜기
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(true);
+        SetActive(pauseMenuPanel, pauseMenuPanel == target);
+        SetActive(inventoryPanel, inventoryPanel == target);
+        SetActive(journalPanel,   journalPanel   == target);
+        SetActive(savePanel,      savePanel      == target);
+        SetActive(loadPanel,      loadPanel      == target);
     }
 
-    // 2. 가방 열기
-    public void OpenInventory()
+    void CloseAll()
     {
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false); // 메인 끄고
-        if (inventoryPanel != null) inventoryPanel.SetActive(true);  // 가방 켜기
+        SetActive(pauseMenuPanel, false);
+        SetActive(inventoryPanel, false);
+        SetActive(journalPanel,   false);
+        SetActive(savePanel,      false);
+        SetActive(loadPanel,      false);
     }
 
-    // 3. 일지 열기
-    public void OpenJournal()
+    static void SetActive(GameObject go, bool active)
     {
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (journalPanel != null) journalPanel.SetActive(true);
-    }
-
-    // 4. 저장 창 열기
-    public void OpenSave()
-    {
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (savePanel != null) savePanel.SetActive(true);
-    }
-
-    // 5. 로드 창 열기 (추가됨)
-    public void OpenLoad()
-    {
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (loadPanel != null) loadPanel.SetActive(true);
-    }
-
-    // 도우미 함수: 싹 다 끄기
-    void CloseAllPanels()
-    {
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (inventoryPanel != null) inventoryPanel.SetActive(false);
-        if (journalPanel != null) journalPanel.SetActive(false);
-        if (savePanel != null) savePanel.SetActive(false);
-        if (loadPanel != null) loadPanel.SetActive(false);
+        if (go != null) go.SetActive(active);
     }
 }

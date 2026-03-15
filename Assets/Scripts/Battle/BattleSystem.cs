@@ -10,481 +10,492 @@ public class BattleSystem : MonoBehaviour
 {
     public BattleState state;
 
-    [Header("유닛 및 위치 설정")]
+    [Header("유닛 및 위치")]
     public GameObject playerPrefab;
-    public GameObject companionPrefab; // 동료 프리팹
+    public GameObject companionPrefab;
     public GameObject enemyPrefab;
+    public Transform  playerBattleStation;
+    public Transform  companionBattleStation;
+    public Transform  enemyBattleStation;
 
-    public Transform playerBattleStation;
-    public Transform companionBattleStation; // 동료 위치
-    public Transform enemyBattleStation;
+    [Header("HP 슬라이더 (배틀씬 전용 — 직접 연결하세요)")]
+    public Slider playerHPSlider;
+    public Slider companionHPSlider;
+    public Slider enemyHPSlider;
 
-    List<Unit> playerParty = new List<Unit>(); // 아군 파티 리스트
-    Unit enemyUnit;
+    [Header("게이지 설정")]
+    public float funGauge             = 0f;
+    public float fatigueGauge         = 0f;
+    public float maxGauge             = 100f;
+    public float playerDamageMultiplier = 0.1f;
 
-    int currentUnitIndex = 0; // 현재 턴인 아군 유닛의 인덱스
-
-    [Header("■ 탄막/환상 모드 설정")]
-    [Tooltip("현재 재미 게이지 (특수 행동으로 증가)")]
-    public float funGauge = 0f;
-    [Tooltip("현재 피로도 게이지 (지루한 행동으로 증가)")]
-    public float fatigueGauge = 0f;
-    [Tooltip("게이지 최대치 (이 값에 도달하면 승리)")]
-    public float maxGauge = 100f;
-    
-    [Tooltip("플레이어 공격 데미지 배율 (0.1 = 10% 데미지). 환상 모드에선 살상이 어렵습니다.")]
-    public float playerDamageMultiplier = 0.1f; 
-
-    [Tooltip("적의 탄막 패턴이 지속되는 시간 (초)")]
-    public float danmakuDuration = 5.0f;
-
-    [Header("UI 연결")]
+    [Header("UI")]
     public Text dialogueText;
-    
+
     [Header("메뉴 패널")]
-    public GameObject mainMenuPanel;   // 행동/아이템/도망 선택 패널
-    public GameObject actionMenuPanel; // 공격/방어/특수 선택 패널 (기존 actionPanel 대체)
-    public GameObject itemMenuPanel;   // 아이템 목록 패널 (지금은 힐 버튼만)
+    public GameObject mainMenuPanel;
+    public GameObject actionMenuPanel;
+    public GameObject itemMenuPanel;
 
-    // ■ 최적화: WaitForSeconds 캐싱 (메모리 할당 최소화)
-    WaitForSeconds wait1sec;
-    WaitForSeconds wait1_5sec;
-    WaitForSeconds wait2sec;
-    WaitForSeconds waitDanmaku; // 탄막 시간 대기용
+    [Header("아이템 버튼 동적 생성")]
+    [Tooltip("아이템 버튼 프리팹 (Text 또는 TMP 가 포함된 Button)")]
+    public GameObject itemButtonPrefab;
+    [Tooltip("버튼들이 생성될 부모 Transform (ScrollView > Content 등)")]
+    public Transform  itemButtonContainer;
+    [Tooltip("아이템 없을 때 보여줄 Text")]
+    public Text       noItemText;
 
+    // ─ 내부 상태 ─
+    private List<Unit>       _playerParty        = new List<Unit>();
+    private Unit             _enemyUnit;
+    private int              _currentUnitIndex   = 0;
+    private List<GameObject> _spawnedItemButtons = new List<GameObject>();
+
+    // 자주 쓰는 WaitForSeconds 캐싱
+    private WaitForSeconds _wait1s;
+    private WaitForSeconds _wait1_5s;
+    private WaitForSeconds _wait2s;
+
+    // ════════════════════════════════════════
+    //  초기화
+    // ════════════════════════════════════════
     void Start()
     {
-        // 캐싱해두고 계속 재사용
-        wait1sec = new WaitForSeconds(1f);
-        wait1_5sec = new WaitForSeconds(1.5f);
-        wait2sec = new WaitForSeconds(2f);
-        waitDanmaku = new WaitForSeconds(danmakuDuration);
+        _wait1s   = new WaitForSeconds(1f);
+        _wait1_5s = new WaitForSeconds(1.5f);
+        _wait2s   = new WaitForSeconds(2f);
 
         state = BattleState.START;
         StartCoroutine(SetupBattle());
     }
 
-    // 전투 시작 전/후에 기존 유닛 정리
-    void ClearBattle()
-    {
-        // 아군 파티 삭제
-        foreach (Unit unit in playerParty)
-        {
-            if (unit != null) Destroy(unit.gameObject);
-        }
-        playerParty.Clear();
-
-        // 적군 삭제
-        if (enemyUnit != null)
-        {
-            Destroy(enemyUnit.gameObject);
-        }
-        
-        funGauge = 0f;
-        fatigueGauge = 0f;
-    }
-
     IEnumerator SetupBattle()
     {
-        // 1. 소환 (부모 설정 및 위치 초기화)
-        if (playerPrefab != null)
-        {
-            GameObject playerGO = Instantiate(playerPrefab, playerBattleStation);
-            playerGO.transform.localPosition = Vector3.zero;
-            playerGO.transform.localRotation = Quaternion.identity;
-            Unit playerUnit = playerGO.GetComponent<Unit>();
-            if (playerUnit != null) playerParty.Add(playerUnit);
-        }
+        // 플레이어 소환
+        SpawnUnit(playerPrefab, playerBattleStation, playerHPSlider, out Unit playerUnit);
+        if (playerUnit != null) _playerParty.Add(playerUnit);
 
-        // 동료 소환 및 위치 초기화 (선택 사항)
-        if (companionPrefab != null)
-        {
-            GameObject companionGO = Instantiate(companionPrefab, companionBattleStation);
-            companionGO.transform.localPosition = Vector3.zero;
-            companionGO.transform.localRotation = Quaternion.identity;
-            Unit companionUnit = companionGO.GetComponent<Unit>();
-            if (companionUnit != null) playerParty.Add(companionUnit);
-        }
+        // 동료 소환 (선택)
+        SpawnUnit(companionPrefab, companionBattleStation, companionHPSlider, out Unit companionUnit);
+        if (companionUnit != null) _playerParty.Add(companionUnit);
 
-        // 적 소환 및 위치 초기화 (EncounterManager로부터 적 데이터 가져오기)
-        GameObject enemyToSpawn = EncounterManager.Instance != null && EncounterManager.Instance.enemyPrefabToSpawn != null 
-            ? EncounterManager.Instance.enemyPrefabToSpawn : enemyPrefab;
+        // 적 소환 (EncounterManager 우선, 없으면 인스펙터 프리팹)
+        GameObject enemyPrefabToUse =
+            (EncounterManager.Instance != null && EncounterManager.Instance.enemyPrefabToSpawn != null)
+            ? EncounterManager.Instance.enemyPrefabToSpawn
+            : enemyPrefab;
 
-        if (enemyToSpawn != null)
-        {
-            GameObject enemyGO = Instantiate(enemyToSpawn, enemyBattleStation);
-            enemyGO.transform.localPosition = Vector3.zero;
-            enemyGO.transform.localRotation = Quaternion.identity;
-            enemyUnit = enemyGO.GetComponent<Unit>();
-        }
+        SpawnUnit(enemyPrefabToUse, enemyBattleStation, enemyHPSlider, out _enemyUnit);
 
-        // 다음 전투를 위해 초기화
         BattleData.nextEnemyPrefab = null;
 
-        // 2. 초기화
-        string eName = (enemyUnit != null) ? enemyUnit.unitName : "적";
-        
-        if (dialogueText != null)
-        {
-            if (LocalizationManager.Instance != null)
-            {
-                dialogueText.text = LocalizationManager.Instance.GetText("battle.wild_enemy_appear", eName);
-            }
-            else
-            {
-                dialogueText.text = $"야생의 {eName}이(가) 나타났다!";
-            }
-        }
-        else
-        {
-            Debug.LogError("dialogueText가 인스펙터에 할당되지 않았습니다!");
-        }
-        
-        // 메뉴들 숨기기
-        mainMenuPanel.SetActive(false);
-        actionMenuPanel.SetActive(false);
-        if(itemMenuPanel != null) itemMenuPanel.SetActive(false);
+        string eName = _enemyUnit != null ? _enemyUnit.unitName : "적";
+        ShowDialogue("battle.wild_enemy_appear", $"야생의 {eName}이(가) 나타났다!", eName);
 
-        yield return wait2sec; // 최적화된 대기
+        SetPanelsActive(false, false, false);
+        yield return _wait2s;
 
-        // 3. 전투 시작 (플레이어 파티 턴)
         state = BattleState.PLAYERTURN;
-        currentUnitIndex = 0;
+        _currentUnitIndex = 0;
         ProcessPartyTurn();
     }
 
-    // 파티원들의 턴을 순서대로 처리
+    /// <summary>유닛 소환 + 슬라이더 주입 + SetHUD 호출을 한번에 처리.</summary>
+    void SpawnUnit(GameObject prefab, Transform station, Slider slider, out Unit unit)
+    {
+        unit = null;
+        if (prefab == null || station == null) return;
+
+        GameObject go = Instantiate(prefab, station);
+        go.transform.localPosition = Vector3.zero;
+        go.transform.localRotation = Quaternion.identity;
+
+        unit = go.GetComponent<Unit>();
+        if (unit == null) return;
+
+        if (slider != null) unit.hpSlider = slider;
+        unit.SetHUD();
+    }
+
+    // ════════════════════════════════════════
+    //  턴 흐름
+    // ════════════════════════════════════════
     void ProcessPartyTurn()
     {
-        if (currentUnitIndex < playerParty.Count)
+        if (_currentUnitIndex < _playerParty.Count)
         {
-            Unit currentUnit = playerParty[currentUnitIndex];
-            if (currentUnit.currentHP > 0)
+            Unit cur = _playerParty[_currentUnitIndex];
+            if (cur.currentHP > 0)
             {
-                currentUnit.ResetState(); // 방어 상태 등 리셋
-                dialogueText.text = LocalizationManager.Instance.GetText("battle.player_turn_prompt", currentUnit.unitName);
+                cur.ResetState();
+                ShowDialogue("battle.player_turn_prompt",
+                             $"{cur.unitName}의 턴: 무엇을 할까?", cur.unitName);
                 ShowMainMenu();
             }
             else
             {
-                // 기절한 유닛은 패스
-                currentUnitIndex++;
+                _currentUnitIndex++;
                 ProcessPartyTurn();
             }
         }
         else
         {
-            // 모든 아군 행동 종료 -> 적 턴으로 (탄막 패턴 시작)
             state = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
         }
     }
 
-    #region UI Control
-    void ShowMainMenu()
+    void NextPartyMember()
     {
-        mainMenuPanel.SetActive(true);
-        actionMenuPanel.SetActive(false);
-        if(itemMenuPanel != null) itemMenuPanel.SetActive(false);
+        _currentUnitIndex++;
+        ProcessPartyTurn();
     }
 
-    void ShowActionMenu()
-    {
-        mainMenuPanel.SetActive(false);
-        actionMenuPanel.SetActive(true);
-    }
+    // ════════════════════════════════════════
+    //  UI 제어
+    // ════════════════════════════════════════
+    void ShowMainMenu()   => SetPanelsActive(true,  false, false);
+    void ShowActionMenu() => SetPanelsActive(false, true,  false);
 
     void ShowItemMenu()
     {
-        mainMenuPanel.SetActive(false);
-        if(itemMenuPanel != null) itemMenuPanel.SetActive(true);
+        SetPanelsActive(false, false, true);
+        PopulateItemButtons();
     }
-    #endregion
 
-    #region Main Menu Buttons
-    // [행동] 버튼
+    void SetPanelsActive(bool main, bool action, bool item)
+    {
+        if (mainMenuPanel   != null) mainMenuPanel.SetActive(main);
+        if (actionMenuPanel != null) actionMenuPanel.SetActive(action);
+        if (itemMenuPanel   != null) itemMenuPanel.SetActive(item);
+    }
+
+    void PopulateItemButtons()
+    {
+        // 이전 버튼 제거
+        foreach (var btn in _spawnedItemButtons)
+            if (btn != null) Destroy(btn);
+        _spawnedItemButtons.Clear();
+
+        if (itemButtonContainer == null) return;
+
+        List<ItemData> items = InventoryManager.Instance?.inventoryItems;
+        bool hasItems = items != null && items.Count > 0;
+
+        if (noItemText != null) noItemText.gameObject.SetActive(!hasItems);
+        if (!hasItems) return;
+
+        foreach (ItemData item in items)
+        {
+            if (item == null) continue;
+
+            GameObject btnObj = itemButtonPrefab != null
+                ? Instantiate(itemButtonPrefab, itemButtonContainer)
+                : CreateFallbackButton(item.itemName, itemButtonContainer);
+
+            SetButtonLabel(btnObj, item.DisplayName);
+
+            Button btn = btnObj.GetComponent<Button>();
+            if (btn != null)
+            {
+                ItemData captured = item;
+                btn.onClick.AddListener(() => OnItemSelected(captured));
+            }
+
+            _spawnedItemButtons.Add(btnObj);
+        }
+    }
+
+    /// <summary>itemButtonPrefab 이 없을 때 기본 버튼 생성.</summary>
+    GameObject CreateFallbackButton(string name, Transform parent)
+    {
+        var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer),
+                                typeof(Image), typeof(Button));
+        go.transform.SetParent(parent, false);
+        go.GetComponent<RectTransform>().sizeDelta = new Vector2(200, 40);
+
+        var textGo = new GameObject("Text", typeof(RectTransform),
+                                    typeof(CanvasRenderer), typeof(Text));
+        textGo.transform.SetParent(go.transform, false);
+        var rt = textGo.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.sizeDelta = Vector2.zero;
+
+        var t = textGo.GetComponent<Text>();
+        t.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        t.alignment = TextAnchor.MiddleCenter;
+        t.color     = Color.black;
+        return go;
+    }
+
+    void SetButtonLabel(GameObject btnObj, string label)
+    {
+        var tmp = btnObj.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (tmp  != null) { tmp.text  = label; return; }
+        var leg = btnObj.GetComponentInChildren<Text>();
+        if (leg  != null)   leg.text  = label;
+    }
+
+    void OnItemSelected(ItemData item)
+    {
+        if (state != BattleState.PLAYERTURN) return;
+        SetPanelsActive(false, false, false);
+        InventoryManager.Instance?.RemoveItem(item);
+        StartCoroutine(UseItemInBattle(item));
+    }
+
+    // ════════════════════════════════════════
+    //  메인 메뉴 버튼 (인스펙터에서 연결)
+    // ════════════════════════════════════════
     public void OnActionMenuButton()
     {
         if (state != BattleState.PLAYERTURN) return;
         ShowActionMenu();
     }
 
-    // [아이템] 버튼
     public void OnItemMenuButton()
     {
         if (state != BattleState.PLAYERTURN) return;
-        // 지금은 바로 아이템 메뉴(또는 힐) 보여주기
-        ShowItemMenu(); 
+        ShowItemMenu();
     }
 
-    // [도망] 버튼
     public void OnEscapeButton()
     {
         if (state != BattleState.PLAYERTURN) return;
         StartCoroutine(TryEscape());
     }
-    #endregion
 
-    #region Action Menu Buttons
-    // [공격] 버튼
+    // ════════════════════════════════════════
+    //  행동 메뉴 버튼 (인스펙터에서 연결)
+    // ════════════════════════════════════════
     public void OnAttackButton()
     {
-        if (state != BattleState.PLAYERTURN || currentUnitIndex >= playerParty.Count) return;
-        actionMenuPanel.SetActive(false);
+        if (!IsPlayerTurn()) return;
+        actionMenuPanel?.SetActive(false);
         StartCoroutine(PlayerAttack());
     }
 
-    // [방어] 버튼
     public void OnDefendButton()
     {
-        if (state != BattleState.PLAYERTURN || currentUnitIndex >= playerParty.Count) return;
-        actionMenuPanel.SetActive(false);
+        if (!IsPlayerTurn()) return;
+        actionMenuPanel?.SetActive(false);
         StartCoroutine(PlayerDefend());
     }
 
-    // [특수] - 재미/피로도 공략 (비살상)
     public void OnSpecialButton()
     {
-        if (state != BattleState.PLAYERTURN || currentUnitIndex >= playerParty.Count) return;
-        actionMenuPanel.SetActive(false);
+        if (!IsPlayerTurn()) return;
+        actionMenuPanel?.SetActive(false);
         StartCoroutine(PlayerSpecialAction());
     }
-    #endregion
 
-    #region Item Menu Buttons
-    // 기존 OnHealButton 재활용 (아이템 사용 예시)
-    public void OnUseItemButton()
-    {
-        if (state != BattleState.PLAYERTURN || currentUnitIndex >= playerParty.Count) return;
-        mainMenuPanel.SetActive(false); // 잘못 연결되었을 때를 대비해 메인메뉴도 끕니다.
-        if(itemMenuPanel != null) itemMenuPanel.SetActive(false);
-        StartCoroutine(PlayerHeal());
-    }
-    #endregion
+    bool IsPlayerTurn() =>
+        state == BattleState.PLAYERTURN && _currentUnitIndex < _playerParty.Count;
 
-
+    // ════════════════════════════════════════
+    //  전투 코루틴
+    // ════════════════════════════════════════
     IEnumerator TryEscape()
     {
-        mainMenuPanel.SetActive(false);
-        dialogueText.text = LocalizationManager.Instance.GetText("battle.escape") + "...";
-        
-        yield return wait1_5sec;
+        mainMenuPanel?.SetActive(false);
+        dialogueText.text = GetText("battle.escape", "도망") + "...";
+        yield return _wait1_5s;
 
-        // 50% 확률 예시
         if (Random.Range(0, 2) == 0)
         {
-            dialogueText.text = LocalizationManager.Instance.GetText("battle.escape_success");
-            yield return wait1sec;
-            state = BattleState.WON; // 도망 성공도 일단 승리 처리(전투 종료)
+            ShowDialogue("battle.escape_success", "도망에 성공했다!");
+            yield return _wait1s;
+            state = BattleState.WON;
             EndBattle();
         }
         else
         {
-            dialogueText.text = LocalizationManager.Instance.GetText("battle.escape_fail");
-            yield return wait1sec;
+            ShowDialogue("battle.escape_fail", "도망칠 수 없었다!");
+            yield return _wait1s;
             NextPartyMember();
         }
     }
 
     IEnumerator PlayerAttack()
     {
-        Unit currentUnit = playerParty[currentUnitIndex];
-        
-        // ■ 살상 공격 로직 (데미지 낮게)
-        int finalDamage = Mathf.Max(1, Mathf.RoundToInt(currentUnit.damage * playerDamageMultiplier));
-        bool isDead = enemyUnit.TakeDamage(finalDamage);
+        Unit cur = _playerParty[_currentUnitIndex];
+        int  dmg = Mathf.Max(1, Mathf.RoundToInt(cur.damage * playerDamageMultiplier));
+        bool dead = _enemyUnit.TakeDamage(dmg);
 
-        dialogueText.text = $"{currentUnit.unitName}의 공격! {finalDamage}의 데미지를 입혔다. (살상 모드)";
+        dialogueText.text = $"{cur.unitName}의 공격! {dmg}의 데미지를 입혔다.";
+        yield return _wait2s;
 
-        yield return wait2sec;
-
-        if (isDead)
-        {
-            state = BattleState.WON;
-            EndBattle();
-        }
-        else
-        {
-            NextPartyMember();
-        }
+        if (dead) { state = BattleState.WON; EndBattle(); }
+        else NextPartyMember();
     }
 
-    // ■ 비살상 특수 행동 (재미/피로도 증가)
     IEnumerator PlayerSpecialAction()
     {
-        Unit currentUnit = playerParty[currentUnitIndex];
-        
-        // 예시: 랜덤하게 재미나 피로도를 올림
-        float increaseAmount = 20f;
-        
-        // 재미를 올릴지 피로도를 올릴지는 스킬에 따라 다르겠지만 여기선 랜덤
+        Unit  cur = _playerParty[_currentUnitIndex];
+        float inc = 20f;
+
         if (Random.value > 0.5f)
         {
-            funGauge += increaseAmount;
-            dialogueText.text = $"{currentUnit.unitName}의 재롱! 적의 재미가 {increaseAmount}만큼 올랐다.";
+            funGauge += inc;
+            dialogueText.text = $"{cur.unitName}의 재롱! 적의 재미가 {inc}만큼 올랐다.";
         }
         else
         {
-            fatigueGauge += increaseAmount;
-            dialogueText.text = $"{currentUnit.unitName}의 지루한 설교... 적의 피로도가 {increaseAmount}만큼 올랐다.";
+            fatigueGauge += inc;
+            dialogueText.text = $"{cur.unitName}의 지루한 설교... 피로도가 {inc}만큼 올랐다.";
         }
 
-        yield return wait2sec;
+        yield return _wait2s;
 
-        // 게이지 꽉 찼는지 확인
         if (funGauge >= maxGauge || fatigueGauge >= maxGauge)
-        {
-            state = BattleState.WON;
-            EndBattle();
-        }
-        else
-        {
-            NextPartyMember();
-        }
+        { state = BattleState.WON; EndBattle(); }
+        else NextPartyMember();
     }
 
     IEnumerator PlayerDefend()
     {
-        Unit currentUnit = playerParty[currentUnitIndex];
-        currentUnit.isDefending = true;
-
-        dialogueText.text = LocalizationManager.Instance.GetText("battle.defend_action", currentUnit.unitName);
-        yield return wait1_5sec;
-
+        Unit cur = _playerParty[_currentUnitIndex];
+        cur.isDefending = true;
+        ShowDialogue("battle.defend_action", $"{cur.unitName}은(는) 방어 태세를 취했다.", cur.unitName);
+        yield return _wait1_5s;
         NextPartyMember();
     }
 
-    IEnumerator PlayerHeal()
+    IEnumerator UseItemInBattle(ItemData item)
     {
-        Unit currentUnit = playerParty[currentUnitIndex];
-        currentUnit.Heal(5); // 회복량 예시
-        dialogueText.text = LocalizationManager.Instance.GetText("battle.heal", currentUnit.unitName);
+        Unit cur = _playerParty[_currentUnitIndex];
+        float healHP  = item.fantasyEffect.healthChange;
+        bool  used    = false;
 
-        yield return wait2sec;
+        if (healHP > 0)
+        {
+            cur.Heal(Mathf.RoundToInt(healHP));
+            dialogueText.text = $"{item.DisplayName} 사용! {cur.unitName}의 HP가 {healHP}만큼 회복됐다.";
+            used = true;
+        }
+        else if (healHP < 0)
+        {
+            cur.TakeDamage(Mathf.RoundToInt(-healHP));
+            dialogueText.text = $"{item.DisplayName}... 이상한 맛이다. {cur.unitName}이(가) {-healHP}의 피해를 받았다.";
+            used = true;
+        }
 
-        NextPartyMember();
-    }
+        // 멘탈 처리
+        float mentalChange = item.fantasyEffect.mentalChange;
+        if (mentalChange != 0 && PlayerStats.Instance != null)
+        {
+            if (mentalChange > 0) PlayerStats.Instance.RecoverMental(mentalChange);
+            else                  PlayerStats.Instance.AddTrauma(-mentalChange);
+        }
 
-    void NextPartyMember()
-    {
-        currentUnitIndex++;
-        ProcessPartyTurn();
+        // 배고픔 처리
+        if (item.satiety > 0 && PlayerStats.Instance != null)
+            PlayerStats.Instance.EatFood(item.satiety);
+
+        if (!used)
+            dialogueText.text = $"{item.DisplayName}을(를) 사용했지만 별다른 효과가 없었다.";
+
+        yield return _wait2s;
+
+        if (IsPartyDead()) { state = BattleState.LOST; EndBattle(); }
+        else NextPartyMember();
     }
 
     IEnumerator EnemyTurn()
     {
-        // ★ 적의 공격 턴 (턴제 전투)
-        dialogueText.text = $"{enemyUnit.unitName}의 턴!";
-        yield return wait1sec;
+        dialogueText.text = $"{_enemyUnit.unitName}의 턴!";
+        yield return _wait1s;
 
-        // 살아있는 아군 중 무작위로 공격 대상 선택 (최적화: List 재할당 방지)
         Unit target = GetRandomAlivePartyMember();
-
         if (target != null)
         {
-            // 데미지 계산 (Unit 스크립트 내부에서 방어 시 20% 경감)
-            int damage = enemyUnit.damage;
-
-            bool isDead = target.TakeDamage(damage);
-            
-            // UI 표시를 위해 실제로 입은 데미지를 다시 계산해서 텍스트로 띄워줍니다
-            int actualDamage = target.isDefending ? Mathf.RoundToInt(damage * 0.8f) : damage;
-            dialogueText.text = $"{enemyUnit.unitName}가 {target.unitName}를 공격하여 {actualDamage}의 데미지를 주었다!";
-            
-            yield return wait2sec;
+            int  dmg    = _enemyUnit.damage;
+            bool dead   = target.TakeDamage(dmg);
+            int  actual = target.isDefending ? Mathf.RoundToInt(dmg * 0.8f) : dmg;
+            dialogueText.text =
+                $"{_enemyUnit.unitName}가 {target.unitName}를 공격하여 {actual}의 데미지를 주었다!";
+            yield return _wait2s;
         }
 
-        // 아군 전멸 확인 (최적화: TrueForAll 람다식 할당 방지)
-        if (IsPartyDead())
-        {
-            state = BattleState.LOST;
-            EndBattle();
-        }
+        if (IsPartyDead()) { state = BattleState.LOST; EndBattle(); }
         else
         {
             state = BattleState.PLAYERTURN;
-            currentUnitIndex = 0;
+            _currentUnitIndex = 0;
             ProcessPartyTurn();
         }
     }
 
-    // 최적화: 가비지 컬렉션(GC)을 유발하는 FindAll 대신 for문 사용
-    Unit GetRandomAlivePartyMember()
-    {
-        int aliveCount = 0;
-        for (int i = 0; i < playerParty.Count; i++)
-        {
-            if (playerParty[i].currentHP > 0) aliveCount++;
-        }
-
-        if (aliveCount == 0) return null;
-
-        int targetIndex = Random.Range(0, aliveCount);
-        int currentAliveIndex = 0;
-
-        for (int i = 0; i < playerParty.Count; i++)
-        {
-            if (playerParty[i].currentHP > 0)
-            {
-                if (currentAliveIndex == targetIndex) return playerParty[i];
-                currentAliveIndex++;
-            }
-        }
-        return null;
-    }
-
-    // 최적화: 가비지 컬렉션(GC)을 유발하는 TrueForAll 대신 for문 사용
-    bool IsPartyDead()
-    {
-        for (int i = 0; i < playerParty.Count; i++)
-        {
-            if (playerParty[i].currentHP > 0) return false; // 한 명이라도 살아있으면 false
-        }
-        return true;
-    }
-
-    void EndBattle()
-    {
-        StartCoroutine(EndBattleCoroutine());
-    }
+    // ════════════════════════════════════════
+    //  전투 종료
+    // ════════════════════════════════════════
+    void EndBattle() => StartCoroutine(EndBattleCoroutine());
 
     IEnumerator EndBattleCoroutine()
     {
         if (state == BattleState.WON)
         {
-            dialogueText.text = "승리했다! (인형화 수치 증가)";
-            
-            // ★ 처치된 적의 ID(이름)를 기록합니다 ★
-            if (!string.IsNullOrEmpty(EncounterManager.currentEnemyID))
-            {
-                if (!GameState.defeatedEnemyIDs.Contains(EncounterManager.currentEnemyID))
-                {
-                    GameState.defeatedEnemyIDs.Add(EncounterManager.currentEnemyID);
-                }
-            }
-
-            PlayerStats pStats = PlayerStats.Instance;
-            if (pStats != null) pStats.AddPuppetization(10f);
+            dialogueText.text = "승리했다!";
+            GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
+            PlayerStats.Instance?.AddPuppetization(10f);
         }
-        else if (state == BattleState.LOST)
+        else
         {
-            dialogueText.text = LocalizationManager.Instance.GetText("battle.lose");
+            ShowDialogue("battle.lose", "패배했다...");
         }
 
         yield return new WaitForSeconds(3f);
 
-        // ★ 전투 직후 맵에 돌아갈 때 쿨타임 확실히 활성화 ★
-        GameState.isComingFromBattle = true;
+        // 복귀 씬 결정 후 GameState 에 세팅
+        string target = string.IsNullOrEmpty(GameState.returnSceneName)
+            ? SceneNames.DarkReality
+            : GameState.returnSceneName;
 
-        // 원래 있던 씬으로 돌아가기
-        if (!string.IsNullOrEmpty(GameState.returnSceneName))
+        GameState.battleReturn.SetReturning(target, 2.5f);
+        SceneManager.LoadScene(target);
+    }
+
+    // ════════════════════════════════════════
+    //  유틸리티
+    // ════════════════════════════════════════
+    Unit GetRandomAlivePartyMember()
+    {
+        int alive = 0;
+        foreach (var u in _playerParty) if (u.currentHP > 0) alive++;
+        if (alive == 0) return null;
+
+        int idx = Random.Range(0, alive);
+        int cur = 0;
+        foreach (var u in _playerParty)
         {
-            SceneManager.LoadScene(GameState.returnSceneName);
+            if (u.currentHP > 0)
+            {
+                if (cur == idx) return u;
+                cur++;
+            }
         }
-        else
-        {
-            // 기본값으로 돌아가기 (안전장치)
-            SceneManager.LoadScene("DarkReality");
-        }
+        return null;
+    }
+
+    bool IsPartyDead()
+    {
+        foreach (var u in _playerParty)
+            if (u.currentHP > 0) return false;
+        return true;
+    }
+
+    // ── 로컬라이제이션 헬퍼 ──
+    string GetText(string key, string fallback, params object[] args)
+    {
+        if (LocalizationManager.Instance == null) return fallback;
+        string result = LocalizationManager.Instance.GetText(key, args);
+        return result == key ? fallback : result;
+    }
+
+    void ShowDialogue(string key, string fallback, params object[] args)
+    {
+        if (dialogueText != null)
+            dialogueText.text = GetText(key, fallback, args);
     }
 }
