@@ -8,6 +8,9 @@ public class DialogueManager : MonoBehaviour
     // 어디서든 접근 가능하게 싱글톤 패턴 사용
     public static DialogueManager Instance;
 
+    private static readonly Color COLOR_REALITY = new Color(0.75f, 0.85f, 0.9f);    // 차가운 청백색
+    private static readonly Color COLOR_FANTASY = new Color(0.196f, 0.196f, 0.196f); // 기존 환상 대사 색상
+
     [Header("UI 연결")]
     public GameObject dialoguePanel; // 대화창 전체 패널
     public Image portraitImage;      // 캐릭터 얼굴 이미지
@@ -76,6 +79,42 @@ public class DialogueManager : MonoBehaviour
                     break;
                 // KO는 기본값이므로 생략
             }
+        }
+
+        // 현실 상태이면 현실 대사 우선 출력
+        bool isReality = DaggerFilterController.Instance != null && DaggerFilterController.Instance.IsReality;
+        if (isReality)
+        {
+            string realitySentence = currentLine.sentence_reality_ko;
+
+            if (LocalizationManager.Instance != null)
+            {
+                switch (LocalizationManager.Instance.currentLanguage)
+                {
+                    case LocalizationManager.Language.EN:
+                        realitySentence = string.IsNullOrEmpty(currentLine.sentence_reality_en)
+                            ? currentLine.sentence_reality_ko : currentLine.sentence_reality_en;
+                        break;
+                    case LocalizationManager.Language.JP:
+                        realitySentence = string.IsNullOrEmpty(currentLine.sentence_reality_jp)
+                            ? currentLine.sentence_reality_ko : currentLine.sentence_reality_jp;
+                        break;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(realitySentence))
+            {
+                sentenceToDisplay = realitySentence;
+                dialogueText.color = COLOR_REALITY;
+            }
+            else
+            {
+                dialogueText.color = COLOR_FANTASY;
+            }
+        }
+        else
+        {
+            dialogueText.color = COLOR_FANTASY;
         }
 
         dialogueText.text = sentenceToDisplay;

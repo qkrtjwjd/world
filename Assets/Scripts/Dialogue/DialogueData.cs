@@ -21,6 +21,11 @@ public class DialogueLine
 
     [Tooltip("이 대사를 칠 때의 표정/얼굴 이미지")]
     public Sprite portrait;
+
+    [Header("현실 대사 (비워두면 환상 대사 그대로 출력)")]
+    [TextArea(3, 10)] public string sentence_reality_ko;
+    [TextArea(3, 10)] public string sentence_reality_en;
+    [TextArea(3, 10)] public string sentence_reality_jp;
 }
 
 [CreateAssetMenu(fileName = "New Dialogue", menuName = "Dialogue/Conversation")]

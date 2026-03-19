@@ -28,12 +28,6 @@ public class DaggerSystem : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
-    void Update()
-    {
-        if (Input.GetKeyDown(toggleKey))
-            Toggle();
-    }
-
     public void Toggle()
     {
         _isDaggerEquipped = !_isDaggerEquipped;
