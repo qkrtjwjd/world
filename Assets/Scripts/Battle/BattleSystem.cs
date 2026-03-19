@@ -504,9 +504,21 @@ public class BattleSystem : MonoBehaviour
         // 적 트리거 리셋
         EncounterManager.Instance?.OnBattleEnded();
 
-        // timeScale 복구 → 프리팹 인스턴스 파괴
+        // timeScale 복구
         Time.timeScale = 1f;
-        Destroy(gameObject.transform.root.gameObject);
+
+        // 현실씬(DarkReality) 위 오버레이로 실행된 턴제 → 환상 맵으로 이동
+        string origin = GameState.returnSceneName;
+        if (SceneNames.IsRealityScene(origin))
+        {
+            Destroy(gameObject.transform.root.gameObject);
+            UnityEngine.SceneManagement.SceneManager.LoadScene(
+                SceneNames.GetFantasyScene(origin));
+        }
+        else
+        {
+            Destroy(gameObject.transform.root.gameObject);
+        }
     }
 
     // ════════════════════════════════════════

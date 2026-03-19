@@ -64,7 +64,7 @@ public class DaggerFilterController : MonoBehaviour
 
     void CacheFilterObjects()
     {
-        _filterObjects = FindObjectsOfType<RealityFilterObject>();
+        _filterObjects = FindObjectsByType<RealityFilterObject>(FindObjectsSortMode.None);
     }
 
     void Update()
