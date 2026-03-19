@@ -84,12 +84,12 @@ public static class GameState
     // ──────────────────────────────────────────
     //  처치된 적 ID
     // ──────────────────────────────────────────
-    public static List<string> defeatedEnemyIDs = new List<string>();
+    public static HashSet<string> defeatedEnemyIDs = new HashSet<string>();
 
     public static void RegisterDefeatedEnemy(string id)
     {
-        if (!string.IsNullOrEmpty(id) && !defeatedEnemyIDs.Contains(id))
-            defeatedEnemyIDs.Add(id);
+        if (!string.IsNullOrEmpty(id))
+            defeatedEnemyIDs.Add(id); // HashSet은 중복 자동 무시
     }
 
     // ──────────────────────────────────────────
@@ -141,4 +141,28 @@ public static class GameState
     // SceneNames 위임
     public static string GetFantasyScene(string scene) => SceneNames.GetFantasyScene(scene);
     public static bool   IsRealityScene(string scene)  => SceneNames.IsRealityScene(scene);
+
+    // ──────────────────────────────────────────
+    //  플레이 시작 시 정적 변수 초기화
+    //  (Unity 에디터에서 정적 변수는 플레이 세션 사이에 유지되므로 명시적으로 리셋)
+    // ──────────────────────────────────────────
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void ResetOnPlay()
+    {
+        battleReturn             = BattleReturnState.Default;
+        lastPosition             = Vector3.zero;
+        hasPositionSaved         = false;
+        pendingSwitchToHackSlash = false;
+        pendingEnemyPrefab       = null;
+        // returnSceneName은 battleReturn = Default 에서 이미 SceneNames.Map 으로 설정됨
+        defeatedEnemyIDs         = new HashSet<string>();
+    }
+
+    // ──────────────────────────────────────────
+    //  전투 모드 강제 전환
+    // ──────────────────────────────────────────
+    /// <summary>씬 복귀 후 핵앤슬래시를 자동 시작해야 하는지 여부.</summary>
+    public static bool pendingSwitchToHackSlash = false;
+    /// <summary>모드 전환 시 넘겨줄 적 프리팹 (에셋 참조이므로 씬 로드에서 유지됨).</summary>
+    public static GameObject pendingEnemyPrefab = null;
 }

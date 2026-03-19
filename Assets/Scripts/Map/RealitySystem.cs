@@ -19,6 +19,9 @@ public class RealitySystem : MonoBehaviour
 
     public static RealitySystem Instance;
 
+    /// <summary>현재 현실 침투 게이지 값 (0 ~ maxTime).</summary>
+    public float CurrentReality => _currentReality;
+
     [Header("씬 전체 설정")]
     public bool sceneDefaultActive = false;
 

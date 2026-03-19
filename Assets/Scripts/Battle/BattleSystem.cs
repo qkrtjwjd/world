@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using System.Text;
 
 public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST }
 
+// Awake()가 EventSystem.OnEnable()보다 반드시 먼저 실행되어야 중복 경고를 막을 수 있음
+[DefaultExecutionOrder(-32000)]
 public class BattleSystem : MonoBehaviour
 {
-    public BattleState state;
+    public BattleState State { get; private set; }
 
     [Header("유닛 및 위치")]
     public GameObject playerPrefab;
@@ -28,6 +31,7 @@ public class BattleSystem : MonoBehaviour
     public float fatigueGauge         = 0f;
     public float maxGauge             = 100f;
     public float playerDamageMultiplier = 0.1f;
+    public float enemyDamageMultiplier  = 0.1f;
 
     [Header("UI")]
     public Text dialogueText;
@@ -51,21 +55,40 @@ public class BattleSystem : MonoBehaviour
     private int              _currentUnitIndex   = 0;
     private List<GameObject> _spawnedItemButtons = new List<GameObject>();
 
-    // 자주 쓰는 WaitForSeconds 캐싱
-    private WaitForSeconds _wait1s;
-    private WaitForSeconds _wait1_5s;
-    private WaitForSeconds _wait2s;
+    // timeScale = 0 에서도 동작하도록 Realtime 버전 사용
+    private WaitForSecondsRealtime _wait1s;
+    private WaitForSecondsRealtime _wait1_5s;
+    private WaitForSecondsRealtime _wait2s;
+    private WaitForSecondsRealtime _wait3s;
+
+    [Header("모드 전환 설정")]
+    [Tooltip("판타지 현실 침투 게이지가 이 값 이상이면 핵앤슬래시로 전환 (RealitySystem.maxTime 기준)")]
+    public float realityGaugeSwitchThreshold = 7f;
+
+    [Header("부가 UI 컴포넌트")]
+    [Tooltip("플레이어 HP 바 애니메이션 (SmoothHPBar)")]
+    public SmoothHPBar    playerHPBar;
+    [Tooltip("동료 UI (BattleCompanionUI)")]
+    public BattleCompanionUI companionUI;
+    [Tooltip("적 글리치 이펙트 (EnemyGlitchEffect)")]
+    public EnemyGlitchEffect enemyGlitch;
+    [Tooltip("퀵슬롯 UI (ItemQuickSlotUI)")]
+    public ItemQuickSlotUI   quickSlotUI;
+
+    // 글리치 연출 중 중복 실행 방지
+    private bool _isSwitching = false;
 
     // ════════════════════════════════════════
     //  초기화
     // ════════════════════════════════════════
     void Start()
     {
-        _wait1s   = new WaitForSeconds(1f);
-        _wait1_5s = new WaitForSeconds(1.5f);
-        _wait2s   = new WaitForSeconds(2f);
+        _wait1s   = new WaitForSecondsRealtime(1f);
+        _wait1_5s = new WaitForSecondsRealtime(1.5f);
+        _wait2s   = new WaitForSecondsRealtime(2f);
+        _wait3s   = new WaitForSecondsRealtime(3f);
 
-        state = BattleState.START;
+        State = BattleState.START;
         StartCoroutine(SetupBattle());
     }
 
@@ -81,7 +104,8 @@ public class BattleSystem : MonoBehaviour
 
         // 적 소환 (EncounterManager 우선, 없으면 인스펙터 프리팹)
         GameObject enemyPrefabToUse =
-            (EncounterManager.Instance != null && EncounterManager.Instance.enemyPrefabToSpawn != null)
+            BattleData.nextEnemyPrefab != null                                                     ? BattleData.nextEnemyPrefab
+            : (EncounterManager.Instance != null && EncounterManager.Instance.enemyPrefabToSpawn != null)
             ? EncounterManager.Instance.enemyPrefabToSpawn
             : enemyPrefab;
 
@@ -89,15 +113,29 @@ public class BattleSystem : MonoBehaviour
 
         BattleData.nextEnemyPrefab = null;
 
+        // HP 바 초기화
+        if (playerUnit != null)
+            playerHPBar?.Init(playerUnit.maxHP, playerUnit.currentHP, playerUnit.unitLevel);
+
+        // 적에 글리치 이펙트 활성화
+        if (_enemyUnit != null && enemyGlitch == null)
+            enemyGlitch = _enemyUnit.GetComponentInChildren<EnemyGlitchEffect>();
+
+        // 퀵슬롯 초기화
+        quickSlotUI?.Refresh();
+
         string eName = _enemyUnit != null ? _enemyUnit.unitName : "적";
         ShowDialogue("battle.wild_enemy_appear", $"야생의 {eName}이(가) 나타났다!", eName);
 
         SetPanelsActive(false, false, false);
         yield return _wait2s;
 
-        state = BattleState.PLAYERTURN;
+        State = BattleState.PLAYERTURN;
         _currentUnitIndex = 0;
         ProcessPartyTurn();
+
+        // 항상 모드 전환 감시 시작 (BattleScene 은 항상 판타지씬 위 오버레이)
+        StartCoroutine(MonitorModeSwitch());
     }
 
     /// <summary>유닛 소환 + 슬라이더 주입 + SetHUD 호출을 한번에 처리.</summary>
@@ -140,7 +178,7 @@ public class BattleSystem : MonoBehaviour
         }
         else
         {
-            state = BattleState.ENEMYTURN;
+            State = BattleState.ENEMYTURN;
             StartCoroutine(EnemyTurn());
         }
     }
@@ -239,7 +277,7 @@ public class BattleSystem : MonoBehaviour
 
     void OnItemSelected(ItemData item)
     {
-        if (state != BattleState.PLAYERTURN) return;
+        if (State != BattleState.PLAYERTURN) return;
         SetPanelsActive(false, false, false);
         InventoryManager.Instance?.RemoveItem(item);
         StartCoroutine(UseItemInBattle(item));
@@ -250,19 +288,19 @@ public class BattleSystem : MonoBehaviour
     // ════════════════════════════════════════
     public void OnActionMenuButton()
     {
-        if (state != BattleState.PLAYERTURN) return;
+        if (State != BattleState.PLAYERTURN) return;
         ShowActionMenu();
     }
 
     public void OnItemMenuButton()
     {
-        if (state != BattleState.PLAYERTURN) return;
+        if (State != BattleState.PLAYERTURN) return;
         ShowItemMenu();
     }
 
     public void OnEscapeButton()
     {
-        if (state != BattleState.PLAYERTURN) return;
+        if (State != BattleState.PLAYERTURN) return;
         StartCoroutine(TryEscape());
     }
 
@@ -291,7 +329,7 @@ public class BattleSystem : MonoBehaviour
     }
 
     bool IsPlayerTurn() =>
-        state == BattleState.PLAYERTURN && _currentUnitIndex < _playerParty.Count;
+        State == BattleState.PLAYERTURN && _currentUnitIndex < _playerParty.Count;
 
     // ════════════════════════════════════════
     //  전투 코루틴
@@ -306,7 +344,7 @@ public class BattleSystem : MonoBehaviour
         {
             ShowDialogue("battle.escape_success", "도망에 성공했다!");
             yield return _wait1s;
-            state = BattleState.WON;
+            State = BattleState.WON;
             EndBattle();
         }
         else
@@ -326,7 +364,7 @@ public class BattleSystem : MonoBehaviour
         dialogueText.text = $"{cur.unitName}의 공격! {dmg}의 데미지를 입혔다.";
         yield return _wait2s;
 
-        if (dead) { state = BattleState.WON; EndBattle(); }
+        if (dead) { State = BattleState.WON; EndBattle(); }
         else NextPartyMember();
     }
 
@@ -349,7 +387,7 @@ public class BattleSystem : MonoBehaviour
         yield return _wait2s;
 
         if (funGauge >= maxGauge || fatigueGauge >= maxGauge)
-        { state = BattleState.WON; EndBattle(); }
+        { State = BattleState.WON; EndBattle(); }
         else NextPartyMember();
     }
 
@@ -398,7 +436,7 @@ public class BattleSystem : MonoBehaviour
 
         yield return _wait2s;
 
-        if (IsPartyDead()) { state = BattleState.LOST; EndBattle(); }
+        if (IsPartyDead()) { State = BattleState.LOST; EndBattle(); }
         else NextPartyMember();
     }
 
@@ -410,18 +448,31 @@ public class BattleSystem : MonoBehaviour
         Unit target = GetRandomAlivePartyMember();
         if (target != null)
         {
-            int  dmg    = _enemyUnit.damage;
+            int  dmg    = Mathf.Max(1, Mathf.RoundToInt(_enemyUnit.damage * enemyDamageMultiplier));
             bool dead   = target.TakeDamage(dmg);
-            int  actual = target.isDefending ? Mathf.RoundToInt(dmg * 0.8f) : dmg;
+
+            // HP 바 부드럽게 감소 (플레이어 전용)
+            if (target == _playerParty[0])
+                playerHPBar?.SetHP(target.currentHP, target.unitLevel);
+
+            // 적 피격 글리치
+            enemyGlitch?.TriggerGlitch();
+
             dialogueText.text =
-                $"{_enemyUnit.unitName}가 {target.unitName}를 공격하여 {actual}의 데미지를 주었다!";
+                $"{_enemyUnit.unitName}가 {target.unitName}를 공격하여 {dmg}의 데미지를 주었다!";
             yield return _wait2s;
         }
 
-        if (IsPartyDead()) { state = BattleState.LOST; EndBattle(); }
+        if (IsPartyDead())
+        {
+            // 동료 죽음 이벤트 확률 발동
+            companionUI?.OnPlayerDied();
+            State = BattleState.LOST;
+            EndBattle();
+        }
         else
         {
-            state = BattleState.PLAYERTURN;
+            State = BattleState.PLAYERTURN;
             _currentUnitIndex = 0;
             ProcessPartyTurn();
         }
@@ -434,7 +485,7 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator EndBattleCoroutine()
     {
-        if (state == BattleState.WON)
+        if (State == BattleState.WON)
         {
             dialogueText.text = "승리했다!";
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
@@ -445,15 +496,132 @@ public class BattleSystem : MonoBehaviour
             ShowDialogue("battle.lose", "패배했다...");
         }
 
-        yield return new WaitForSeconds(3f);
+        yield return _wait3s;
 
-        // 복귀 씬 결정 후 GameState 에 세팅
-        string target = string.IsNullOrEmpty(GameState.returnSceneName)
-            ? SceneNames.DarkReality
-            : GameState.returnSceneName;
+        // 재조우 방지 쿨타임
+        GameState.battleReturn.SetReturning(GameState.returnSceneName, 2.5f);
 
-        GameState.battleReturn.SetReturning(target, 2.5f);
-        SceneManager.LoadScene(target);
+        // 적 트리거 리셋
+        EncounterManager.Instance?.OnBattleEnded();
+
+        // timeScale 복구 → 프리팹 인스턴스 파괴
+        Time.timeScale = 1f;
+        Destroy(gameObject.transform.root.gameObject);
+    }
+
+    // ════════════════════════════════════════
+    //  모드 전환 (판타지 턴제 → 핵앤슬래시)
+    // ════════════════════════════════════════
+
+    IEnumerator MonitorModeSwitch()
+    {
+        while (!_isSwitching)
+        {
+            // 전투가 끝났으면 감시 중단
+            if (State == BattleState.WON || State == BattleState.LOST)
+                yield break;
+
+            bool realityIntruding = RealitySystem.Instance != null
+                && RealitySystem.Instance.CurrentReality >= realityGaugeSwitchThreshold;
+
+            bool daggerEquipped = DaggerSystem.IsEquipped;
+
+            if (realityIntruding || daggerEquipped)
+            {
+                _isSwitching = true;
+                string reason = daggerEquipped ? "단검을 꺼내들었다..." : "현실이 침식해온다...";
+                StartCoroutine(GlitchAndSwitchToHackSlash(reason));
+                yield break;
+            }
+
+            yield return new WaitForSecondsRealtime(0.3f);
+        }
+    }
+
+    IEnumerator GlitchAndSwitchToHackSlash(string triggerMessage)
+    {
+        // 모든 입력 차단
+        SetPanelsActive(false, false, false);
+        ShowDialogue("", triggerMessage);
+
+        yield return new WaitForSecondsRealtime(0.8f);
+
+        // 글리치 연출
+        StartCoroutine(GlitchEffect());
+        yield return new WaitForSecondsRealtime(2.2f);
+
+        // 적 프리팹 저장 → 현실씬에서 핵앤슬래시 자동 시작 예약
+        GameState.pendingSwitchToHackSlash = true;
+        GameState.pendingEnemyPrefab =
+            EncounterManager.Instance != null ? EncounterManager.Instance.enemyPrefabToSpawn : null;
+
+        // 프리팹 파괴 → timeScale 복구 → DarkReality 로드
+        Destroy(gameObject.transform.root.gameObject);
+        Time.timeScale = 1f;
+        SceneManager.LoadScene(SceneNames.DarkReality);
+    }
+
+    IEnumerator GlitchEffect()
+    {
+        // UI 패널들의 원래 위치 저장
+        RectTransform mainRT   = mainMenuPanel   != null ? mainMenuPanel.GetComponent<RectTransform>()   : null;
+        RectTransform actionRT = actionMenuPanel != null ? actionMenuPanel.GetComponent<RectTransform>() : null;
+        RectTransform itemRT   = itemMenuPanel   != null ? itemMenuPanel.GetComponent<RectTransform>()   : null;
+
+        Vector2 mainOrigin   = mainRT   != null ? mainRT.anchoredPosition   : Vector2.zero;
+        Vector2 actionOrigin = actionRT != null ? actionRT.anchoredPosition : Vector2.zero;
+        Vector2 itemOrigin   = itemRT   != null ? itemRT.anchoredPosition   : Vector2.zero;
+
+        // 패널 모두 켜서 박살내는 연출
+        if (mainMenuPanel   != null) mainMenuPanel.SetActive(true);
+        if (actionMenuPanel != null) actionMenuPanel.SetActive(true);
+
+        string glitchChars = "!@#$%^&*<>?/|\\█▓▒░";
+        float elapsed = 0f;
+        float duration = 2f;
+
+        while (elapsed < duration)
+        {
+            float progress = elapsed / duration;
+            float shakeStrength = Mathf.Lerp(10f, 60f, progress);
+
+            // 패널 흔들기
+            if (mainRT != null)
+                mainRT.anchoredPosition = mainOrigin + Random.insideUnitCircle * shakeStrength;
+            if (actionRT != null)
+                actionRT.anchoredPosition = actionOrigin + Random.insideUnitCircle * shakeStrength;
+            if (itemRT != null)
+                itemRT.anchoredPosition = itemOrigin + Random.insideUnitCircle * shakeStrength;
+
+            // 다이얼로그 텍스트 글리치
+            if (dialogueText != null && Random.value > 0.4f)
+            {
+                int len = Random.Range(5, 20);
+                StringBuilder sb = new StringBuilder(len);
+                for (int i = 0; i < len; i++)
+                    sb.Append(glitchChars[Random.Range(0, glitchChars.Length)]);
+                dialogueText.text = sb.ToString();
+
+                // 텍스트 색상 난폭하게 변경
+                dialogueText.color = new Color(
+                    Random.Range(0.5f, 1f),
+                    Random.Range(0f, 0.3f),
+                    Random.Range(0f, 0.3f));
+            }
+
+            // HP 슬라이더 값 무작위 흔들기
+            if (playerHPSlider   != null) playerHPSlider.value   += Random.Range(-5f, 5f);
+            if (enemyHPSlider    != null) enemyHPSlider.value    += Random.Range(-5f, 5f);
+            if (companionHPSlider != null) companionHPSlider.value += Random.Range(-5f, 5f);
+
+            elapsed += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        // 원래 위치 복원 (씬 전환 전 정리)
+        if (mainRT   != null) mainRT.anchoredPosition   = mainOrigin;
+        if (actionRT != null) actionRT.anchoredPosition = actionOrigin;
+        if (itemRT   != null) itemRT.anchoredPosition   = itemOrigin;
     }
 
     // ════════════════════════════════════════

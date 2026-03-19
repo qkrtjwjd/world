@@ -4,6 +4,11 @@ using UnityEngine.SceneManagement;
 
 public class DarkRealitySystem : MonoBehaviour
 {
+    public static DarkRealitySystem Instance { get; private set; }
+
+    /// <summary>현재 현실 게이지 값 (0 ~ maxTime).</summary>
+    public float CurrentReality => _currentReality;
+
     [Header("기본 설정")]
     public string nextSceneName = SceneNames.Map;   // ← 상수 기본값
     public float  maxTime       = 60f;
@@ -20,6 +25,12 @@ public class DarkRealitySystem : MonoBehaviour
     private float _currentReality;
     private bool  _isTransitioning = false;
     private float _timeSinceStart  = 0f;
+
+    void Awake()
+    {
+        if (Instance == null) Instance = this;
+        else Destroy(gameObject);
+    }
 
     void Start()
     {

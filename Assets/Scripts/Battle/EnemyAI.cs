@@ -37,6 +37,12 @@ public class EnemyAI : MonoBehaviour
     [Tooltip("연결된 SpriteRenderer (방향 전환 등)")]
     public SpriteRenderer spriteRenderer;
 
+    [Header("도주")]
+    [Tooltip("도주 속도 (단위/초)")]
+    public float fleeSpeed = 4f;
+    [Tooltip("도주 시작 후 이 시간(초)이 지나면 씬에서 사라짐")]
+    public float fleeDuration = 3f;
+
     // ─────────────────────────────────────────────
     //  내부 상태
     // ─────────────────────────────────────────────
@@ -45,6 +51,7 @@ public class EnemyAI : MonoBehaviour
     private bool         _isChasing    = true;
     private bool         _isKnockedBack = false;
     private float        _attackTimer  = 0f;
+    private bool         _isFleeing    = false;
 
     // ─────────────────────────────────────────────
     //  Unity
@@ -67,7 +74,7 @@ public class EnemyAI : MonoBehaviour
 
     void Update()
     {
-        if (!_isChasing || _player == null) return;
+        if (_isFleeing || !_isChasing || _player == null) return;
 
         _attackTimer = Mathf.Max(0f, _attackTimer - Time.deltaTime);
 
@@ -82,6 +89,20 @@ public class EnemyAI : MonoBehaviour
 
     void FixedUpdate()
     {
+        if (_isFleeing)
+        {
+            // 도주: 플레이어 반대 방향으로 질주
+            if (_player != null)
+            {
+                Vector2 dir = ((Vector2)transform.position - (Vector2)_player.position).normalized;
+                _rb.linearVelocity = dir * fleeSpeed;
+
+                if (spriteRenderer != null)
+                    spriteRenderer.flipX = dir.x > 0f; // 도망치는 방향이므로 반전 기준 반대
+            }
+            return;
+        }
+
         if (!_isChasing || _isKnockedBack || _player == null)
         {
             if (!_isChasing || _isKnockedBack)
@@ -158,7 +179,39 @@ public class EnemyAI : MonoBehaviour
     public void SetChase(bool active)
     {
         _isChasing = active;
-        if (!active) _rb.linearVelocity = Vector2.zero;
+        if (!active && !_isFleeing) _rb.linearVelocity = Vector2.zero;
+    }
+
+    /// <summary>체력 10% 미만 시 EnemyHealth 에서 호출. 도주를 시작합니다.</summary>
+    public void StartFlee()
+    {
+        if (_isFleeing) return;
+        _isFleeing = true;
+        _isChasing = false;
+        Debug.Log($"[EnemyAI] {gameObject.name} 도주 시작!");
+        StartCoroutine(FleeRoutine());
+    }
+
+    IEnumerator FleeRoutine()
+    {
+        yield return new WaitForSeconds(fleeDuration);
+
+        // EnemyHealth 에 도주 완료 위임 (귀환 감시 + 매니저 통보)
+        EnemyHealth eh = GetComponent<EnemyHealth>();
+        if (eh != null) eh.OnFledComplete();
+        else
+        {
+            HackSlashCombatManager.Instance?.NotifyEnemyFled(gameObject);
+            Destroy(gameObject);
+        }
+    }
+
+    /// <summary>EnemyHealth 에서 귀환 시 호출. 도주 상태를 초기화합니다.</summary>
+    public void ResetFlee()
+    {
+        _isFleeing = false;
+        _isChasing = true;
+        _rb.linearVelocity = Vector2.zero;
     }
 
     // ─────────────────────────────────────────────
