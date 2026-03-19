@@ -33,6 +33,7 @@ public class EnemyHealth : MonoBehaviour
     private Transform     _playerTransform;   // RespawnWatch에서 반복 검색 방지용 캐시
     private SpriteRenderer[] _spriteRenderers; // SetVisible 반복 GetComponents 방지용 캐시
     private Collider2D[]     _colliders;
+    private EnemyAI          _enemyAI;
 
     // ─────────────────────────────────────────────
     //  Unity
@@ -45,6 +46,7 @@ public class EnemyHealth : MonoBehaviour
         // 컴포넌트 캐시
         _spriteRenderers = GetComponentsInChildren<SpriteRenderer>();
         _colliders       = GetComponents<Collider2D>();
+        _enemyAI         = GetComponent<EnemyAI>();
 
         // 플레이어 참조 캐시
         if (PlayerStats.Instance != null)
@@ -102,7 +104,7 @@ public class EnemyHealth : MonoBehaviour
         transform.position = _originalPosition;
         SetVisible(false);
 
-        EnemyAI ai = GetComponent<EnemyAI>();
+        EnemyAI ai = _enemyAI;
         if (ai != null) ai.enabled = false;
 
         StartCoroutine(RespawnWatch());
@@ -137,7 +139,7 @@ public class EnemyHealth : MonoBehaviour
         currentHealth = maxHealth;
         _isFleeing    = false;
 
-        EnemyAI ai = GetComponent<EnemyAI>();
+        EnemyAI ai = _enemyAI;
         if (ai != null)
         {
             ai.enabled = true;

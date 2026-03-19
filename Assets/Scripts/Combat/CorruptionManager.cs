@@ -9,6 +9,8 @@ public class CorruptionManager : MonoBehaviour
     public float currentCorruption = 20f;
     public float maxCorruption     = 100f;
 
+    private bool _isEnding = false;
+
     private void Awake()
     {
         if (instance == null)
@@ -24,7 +26,8 @@ public class CorruptionManager : MonoBehaviour
 
     public void AddCorruption(float amount)
     {
-        currentCorruption += amount;
+        if (_isEnding) return;
+        currentCorruption = Mathf.Clamp(currentCorruption + amount, 0f, maxCorruption);
         Debug.Log($"현재 인형화 수치: {currentCorruption}%");
         CheckEnding();
     }
@@ -32,6 +35,9 @@ public class CorruptionManager : MonoBehaviour
     private void CheckEnding()
     {
         if (currentCorruption >= maxCorruption)
+        {
+            _isEnding = true;
             SceneManager.LoadScene(SceneNames.BadEnding);
+        }
     }
 }

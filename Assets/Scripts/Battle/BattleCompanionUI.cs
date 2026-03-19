@@ -28,6 +28,7 @@ public class BattleCompanionUI : MonoBehaviour
 
     private bool _isDead = false;
     private bool _isMoving = false;
+    private WaitForSecondsRealtime _wait25s;
 
     public static BattleCompanionUI Instance { get; private set; }
 
@@ -44,6 +45,7 @@ public class BattleCompanionUI : MonoBehaviour
 
     void Start()
     {
+        _wait25s = new WaitForSecondsRealtime(2.5f);
         if (dialogueArea != null) dialogueArea.SetActive(false);
         SnapToIdle();
     }
@@ -73,7 +75,7 @@ public class BattleCompanionUI : MonoBehaviour
         if (dialogueArea != null)   dialogueArea.SetActive(true);
         if (companionDialogue != null) companionDialogue.text = "...미안해. 나 여기까지인 것 같아.";
 
-        yield return new WaitForSecondsRealtime(2.5f);
+        yield return _wait25s;
 
         // 페이드 아웃
         if (portraitImage != null)

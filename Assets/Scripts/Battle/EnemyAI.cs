@@ -48,6 +48,7 @@ public class EnemyAI : MonoBehaviour
     // ─────────────────────────────────────────────
     private Transform    _player;
     private Rigidbody2D  _rb;
+    private Rigidbody2D  _playerRb;
     private bool         _isChasing    = true;
     private bool         _isKnockedBack = false;
     private float        _attackTimer  = 0f;
@@ -146,7 +147,7 @@ public class EnemyAI : MonoBehaviour
                 PlayerStats.Instance?.TakeDamage(attackDamage);
 
                 // 플레이어에게 넉백
-                Rigidbody2D playerRb = _player.GetComponent<Rigidbody2D>();
+                Rigidbody2D playerRb = _playerRb;
                 if (playerRb != null)
                 {
                     Vector2 dir = ((Vector2)_player.position - (Vector2)transform.position).normalized;
@@ -222,10 +223,15 @@ public class EnemyAI : MonoBehaviour
         if (PlayerStats.Instance != null)
         {
             _player = PlayerStats.Instance.transform;
-            return;
         }
-        GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p != null) _player = p.transform;
+        else
+        {
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) _player = p.transform;
+        }
+
+        if (_player != null)
+            _playerRb = _player.GetComponent<Rigidbody2D>();
     }
 
     // 에디터에서 공격 범위 시각화

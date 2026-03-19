@@ -25,9 +25,11 @@ public class ItemQuickSlotUI : MonoBehaviour
 
     private List<GameObject> _slots = new List<GameObject>();
     private Coroutine        _showCoroutine;
+    private WaitForSecondsRealtime _waitPopup;
 
     void Start()
     {
+        _waitPopup = new WaitForSecondsRealtime(showDelay);
         if (popupPanel != null) popupPanel.SetActive(false);
         Refresh();
     }
@@ -76,7 +78,7 @@ public class ItemQuickSlotUI : MonoBehaviour
 
     IEnumerator ShowAfterDelay(ItemData item)
     {
-        yield return new WaitForSecondsRealtime(showDelay);
+        yield return _waitPopup;
 
         if (popupItemImage != null) popupItemImage.sprite = item.itemIcon;
         if (popupItemName  != null) popupItemName.text   = item.DisplayName;

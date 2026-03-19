@@ -15,6 +15,7 @@ public class CameraFollow : MonoBehaviour
     private float _camHeight;
     private float _camWidth;
     private Vector3 _currentVelocity = Vector3.zero;
+    private bool _needsSnap = true;
 
     public static CameraFollow Instance;
 
@@ -28,14 +29,17 @@ public class CameraFollow : MonoBehaviour
             Debug.LogError("[CameraFollow] Camera 컴포넌트가 없습니다!");
     }
 
-    void Start()
-    {
-        SnapToTarget();
-    }
-
     void LateUpdate()
     {
         if (target == null) return;
+
+        if (_needsSnap)
+        {
+            _needsSnap = false;
+            SnapToTarget();
+            return;
+        }
+
         transform.position = Vector3.SmoothDamp(
             transform.position, ClampToBounds(target.position + offset),
             ref _currentVelocity, smoothTime);

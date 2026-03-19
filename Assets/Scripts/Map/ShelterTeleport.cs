@@ -9,6 +9,19 @@ public class ShelterTeleport : MonoBehaviour
     public string    shelterSceneName = SceneNames.Shelter;
     public string[]  allowedScenes;
 
+    private Transform _playerTransform;
+
+    void Start()
+    {
+        if (PlayerStats.Instance != null)
+            _playerTransform = PlayerStats.Instance.transform;
+        else
+        {
+            var p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null) _playerTransform = p.transform;
+        }
+    }
+
     void Update()
     {
         if (Input.GetKeyDown(teleportKey))
@@ -22,10 +35,9 @@ public class ShelterTeleport : MonoBehaviour
 
         PlayerPrefs.SetString("LastScene", current);
 
-        GameObject player = GameObject.FindGameObjectWithTag("Player");
-        if (player != null)
+        if (_playerTransform != null)
         {
-            GameState.lastPosition     = player.transform.position;
+            GameState.lastPosition     = _playerTransform.position;
             GameState.hasPositionSaved = true;
             GameState.returnSceneName  = current;
         }
