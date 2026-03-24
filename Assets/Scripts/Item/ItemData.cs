@@ -18,14 +18,6 @@ public class ItemData : ScriptableObject
     [Tooltip("체크하면 고급 아이템 취급을 받습니다. 연속으로 먹이면 급체합니다.")]
     public bool isHighGrade;
 
-    [Header("■ 음식/소모품 설정")]
-    [Tooltip("이 아이템이 섭취 가능한 음식인가요?")]
-    public bool isConsumable = false;
-
-    [Tooltip("기본 포만감 수치 (배고픔 게이지 회복량)")]
-    public float satiety = 0f;
-
-    [Space(10)]
     [Header("■ [현실]에서의 효과")]
     public ItemEffect realityEffect;
 

@@ -115,7 +115,7 @@ public class EncounterManager : MonoBehaviour
         GameState.returnSceneName = SceneManager.GetActiveScene().name;
 
         // 잔류 속도 제거 후 게임 정지
-        foreach (var rb in FindObjectsByType<Rigidbody2D>(FindObjectsSortMode.None))
+        foreach (var rb in FindObjectsByType<Rigidbody2D>(FindObjectsInactive.Exclude))
             rb.linearVelocity = Vector2.zero;
 
         Time.timeScale = 0f;

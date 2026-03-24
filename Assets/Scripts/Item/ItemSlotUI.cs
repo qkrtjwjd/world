@@ -30,7 +30,7 @@ public class ItemSlotUI : MonoBehaviour
     {
         if (_item == null) return;
 
-        MysteriousObject feeder = Object.FindFirstObjectByType<MysteriousObject>();
+        MysteriousObject feeder = Object.FindAnyObjectByType<MysteriousObject>();
         if (feeder == null)
         {
             Debug.LogWarning("[ItemSlotUI] 씬에 MysteriousObject 가 없습니다.");

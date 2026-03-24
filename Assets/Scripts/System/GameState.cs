@@ -13,14 +13,12 @@ public static class GameState
     {
         public float health;
         public float mental;
-        public float hunger;
         public float puppetization;
 
         public static PlayerState Default => new PlayerState
         {
             health        = -1f,
             mental        = -1f,
-            hunger        = -1f,
             puppetization = -1f,
         };
 
@@ -128,10 +126,6 @@ public static class GameState
     public static float playerMental
     {
         get => player.mental;        set => player.mental = value;
-    }
-    public static float playerHunger
-    {
-        get => player.hunger;        set => player.hunger = value;
     }
     public static float playerPuppetization
     {

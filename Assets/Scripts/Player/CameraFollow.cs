@@ -8,6 +8,9 @@ public class CameraFollow : MonoBehaviour
     public float smoothTime = 0.15f;
     public Vector3 offset = new Vector3(0, 0, -10);
 
+    [Header("Snap Settings")]
+    public float snapDistance = 5f;
+
     [Header("Bounds")]
     public BoxCollider2D currentBound;
 
@@ -33,15 +36,19 @@ public class CameraFollow : MonoBehaviour
     {
         if (target == null) return;
 
-        if (_needsSnap)
+        Vector3 targetPos = ClampToBounds(target.position + offset);
+        float dist = Vector3.Distance(transform.position, targetPos);
+
+        if (_needsSnap || dist > snapDistance)
         {
             _needsSnap = false;
-            SnapToTarget();
+            transform.position = targetPos;
+            _currentVelocity = Vector3.zero;
             return;
         }
 
         transform.position = Vector3.SmoothDamp(
-            transform.position, ClampToBounds(target.position + offset),
+            transform.position, targetPos,
             ref _currentVelocity, smoothTime);
     }
 
@@ -49,6 +56,12 @@ public class CameraFollow : MonoBehaviour
     {
         currentBound = newBound;
         if (snap) SnapToTarget();
+    }
+
+    public void SetTarget(Transform newTarget)
+    {
+        target = newTarget;
+        _needsSnap = true;
     }
 
     public void SnapToTarget()

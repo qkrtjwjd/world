@@ -73,13 +73,11 @@ public class SaveManager : MonoBehaviour
         {
             data.health  = GameState.player.health;
             data.mental  = GameState.player.mental;
-            data.hunger  = GameState.player.hunger;
         }
         else
         {
             data.health = 100f;
             data.mental = 100f;
-            data.hunger = 100f;
         }
 
         data.realityGauge = GameState.battleReturn.savedGaugeValue;
@@ -146,7 +144,6 @@ public class SaveManager : MonoBehaviour
         {
             health        = data.health,
             mental        = data.mental,
-            hunger        = data.hunger,
             puppetization = GameState.player.puppetization, // 저장 안 한 항목은 유지
         };
         GameState.battleReturn.savedGaugeValue = data.realityGauge;
@@ -159,7 +156,6 @@ public class SaveManager : MonoBehaviour
             {
                 stats.currentHealth = data.health;
                 stats.currentMental = data.mental;
-                stats.currentHunger = data.hunger;
                 stats.UpdateUI(true);
             }
         }

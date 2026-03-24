@@ -427,10 +427,6 @@ public class BattleSystem : MonoBehaviour
             else                  PlayerStats.Instance.AddTrauma(-mentalChange);
         }
 
-        // 배고픔 처리
-        if (item.satiety > 0 && PlayerStats.Instance != null)
-            PlayerStats.Instance.EatFood(item.satiety);
-
         if (!used)
             dialogueText.text = $"{item.DisplayName}을(를) 사용했지만 별다른 효과가 없었다.";
 

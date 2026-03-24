@@ -12,18 +12,12 @@ public class PlayerStats : MonoBehaviour
     public float allyCurrentHP    = 100f;
     public float maxMental        = 100f;
     public float currentMental;
-    public float maxHunger        = 100f;
-    public float currentHunger;
     public float maxPuppetization = 100f;
     public float currentPuppetization;
-
-    [Header("자연 감소")]
-    public float hungerDecreaseRate = 1.0f;
 
     // 이전 값 캐시 (UI 갱신 최소화)
     private float _lastHealth = -1f;
     private float _lastMental = -1f;
-    private float _lastHunger = -1f;
 
     void Awake()
     {
@@ -37,14 +31,12 @@ public class PlayerStats : MonoBehaviour
         {
             currentHealth        = GameState.player.health;
             currentMental        = GameState.player.mental;
-            currentHunger        = GameState.player.hunger;
             currentPuppetization = GameState.player.puppetization;
         }
         else
         {
             currentHealth        = maxHealth;
             currentMental        = maxMental;
-            currentHunger        = maxHunger;
             currentPuppetization = 0f;
         }
 
@@ -53,9 +45,6 @@ public class PlayerStats : MonoBehaviour
 
     void Update()
     {
-        // 배고픔 자연 감소
-        currentHunger = Mathf.Max(0f, currentHunger - hungerDecreaseRate * Time.deltaTime);
-
         // 멘탈 붕괴 체크
         if (currentMental <= 0 && GameState.mentalBreakdownTimer <= 0)
             TriggerMentalBreakdown();
@@ -77,7 +66,6 @@ public class PlayerStats : MonoBehaviour
         {
             health        = currentHealth,
             mental        = currentMental,
-            hunger        = currentHunger,
             puppetization = currentPuppetization,
         };
 
@@ -115,11 +103,6 @@ public class PlayerStats : MonoBehaviour
             PlayerStatusUI.Instance.UpdateMental(currentMental, maxMental);
             _lastMental = currentMental;
         }
-        if (force || Mathf.Abs(currentHunger - _lastHunger) > 0.01f)
-        {
-            PlayerStatusUI.Instance.UpdateHunger(currentHunger, maxHunger);
-            _lastHunger = currentHunger;
-        }
     }
 
     // ── 스탯 변경 메서드 ──
@@ -127,14 +110,6 @@ public class PlayerStats : MonoBehaviour
     {
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         PlayerStatusUI.Instance?.UpdateHP(currentHealth, maxHealth);
-    }
-
-    public void EatFood(float amount)
-    {
-        currentHunger = Mathf.Min(maxHunger, currentHunger + amount);
-        AddPuppetization(5f);
-        RecoverMental(5f);
-        PlayerStatusUI.Instance?.UpdateHunger(currentHunger, maxHunger);
     }
 
     public void AddTrauma(float amount)

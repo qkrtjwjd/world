@@ -26,7 +26,7 @@ public class RoomTransfer : MonoBehaviour
         EnterRoom();
 
         if (CameraFollow.Instance != null)
-            CameraFollow.Instance.SetBound(roomBound);
+            CameraFollow.Instance.SetBound(roomBound, snap: true);
     }
 
     // ─────────────────────────────────────────────

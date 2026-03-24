@@ -20,6 +20,5 @@ public class SaveData
     // ★ [추가됨] 플레이어 스탯 및 게이지 저장
     public float health;
     public float mental;
-    public float hunger;
     public float realityGauge; // RealitySystem 게이지
 }
