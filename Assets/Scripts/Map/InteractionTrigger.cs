@@ -7,6 +7,8 @@ public class InteractionTrigger : MonoBehaviour
     [Header("설정")]
     public string      message              = "E키를 눌러 상호작용";
     public bool        hideTextAfterFirstView = false;
+    [Tooltip("상호작용 시 소모할 멘탈 (0이면 소모 없음)")]
+    public float       mentalCost           = 0f;
 
     [HideInInspector] public bool hasShownText = false;
 
@@ -19,6 +21,8 @@ public class InteractionTrigger : MonoBehaviour
     {
         if (!_canInteract) return;
         onInteract?.Invoke();
+        if (mentalCost > 0f)
+            PlayerStats.Instance?.AddTrauma(mentalCost);
 
         if (hideTextAfterFirstView)
             InteractionTextUI.Instance?.Hide();

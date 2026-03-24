@@ -14,6 +14,7 @@ public class EnemyEncounterTrigger : MonoBehaviour
         if (EncounterManager.Instance == null) return;
 
         _hasEncountered = true;
+        PlayerStats.Instance?.AddTrauma(10f);
         EncounterManager.Instance.StartEncounter(gameObject);
     }
 

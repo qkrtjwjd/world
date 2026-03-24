@@ -110,6 +110,9 @@ public class PlayerStats : MonoBehaviour
     {
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         PlayerStatusUI.Instance?.UpdateHP(currentHealth, maxHealth);
+
+        if (currentHealth <= maxHealth * 0.3f)
+            AddTrauma(5f);
     }
 
     public void AddTrauma(float amount)

@@ -157,6 +157,26 @@ public class DaggerFilterController : MonoBehaviour
         _fadeCoroutine = null;
     }
 
+    /// <summary>코루틴 간섭 없이 현실 모드 강제 전환 (MentalBreakStage 환각용)</summary>
+    public void SwitchToRealityForced()
+    {
+        if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
+        if (_forcedReturnCoroutine != null) StopCoroutine(_forcedReturnCoroutine);
+        _forcedReturnCoroutine = null;
+        IsReality = true;
+        StartFade(1f);
+        ApplyFilter(true);
+    }
+
+    /// <summary>코루틴 간섭 없이 환상 모드 강제 전환 (MentalBreakStage 환각용)</summary>
+    public void SwitchToFantasyForced()
+    {
+        if (_fadeCoroutine != null) StopCoroutine(_fadeCoroutine);
+        IsReality = false;
+        StartFade(0f);
+        ApplyFilter(false);
+    }
+
     bool IsHighPuppetization()
     {
         if (CorruptionManager.instance == null) return false;
