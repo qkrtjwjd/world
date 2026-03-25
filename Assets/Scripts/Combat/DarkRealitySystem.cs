@@ -25,6 +25,7 @@ public class DarkRealitySystem : MonoBehaviour
     private float _currentReality;
     private bool  _isTransitioning = false;
     private float _timeSinceStart  = 0f;
+    private float _traumaTimer     = 0f;
 
     void Awake()
     {
@@ -59,6 +60,14 @@ public class DarkRealitySystem : MonoBehaviour
         GameState.battleReturn.savedGaugeValue = _currentReality;
 
         if (_isTransitioning) return;
+
+        // 5초마다 트라우마 3 추가
+        _traumaTimer += Time.deltaTime;
+        if (_traumaTimer >= 5f)
+        {
+            _traumaTimer = 0f;
+            PlayerStats.Instance?.AddTrauma(3f);
+        }
 
         _currentReality -= Time.deltaTime * drainSpeed;
         if (realityGauge != null) realityGauge.value = _currentReality;

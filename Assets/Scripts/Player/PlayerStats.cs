@@ -109,6 +109,11 @@ public class PlayerStats : MonoBehaviour
     public void TakeDamage(float amount)
     {
         currentHealth = Mathf.Max(0f, currentHealth - amount);
+
+        // HP 30% 이하 구간이면 추가 트라우마
+        if (currentHealth / maxHealth <= 0.3f)
+            AddTrauma(5f);
+
         PlayerStatusUI.Instance?.UpdateHP(currentHealth, maxHealth);
     }
 

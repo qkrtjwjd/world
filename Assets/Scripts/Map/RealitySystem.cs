@@ -67,7 +67,11 @@ public class RealitySystem : MonoBehaviour
         // 멘탈 붕괴 중이면 게이지 정지
         if (GameState.mentalBreakdownTimer > 0) return;
 
-        _currentReality += Time.deltaTime * fillSpeed;
+        float mentalRatio = (PlayerStats.Instance != null)
+            ? PlayerStats.Instance.currentMental / PlayerStats.Instance.maxMental
+            : 1f;
+        float dynamicFillSpeed = fillSpeed * (1f + (1f - mentalRatio) * 0.5f);
+        _currentReality += Time.deltaTime * dynamicFillSpeed;
         if (realityGauge != null) realityGauge.value = _currentReality;
 
         UpdateOverlay();

@@ -79,6 +79,26 @@ public class DaggerFilterController : MonoBehaviour
             SwitchToFantasy();
     }
 
+    /// <summary>MentalBreakStage에서 호출: 코루틴 간섭 없이 즉시 현실 전환</summary>
+    public void SwitchToRealityForced()
+    {
+        if (_forcedReturnCoroutine != null) { StopCoroutine(_forcedReturnCoroutine); _forcedReturnCoroutine = null; }
+        if (_fadeCoroutine != null)         { StopCoroutine(_fadeCoroutine);         _fadeCoroutine = null; }
+        IsReality = true;
+        if (realityOverlay != null) realityOverlay.alpha = 1f;
+        ApplyFilter(true);
+    }
+
+    /// <summary>MentalBreakStage에서 호출: 코루틴 간섭 없이 즉시 환상 복귀</summary>
+    public void SwitchToFantasyForced()
+    {
+        if (_forcedReturnCoroutine != null) { StopCoroutine(_forcedReturnCoroutine); _forcedReturnCoroutine = null; }
+        if (_fadeCoroutine != null)         { StopCoroutine(_fadeCoroutine);         _fadeCoroutine = null; }
+        IsReality = false;
+        if (realityOverlay != null) realityOverlay.alpha = 0f;
+        ApplyFilter(false);
+    }
+
     void SwitchToReality()
     {
         if (IsReality) return;

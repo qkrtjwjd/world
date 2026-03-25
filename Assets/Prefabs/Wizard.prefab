@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 8985718321403749677}
   - component: {fileID: 372680126210068970}
   - component: {fileID: 7881397838177194964}
+  - component: {fileID: 6197859170624736353}
   m_Layer: 0
   m_Name: Wizard
   m_TagString: Player
@@ -130,11 +131,8 @@ MonoBehaviour:
   allyCurrentHP: 100
   maxMental: 100
   currentMental: 0
-  maxHunger: 100
-  currentHunger: 0
   maxPuppetization: 100
   currentPuppetization: 0
-  hungerDecreaseRate: 1
 --- !u!114 &8985718321403749677
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -233,6 +231,18 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
+--- !u!114 &6197859170624736353
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2978924516392596811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b53b23e1a49d8dd458dfd335ef6a31d4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MentalBreakStage
 --- !u!1001 &7806009250454000519
 PrefabInstance:
   m_ObjectHideFlags: 0
