@@ -42,6 +42,9 @@ public class ShelterTeleport : MonoBehaviour
             GameState.returnSceneName  = current;
         }
 
-        SceneManager.LoadScene(shelterSceneName);
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(shelterSceneName);
+        else
+            SceneManager.LoadScene(shelterSceneName);
     }
 }

@@ -7,6 +7,11 @@ public class TeleportInteraction : MonoBehaviour
     [Tooltip("플레이어가 이동할 목적지 위치")]
     public Transform targetLocation;
 
+    void Awake()
+    {
+        GetComponent<InteractionTrigger>().onInteract.AddListener(Teleport);
+    }
+
     public void Teleport()
     {
         if (targetLocation == null)
@@ -22,19 +27,26 @@ public class TeleportInteraction : MonoBehaviour
             return;
         }
 
-        // 이동 + 물리 동기화
-        player.position = targetLocation.position;
-        Physics2D.SyncTransforms();
-
-        // 카메라 + 방 덮개 갱신
+        // 페이드 전환 후 이동
+        Transform playerRef = player;
+        Transform dest = targetLocation;
         RoomTransfer room = targetLocation.GetComponentInParent<RoomTransfer>();
-        if (room != null)
-        {
-            room.EnterRoom();
-            CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
-        }
 
-        InteractionManager.Instance?.SetCooldown(1.0f);
+        TransitionManager.Instance?.DoTransition(() =>
+        {
+            playerRef.position = dest.position;
+            if (room != null)
+            {
+                room.EnterRoom();
+                CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
+            }
+            else
+            {
+                CameraFollow.Instance?.SetBound(null, snap: true);
+            }
+        });
+
+        InteractionManager.Instance?.SetCooldown(1.5f);
     }
 
     // ─────────────────────────────────────────────

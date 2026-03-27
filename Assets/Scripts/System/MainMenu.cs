@@ -5,7 +5,7 @@ public class MainMenu : MonoBehaviour
 {
     public void OnClickStart()
     {
-        SceneManager.LoadScene(SceneNames.Home);
+        SceneManager.LoadScene(SceneNames.Intro);
     }
 
     public void OnClickLoad()

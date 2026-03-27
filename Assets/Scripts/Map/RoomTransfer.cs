@@ -17,16 +17,16 @@ public class RoomTransfer : MonoBehaviour
     public static RoomTransfer CurrentRoom { get; private set; }
 
     // ─────────────────────────────────────────────
-    //  트리거
+    //  트리거 (방을 나갈 때 카메라 바운드 해제)
     // ─────────────────────────────────────────────
-    private void OnTriggerEnter2D(Collider2D other)
+    private void OnTriggerExit2D(Collider2D other)
     {
         if (!other.CompareTag("Player") || other.isTrigger) return;
-
-        EnterRoom();
-
-        if (CameraFollow.Instance != null)
-            CameraFollow.Instance.SetBound(roomBound, snap: true);
+        if (CurrentRoom == this)
+        {
+            ExitRoom();
+            CameraFollow.Instance?.SetBound(null, snap: false);
+        }
     }
 
     // ─────────────────────────────────────────────

@@ -5,6 +5,7 @@
 public static class SceneNames
 {
     public const string Title       = "TitleScene";
+    public const string Intro       = "IntroScene";
     public const string Home        = "Home";
     public const string Map         = "MapScene";
     public const string DarkReality = "DarkReality";

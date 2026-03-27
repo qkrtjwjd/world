@@ -25,18 +25,21 @@ public class Teleport : MonoBehaviour
         if (InteractionManager.Instance != null && InteractionManager.Instance.IsCoolingDown)
             return;
 
-        // 이동
-        other.transform.position = targetDestination.position;
-        Physics2D.SyncTransforms();
-
-        // 카메라 바운드 갱신
+        // 페이드 전환 후 이동
+        Transform playerTransform = other.transform;
+        Transform dest = targetDestination;
         RoomTransfer room = targetDestination.GetComponent<RoomTransfer>();
-        if (room != null)
-        {
-            room.EnterRoom();
-            CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
-        }
 
-        InteractionManager.Instance?.SetCooldown(1.0f);
+        TransitionManager.Instance?.DoTransition(() =>
+        {
+            playerTransform.position = dest.position;
+            if (room != null)
+            {
+                room.EnterRoom();
+                CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
+            }
+        });
+
+        InteractionManager.Instance?.SetCooldown(1.5f);
     }
 }

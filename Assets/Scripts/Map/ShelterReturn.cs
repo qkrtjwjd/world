@@ -20,7 +20,10 @@ public class ShelterReturn : MonoBehaviour
             ? GameState.returnSceneName
             : PlayerPrefs.GetString("LastScene", SceneNames.Map);
 
-        SceneManager.LoadScene(target);
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(target);
+        else
+            SceneManager.LoadScene(target);
     }
 
     private void OnTriggerEnter2D(Collider2D other)
