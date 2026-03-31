@@ -133,6 +133,7 @@ public class InteractionManager : MonoBehaviour
     // ─────────────────────────────────────────────
     public void SetCooldown(float time) => _cooldown = time;
     public bool IsCoolingDown           => _cooldown > 0f;
+    public bool HasActiveTarget         => _active != null;
 
     void TryFindPlayer()
     {

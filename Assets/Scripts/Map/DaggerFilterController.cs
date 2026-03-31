@@ -29,6 +29,7 @@ public class DaggerFilterController : MonoBehaviour
     private RealityFilterObject[] _filterObjects = new RealityFilterObject[0];
     private Coroutine _fadeCoroutine;
     private Coroutine _forcedReturnCoroutine;
+    private bool _hintGlitchActive = false;
 
     void Awake()
     {
@@ -77,6 +78,25 @@ public class DaggerFilterController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.F))
             SwitchToFantasy();
+
+        UpdateHintGlitch();
+    }
+
+    void UpdateHintGlitch()
+    {
+        bool shouldHint = IsReality &&
+                          InteractionManager.Instance != null &&
+                          InteractionManager.Instance.HasActiveTarget;
+
+        if (shouldHint == _hintGlitchActive) return;
+        _hintGlitchActive = shouldHint;
+
+        if (GlitchManager.Instance == null) return;
+
+        if (shouldHint)
+            GlitchManager.Instance.SetGlitchLoop(true, GlitchManager.PresetSubtle);
+        else
+            GlitchManager.Instance.SetGlitchLoop(false);
     }
 
     /// <summary>MentalBreakStage에서 호출: 코루틴 간섭 없이 즉시 현실 전환</summary>

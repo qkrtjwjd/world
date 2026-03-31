@@ -26,6 +26,9 @@ public class DialogueLine
     [TextArea(3, 10)] public string sentence_reality_ko;
     [TextArea(3, 10)] public string sentence_reality_en;
     [TextArea(3, 10)] public string sentence_reality_jp;
+
+    [Header("속마음 여부 (체크 시 이탤릭 + 별도 색상으로 표시)")]
+    public bool isInnerMonologue;
 }
 
 [CreateAssetMenu(fileName = "New Dialogue", menuName = "Dialogue/Conversation")]

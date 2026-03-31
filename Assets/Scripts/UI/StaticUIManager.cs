@@ -26,12 +26,6 @@ public class StaticUIManager : MonoBehaviour
         UpdateHealthBars();
     }
 
-    void Update()
-    {
-        // 실시간 업데이트 (패널이 켜져 있을 때 매 프레임 혹은 이벤트 기반 갱신)
-        UpdateHealthBars();
-    }
-
     public void UpdateHealthBars()
     {
         if (PlayerStats.Instance != null)

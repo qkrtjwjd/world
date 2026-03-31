@@ -30,6 +30,14 @@ public class CameraFollow : MonoBehaviour
         _cam = GetComponent<Camera>();
         if (_cam == null)
             Debug.LogError("[CameraFollow] Camera 컴포넌트가 없습니다!");
+        else
+            CacheCamDimensions();
+    }
+
+    void CacheCamDimensions()
+    {
+        _camHeight = _cam.orthographicSize;
+        _camWidth  = _cam.orthographicSize * _cam.aspect;
     }
 
     void LateUpdate()
@@ -55,6 +63,7 @@ public class CameraFollow : MonoBehaviour
     public void SetBound(BoxCollider2D newBound, bool snap = false)
     {
         currentBound = newBound;
+        if (_cam != null) CacheCamDimensions();
         if (snap) SnapToTarget();
     }
 
@@ -75,9 +84,6 @@ public class CameraFollow : MonoBehaviour
     Vector3 ClampToBounds(Vector3 targetPos)
     {
         if (currentBound == null || _cam == null) return targetPos;
-
-        _camHeight = _cam.orthographicSize;
-        _camWidth  = _cam.orthographicSize * _cam.aspect;
 
         Bounds bounds = currentBound.bounds;
         float minX = bounds.min.x + _camWidth;

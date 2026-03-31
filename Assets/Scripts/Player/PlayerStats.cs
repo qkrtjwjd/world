@@ -19,6 +19,8 @@ public class PlayerStats : MonoBehaviour
     private float _lastHealth = -1f;
     private float _lastMental = -1f;
 
+    private bool _gameStateDirty = false;
+
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -53,6 +55,7 @@ public class PlayerStats : MonoBehaviour
         if (GameState.mentalBreakdownTimer > 0)
         {
             GameState.mentalBreakdownTimer -= Time.deltaTime;
+            _gameStateDirty = true;
             if (GameState.mentalBreakdownTimer <= 0)
             {
                 GameState.mentalBreakdownTimer = 0;
@@ -61,13 +64,17 @@ public class PlayerStats : MonoBehaviour
             }
         }
 
-        // GameState 에 실시간 동기화 (struct 이므로 한번에 할당)
-        GameState.player = new GameState.PlayerState
+        // GameState 에 변경된 경우에만 동기화
+        if (_gameStateDirty)
         {
-            health        = currentHealth,
-            mental        = currentMental,
-            puppetization = currentPuppetization,
-        };
+            GameState.player = new GameState.PlayerState
+            {
+                health        = currentHealth,
+                mental        = currentMental,
+                puppetization = currentPuppetization,
+            };
+            _gameStateDirty = false;
+        }
 
         UpdateUI(false);
     }
@@ -109,17 +116,20 @@ public class PlayerStats : MonoBehaviour
     public void TakeDamage(float amount)
     {
         currentHealth = Mathf.Max(0f, currentHealth - amount);
+        _gameStateDirty = true;
 
         // HP 30% 이하 구간이면 추가 트라우마
         if (currentHealth / maxHealth <= 0.3f)
             AddTrauma(5f);
 
         PlayerStatusUI.Instance?.UpdateHP(currentHealth, maxHealth);
+        StaticUIManager.Instance?.UpdateHealthBars();
     }
 
     public void AddTrauma(float amount)
     {
         currentMental = Mathf.Max(0f, currentMental - amount);
+        _gameStateDirty = true;
         ReducePuppetization(amount * 0.5f);
         PlayerStatusUI.Instance?.UpdateMental(currentMental, maxMental);
     }
@@ -127,16 +137,19 @@ public class PlayerStats : MonoBehaviour
     public void RecoverMental(float amount)
     {
         currentMental = Mathf.Min(maxMental, currentMental + amount);
+        _gameStateDirty = true;
         PlayerStatusUI.Instance?.UpdateMental(currentMental, maxMental);
     }
 
     public void AddPuppetization(float amount)
     {
         currentPuppetization = Mathf.Min(maxPuppetization, currentPuppetization + amount);
+        _gameStateDirty = true;
     }
 
     public void ReducePuppetization(float amount)
     {
         currentPuppetization = Mathf.Max(0f, currentPuppetization - amount);
+        _gameStateDirty = true;
     }
 }

@@ -72,6 +72,16 @@ public static class GameState
     public static BattleReturnState battleReturn = BattleReturnState.Default;
 
     // ──────────────────────────────────────────
+    //  스토리 진행 플래그
+    // ──────────────────────────────────────────
+    /// <summary>S#2~S#4 야간 시퀀스(튜토리얼) 시청 여부. 한 번만 발동.</summary>
+    public static bool hasWatchedNightSequence = false;
+    /// <summary>S#8 아버지 메시지 이후 루의 결심 여부. true 이면 현관문이 열린다.</summary>
+    public static bool hasResolve = false;
+    /// <summary>S#5 아침 식사 컷씬 시청 여부. 한 번만 발동.</summary>
+    public static bool hasWatchedBreakfast = false;
+
+    // ──────────────────────────────────────────
     //  위치 / 멘탈 붕괴 / 기타
     // ──────────────────────────────────────────
     public static Vector3 lastPosition      = Vector3.zero;
@@ -148,6 +158,9 @@ public static class GameState
         hasPositionSaved         = false;
         pendingSwitchToHackSlash = false;
         pendingEnemyPrefab       = null;
+        hasWatchedNightSequence  = false;
+        hasResolve               = false;
+        hasWatchedBreakfast      = false;
         // returnSceneName은 battleReturn = Default 에서 이미 SceneNames.Map 으로 설정됨
         defeatedEnemyIDs         = new HashSet<string>();
     }

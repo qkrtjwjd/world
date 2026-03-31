@@ -59,6 +59,26 @@ public class InventoryManager : MonoBehaviour
         return true;
     }
 
+    /// <summary>여러 아이템을 한 번에 추가. UI는 마지막에 한 번만 갱신.</summary>
+    /// <returns>실제로 추가된 아이템 수</returns>
+    public int AddItems(List<ItemData> items)
+    {
+        int added = 0;
+        foreach (var item in items)
+        {
+            if (item == null) continue;
+            if (inventoryItems.Count >= _slots.Count)
+            {
+                Debug.Log("[InventoryManager] 인벤토리가 가득 찼습니다.");
+                break;
+            }
+            inventoryItems.Add(item);
+            added++;
+        }
+        if (added > 0) UpdateSlotUI();
+        return added;
+    }
+
     public void RemoveItem(ItemData item)
     {
         if (item == null || !inventoryItems.Contains(item)) return;

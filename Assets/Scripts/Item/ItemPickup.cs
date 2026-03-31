@@ -1,10 +1,20 @@
+using System.Collections.Generic;
 using UnityEngine;
+
+[System.Serializable]
+public struct ExtraItemEntry
+{
+    public ItemData item;
+    [Min(1)] public int quantity;
+}
 
 [RequireComponent(typeof(InteractionTrigger))]
 public class ItemPickup : MonoBehaviour
 {
     [Header("획득할 아이템")]
     public ItemData itemData;
+    [Min(1)] public int quantity = 1;                                    // itemData 수량
+    public List<ExtraItemEntry> extraItems = new List<ExtraItemEntry>(); // 다른 종류 추가 아이템
 
     private InteractionTrigger _trigger;
 
@@ -21,38 +31,61 @@ public class ItemPickup : MonoBehaviour
 
     string BuildPickupMessage()
     {
+        string name = itemData != null ? itemData.DisplayName : "";
+        string baseMsg;
         if (LocalizationManager.Instance == null)
-            return $"{itemData.DisplayName} 획득하기";
+        {
+            baseMsg = $"{name} 획득하기";
+        }
+        else
+        {
+            string format = LocalizationManager.Instance.GetText("interaction.pickup");
+            baseMsg = format.Contains("{0}")
+                ? string.Format(format, name)
+                : $"{format} {name}";
+        }
 
-        string format = LocalizationManager.Instance.GetText("interaction.pickup");
-        return format.Contains("{0}")
-            ? string.Format(format, itemData.DisplayName)
-            : $"{format} {itemData.DisplayName}";
+        int extraTotal = 0;
+        foreach (var e in extraItems) extraTotal += e.quantity;
+        int total = (itemData != null ? quantity : 0) + extraTotal;
+        if (total > 1) baseMsg += $" x{total}";
+        return baseMsg;
     }
 
     public void OnPickUp()
     {
-        if (itemData == null)
-        {
-            Debug.LogWarning($"[ItemPickup] '{gameObject.name}' 에 ItemData 가 없습니다.");
-            return;
-        }
-
         if (InventoryManager.Instance == null)
         {
             Debug.LogError("[ItemPickup] InventoryManager 를 찾을 수 없습니다.");
             return;
         }
 
-        bool added = InventoryManager.Instance.AddItem(itemData);
-        if (added)
+        // 획득할 아이템 목록 구성
+        var toAdd = new List<ItemData>();
+
+        if (itemData != null)
+            for (int i = 0; i < quantity; i++)
+                toAdd.Add(itemData);
+
+        foreach (var entry in extraItems)
+            if (entry.item != null)
+                for (int i = 0; i < entry.quantity; i++)
+                    toAdd.Add(entry.item);
+
+        if (toAdd.Count == 0)
+        {
+            Debug.LogWarning($"[ItemPickup] '{gameObject.name}' 에 ItemData 가 없습니다.");
+            return;
+        }
+
+        int added = InventoryManager.Instance.AddItems(toAdd);
+        if (added > 0)
         {
             InteractionTextUI.Instance?.Hide();
             Destroy(gameObject);
         }
         else
         {
-            // 인벤토리가 꽉 참 — 메시지 표시
             string msg = LocalizationManager.Instance != null
                 ? LocalizationManager.Instance.GetText("messages.inventory_full")
                 : "인벤토리가 가득 찼습니다!";

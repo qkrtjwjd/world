@@ -11,6 +11,10 @@ public class DialogueManager : MonoBehaviour
     private static readonly Color COLOR_REALITY = new Color(0.75f, 0.85f, 0.9f);    // 차가운 청백색
     private static readonly Color COLOR_FANTASY = new Color(0.196f, 0.196f, 0.196f); // 기존 환상 대사 색상
 
+    [Header("속마음 스타일")]
+    public Color innerMonologueColor = new Color(0.4f, 0.4f, 0.58f); // 어두운 청보라
+    public bool  innerMonologueItalic = true;
+
     [Header("UI 연결")]
     public GameObject dialoguePanel; // 대화창 전체 패널
     public Image portraitImage;      // 캐릭터 얼굴 이미지
@@ -81,7 +85,7 @@ public class DialogueManager : MonoBehaviour
             }
         }
 
-        // 현실 상태이면 현실 대사 우선 출력
+        // 현실 상태이면 현실 대사 우선 출력 (속마음보다 우선)
         bool isReality = DaggerFilterController.Instance != null && DaggerFilterController.Instance.IsReality;
         if (isReality)
         {
@@ -111,10 +115,22 @@ public class DialogueManager : MonoBehaviour
             {
                 dialogueText.color = COLOR_FANTASY;
             }
+            dialogueText.fontStyle = FontStyle.Normal;
+            nameText.fontStyle     = FontStyle.Normal;
+        }
+        else if (currentLine.isInnerMonologue)
+        {
+            // 속마음: 별도 색상 + 이탤릭
+            dialogueText.color     = innerMonologueColor;
+            FontStyle style        = innerMonologueItalic ? FontStyle.Italic : FontStyle.Normal;
+            dialogueText.fontStyle = style;
+            nameText.fontStyle     = style;
         }
         else
         {
-            dialogueText.color = COLOR_FANTASY;
+            dialogueText.color     = COLOR_FANTASY;
+            dialogueText.fontStyle = FontStyle.Normal;
+            nameText.fontStyle     = FontStyle.Normal;
         }
 
         dialogueText.text = sentenceToDisplay;

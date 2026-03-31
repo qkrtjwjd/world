@@ -77,17 +77,17 @@ public class MentalBreakStage : MonoBehaviour
                 break;
 
             case MentalStage.Anxiety:
-                GlitchManager.Instance?.SetGlitchLoop(true, 0.15f);
+                GlitchManager.Instance?.SetGlitchLoop(true, GlitchManager.PresetSubtle);
                 RestartHallucinationLoop();
                 break;
 
             case MentalStage.Panic:
-                GlitchManager.Instance?.SetGlitchLoop(true, 0.35f);
+                GlitchManager.Instance?.SetGlitchLoop(true, GlitchManager.PresetMild);
                 RestartHallucinationLoop();
                 break;
 
             case MentalStage.Collapse:
-                GlitchManager.Instance?.SetGlitchLoop(true, 0.5f);
+                GlitchManager.Instance?.SetGlitchLoop(true, GlitchManager.PresetStrong);
                 RestartHallucinationLoop();
                 break;
         }
@@ -185,7 +185,7 @@ public class MentalBreakStage : MonoBehaviour
 
     IEnumerator StrongGlitch()
     {
-        GlitchManager.Instance?.PlayGlitch(0.6f, 0.9f);
+        GlitchManager.Instance?.PlayGlitch(0.6f, GlitchManager.PresetCrash);
         yield return new WaitForSeconds(0.6f);
     }
 

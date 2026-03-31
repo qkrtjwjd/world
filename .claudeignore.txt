@@ -1,0 +1,16 @@
+# 프로젝트 폴더에서
+touch .claudeignore
+```
+ets/
+textures/
+audio/
+sounds/
+videos/
+build/
+dist/
+node_modules/
+*.png
+*.jpg
+*.mp3
+*.wav
+*.mp4

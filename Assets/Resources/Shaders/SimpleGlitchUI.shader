@@ -7,6 +7,8 @@ Shader "Custom/SimpleGlitchUI"
         _Intensity ("Glitch Intensity", Range(0, 1)) = 0
         _ColorDrift ("Color Drift", Range(0, 1)) = 0.02
         _ScanLineJitter ("Scan Line Jitter", Range(0, 1)) = 0.05
+        _StaticNoise ("Static Noise", Range(0, 1)) = 0.0
+        _BlockDisplace ("Block Displace", Range(0, 1)) = 0.0
     }
 
     SubShader
@@ -50,6 +52,8 @@ Shader "Custom/SimpleGlitchUI"
             float _Intensity;
             float _ColorDrift;
             float _ScanLineJitter;
+            float _StaticNoise;
+            float _BlockDisplace;
 
             // 랜덤 함수
             float nrand(float x, float y)
@@ -79,14 +83,25 @@ Shader "Custom/SimpleGlitchUI"
                 float2 glitchUV = uv;
                 glitchUV.x += jitter;
 
+                // 3. 블록 단위 변위 (지지직 찢김)
+                float blockRow   = floor(uv.y * 8.0) / 8.0;
+                float blockRand  = nrand(blockRow, floor(t * 12.0));
+                float blockShift = step(0.85, blockRand) * (blockRand * 2.0 - 1.0);
+                glitchUV.x += blockShift * _BlockDisplace * _Intensity;
+
                 // 2. 색상 분리 (RGB Split)
                 float drift = sin(t) * _ColorDrift * _Intensity;
-                
+
                 fixed4 src1 = tex2D(_MainTex, glitchUV + float2(drift, 0));
                 fixed4 src2 = tex2D(_MainTex, glitchUV - float2(drift, 0));
 
                 // R, G, B 채널을 각각 다른 위치에서 가져와 섞음
                 fixed4 finalColor = fixed4(src1.r, src2.g, src1.b, src1.a);
+
+                // 4. 픽셀 스태틱 노이즈 (grain)
+                float staticRand  = nrand(uv.x + floor(t * 24.0), uv.y);
+                float staticGrain = step(0.92, staticRand) * (staticRand - 0.92) * 12.0;
+                finalColor.rgb += staticGrain * _StaticNoise * _Intensity;
 
                 // 원본 알파값 유지 (투명도)
                 return finalColor * IN.color;
