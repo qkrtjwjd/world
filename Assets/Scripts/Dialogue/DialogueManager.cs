@@ -16,12 +16,18 @@ public class DialogueManager : MonoBehaviour
     public bool  innerMonologueItalic = true;
 
     [Header("UI 연결")]
-    public GameObject dialoguePanel; // 대화창 전체 패널
-    public Image portraitImage;      // 캐릭터 얼굴 이미지
-    public Text nameText;            // 캐릭터 이름 텍스트
-    public Text dialogueText;        // 대사 텍스트
+    public GameObject dialoguePanel;      // 대화창 전체 패널
+    public Image portraitImage;           // 좌측 초상화
+    public Image portraitImageRight;      // 우측 초상화 (대화 중 주인공용)
+    public Text  nameText;                // 발언자 이름 텍스트 (단일)
+    public Text  dialogueText;            // 대사 텍스트
 
-    private Queue<DialogueLine> sentences; // 대사들을 담아둘 큐
+    [Header("플레이어 식별")]
+    [Tooltip("대화/독백 판정에 사용할 주인공 이름")]
+    public string playerName = "루";
+
+    private Queue<DialogueLine> sentences;   // 대사들을 담아둘 큐
+    private bool _isConversation = false;    // 복수 발화자 여부
 
     // 대화 중인지 확인하는 변수 (플레이어 이동 막기 등에 사용)
     public bool isTalking = false;
@@ -30,20 +36,34 @@ public class DialogueManager : MonoBehaviour
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+        if (dialoguePanel != null) dialoguePanel.SetActive(false); // 첫 프레임 전에 숨김
     }
 
     void Start()
     {
         sentences = new Queue<DialogueLine>();
-        dialoguePanel.SetActive(false); // 시작할 땐 꺼둠
     }
 
     public void StartDialogue(DialogueData dialogue)
     {
         isTalking = true;
         dialoguePanel.SetActive(true);
+        ObjectiveManager.Instance?.HideHUD();
+        nameText.gameObject.SetActive(true);
+        dialogueText.gameObject.SetActive(true);
         
         sentences.Clear();
+
+        // 대화(복수 발화자) vs 독백(단일 발화자) 자동 감지
+        _isConversation = false;
+        if (dialogue.lines != null && dialogue.lines.Count > 0)
+        {
+            string first = dialogue.lines[0].speakerName;
+            foreach (DialogueLine line in dialogue.lines)
+            {
+                if (line.speakerName != first) { _isConversation = true; break; }
+            }
+        }
 
         // ScriptableObject에 있는 대사들을 큐에 담기
         foreach (DialogueLine line in dialogue.lines)
@@ -65,8 +85,9 @@ public class DialogueManager : MonoBehaviour
 
         DialogueLine currentLine = sentences.Dequeue();
 
-        // 1. 텍스트와 이름 갱신
-        nameText.text = currentLine.speakerName;
+        // 1. 이름 및 초상화 방향 결정
+        bool useRight  = _isConversation && currentLine.speakerName == playerName;
+        nameText.text  = currentLine.speakerName;
         
         // 언어 설정에 따라 대사 선택
         string sentenceToDisplay = currentLine.sentence_ko; // 기본값
@@ -135,16 +156,21 @@ public class DialogueManager : MonoBehaviour
 
         dialogueText.text = sentenceToDisplay;
 
-        // 2. 초상화 갱신 (이미지가 있을 때만)
+        // 2. 초상화 갱신
+        // 독백 → 좌측 / 대화 중 주인공 → 우측 / 대화 중 상대방 → 좌측
+        Image activePortrait   = useRight ? portraitImageRight : portraitImage;
+        Image inactivePortrait = useRight ? portraitImage      : portraitImageRight;
+
+        if (inactivePortrait != null) inactivePortrait.gameObject.SetActive(false);
+
         if (currentLine.portrait != null)
         {
-            portraitImage.sprite = currentLine.portrait;
-            portraitImage.gameObject.SetActive(true);
+            activePortrait.sprite = currentLine.portrait;
+            activePortrait.gameObject.SetActive(true);
         }
         else
         {
-            // 이미지가 없으면 얼굴 칸 숨기기 (선택 사항)
-            portraitImage.gameObject.SetActive(false); 
+            activePortrait.gameObject.SetActive(false);
         }
 
         // TODO: 여기서 타이핑 효과(타자 치는 듯한 연출) 코루틴을 넣을 수도 있음
@@ -154,6 +180,11 @@ public class DialogueManager : MonoBehaviour
     {
         isTalking = false;
         dialoguePanel.SetActive(false);
+        nameText.gameObject.SetActive(false);
+        dialogueText.gameObject.SetActive(false);
+        portraitImage.gameObject.SetActive(false);
+        if (portraitImageRight != null) portraitImageRight.gameObject.SetActive(false);
+        ObjectiveManager.Instance?.RestoreHUD();
         Debug.Log("대화 종료");
     }
 }

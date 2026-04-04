@@ -1082,6 +1082,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -1158,10 +1159,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerStatusUI
   hpSlider: {fileID: 4114797093222512027}
   mentalSlider: {fileID: 1217703653543421211}
-  hungerSlider: {fileID: 1921839281235977090}
   hpText: {fileID: 5052910572571822128}
   mentalText: {fileID: 5234483832895312026}
-  hungerText: {fileID: 7016728157757204752}
 --- !u!1 &1011694372759308978
 GameObject:
   m_ObjectHideFlags: 0

@@ -24,15 +24,15 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public string seraSmileFreezeTrigger = "SmileFreeze"; // 미소 굳음 (0.5초 후 자동 복귀)
     public string seraKissAndExitTrigger = "KissAndExit"; // 이마 입맞춤 + 퇴장
 
+    // ── 부엌 시작 위치 ────────────────────────────
+    [Header("S#5 — 부엌 시작 위치")]
+    public Transform playerKitchenSpawn; // 빈 GameObject로 위치 지정
+    public Transform seraKitchenSpawn;   // 빈 GameObject로 위치 지정
+    public RoomTransfer kitchenRoom;     // 부엌 RoomTransfer → 카메라 바운드 적용
+
     // ── 효과음 ───────────────────────────────────
     [Header("S#5 — 효과음")]
     public AudioSource doorCloseAudio; // 현관문 닫히는 소리
-
-    // ── 목표 UI ──────────────────────────────────
-    [Header("목표 UI")]
-    public GameObject objectivePanel;
-    public Text objectiveHeaderText;
-    public Text objectiveBodyText;
 
     // ─────────────────────────────────────────────
 
@@ -53,6 +53,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
     IEnumerator PlayCutscene()
     {
+        TeleportToKitchen();
+        ObjectiveManager.Instance?.HideHUD(); // 컷씬 동안 HUD 숨김
         var ctrl = LockPlayer();
 
         // Part1: 세라↔루 대사 (세라 미소 굳기 전)
@@ -76,16 +78,13 @@ public class KitchenTriggerCutscene : MonoBehaviour
             doorCloseAudio.Play();
         yield return new WaitForSeconds(0.5f);
 
-        // 목표 UI 표시
-        ShowObjective("현재 목표", "어머니가 돌아오기 전에 단서를 찾으세요.");
-
         // 루 내면 독백: 『다락방. 엄마가 유일하게 못 들어가게 하는 곳.』
         yield return PlayDialogueAndWait(lu_InnerMonologue);
 
-        yield return new WaitForSeconds(2f);
-        HideObjective();
-
         UnlockPlayer(ctrl);
+
+        // 컷씬 완전 종료 후 Objective 초기화, 일반 HUD 복원
+        ObjectiveManager.Instance?.ShowObjective("현재 목표", "엄마 몰래 단서를 찾으세요");
     }
 
     // ─── 헬퍼 ────────────────────────────────────
@@ -103,17 +102,26 @@ public class KitchenTriggerCutscene : MonoBehaviour
         }
     }
 
-    void ShowObjective(string header, string body)
+    void TeleportToKitchen()
     {
-        if (objectivePanel == null) return;
-        if (objectiveHeaderText != null) objectiveHeaderText.text = header;
-        if (objectiveBodyText   != null) objectiveBodyText.text   = body;
-        objectivePanel.SetActive(true);
-    }
+        var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+        if (ctrl != null && playerKitchenSpawn != null)
+            ctrl.transform.position = playerKitchenSpawn.position;
 
-    void HideObjective()
-    {
-        if (objectivePanel != null) objectivePanel.SetActive(false);
+        if (seraAnimator != null && seraKitchenSpawn != null)
+        {
+            var companion = seraAnimator.GetComponent<CompanionFollow>();
+            if (companion != null)
+                companion.TeleportTo(seraKitchenSpawn.position);
+            else
+                seraAnimator.transform.position = seraKitchenSpawn.position;
+        }
+
+        if (kitchenRoom != null)
+        {
+            kitchenRoom.EnterRoom();
+            CameraFollow.Instance?.SetBound(kitchenRoom.roomBound, snap: true);
+        }
     }
 
     static ClearSky.SimplePlayerController LockPlayer()

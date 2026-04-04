@@ -485,7 +485,7 @@ public class BattleSystem : MonoBehaviour
         {
             dialogueText.text = "승리했다!";
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
-            PlayerStats.Instance?.AddPuppetization(10f);
+            PlayerStats.Instance?.AddPuppetizationOnKill();
         }
         else
         {

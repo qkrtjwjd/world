@@ -227,6 +227,7 @@ public class HackSlashCombatManager : MonoBehaviour
         if (playerWon && _activeEnemy != null)
         {
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
+            PlayerStats.Instance?.AddPuppetizationOnKill();
             Destroy(_activeEnemy);
         }
 

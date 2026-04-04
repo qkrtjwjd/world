@@ -152,4 +152,38 @@ public class PlayerStats : MonoBehaviour
         currentPuppetization = Mathf.Max(0f, currentPuppetization - amount);
         _gameStateDirty = true;
     }
+
+    /// <summary>
+    /// 적 처치 시 현재 인형화 구간에 따라 인형화를 증가시킵니다.
+    /// </summary>
+    public void AddPuppetizationOnKill()
+    {
+        float pct = maxPuppetization > 0f ? currentPuppetization / maxPuppetization * 100f : 0f;
+
+        float baseAmount;
+        float multiplier;
+
+        if (pct <= 30f)
+        {
+            baseAmount = Random.Range(1f, 2f);
+            multiplier = 1.0f;
+        }
+        else if (pct <= 60f)
+        {
+            baseAmount = Random.Range(1.5f, 2.5f);
+            multiplier = 1.2f;
+        }
+        else if (pct <= 80f)
+        {
+            baseAmount = Random.Range(2f, 3f);
+            multiplier = 1.5f;
+        }
+        else
+        {
+            baseAmount = Random.Range(2.5f, 4f);
+            multiplier = 2.0f;
+        }
+
+        AddPuppetization(baseAmount * multiplier);
+    }
 }

@@ -15,11 +15,6 @@ public class NightSequenceManager : MonoBehaviour
     [Header("S#2 — 루의 방 / 심야")]
     public DialogueData lu_S2_Reaction;          // "...뭐야 이 소리."
 
-    [Header("목표 UI (S#2 / S#4 공용)")]
-    public GameObject objectivePanel;
-    public Text objectiveHeaderText;
-    public Text objectiveBodyText;
-
     // ── S#3 ──────────────────────────────────────
     [Header("S#3 — 정원 컷씬 대사")]
     public DialogueData lu_S3_Monologue;         // "저게 뭐지. 새가 아닌 것 같은데... 기계?"
@@ -108,7 +103,7 @@ public class NightSequenceManager : MonoBehaviour
         yield return PlayDialogueAndWait(lu_S2_Reaction);
 
         // 목표 UI 표시
-        ShowObjective(
+        ObjectiveManager.Instance?.ShowObjective(
             "창밖에서 이상한 소리가 들립니다.",
             "목표: 창문으로 이동해서 밖을 확인하세요.");
 
@@ -119,7 +114,7 @@ public class NightSequenceManager : MonoBehaviour
         _windowReached = false;
         yield return new WaitUntil(() => _windowReached);
 
-        HideObjective();
+        ObjectiveManager.Instance?.HideObjective();
     }
 
     // ─── S#3 ─────────────────────────────────────
@@ -214,10 +209,6 @@ public class NightSequenceManager : MonoBehaviour
         }
         if (heartbeatAudio != null) heartbeatAudio.Stop();
 
-        // 최종 목표 UI: 튜토리얼 완료
-        ShowObjective("튜토리얼 완료", "다음 목표: 날이 밝으면 엄마 몰래 단서를 찾으세요.");
-        yield return new WaitForSeconds(3f);
-        HideObjective();
     }
 
     // ─── 헬퍼 ────────────────────────────────────
@@ -259,19 +250,6 @@ public class NightSequenceManager : MonoBehaviour
             heartbeatOverlay.color = c;
             yield return null;
         }
-    }
-
-    void ShowObjective(string header, string body)
-    {
-        if (objectivePanel == null) return;
-        if (objectiveHeaderText != null) objectiveHeaderText.text = header;
-        if (objectiveBodyText   != null) objectiveBodyText.text   = body;
-        objectivePanel.SetActive(true);
-    }
-
-    void HideObjective()
-    {
-        if (objectivePanel != null) objectivePanel.SetActive(false);
     }
 
     static void LockPlayer()
