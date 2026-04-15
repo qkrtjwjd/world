@@ -13,13 +13,20 @@ public class BattleSystem : MonoBehaviour
 {
     public BattleState State { get; private set; }
 
+    /// <summary>BattleSystem이 씬에 활성화돼 있는지 여부. 전투 중 여부 판단에 사용.</summary>
+    public static bool IsActive { get; private set; }
+
     [Header("유닛 및 위치")]
-    public GameObject playerPrefab;
     public GameObject companionPrefab;
     public GameObject enemyPrefab;
-    public Transform  playerBattleStation;
     public Transform  companionBattleStation;
     public Transform  enemyBattleStation;
+
+    [Header("1인칭 플레이어 설정")]
+    [Tooltip("전투 대화문에 표시될 플레이어 이름")]
+    public string playerUnitName   = "플레이어";
+    [Tooltip("플레이어 기본 공격력 (PlayerStats에 공격력 스탯이 없으므로 직접 설정)")]
+    public int    playerBaseDamage = 10;
 
     [Header("HP 슬라이더 (배틀씬 전용 — 직접 연결하세요)")]
     public Slider playerHPSlider;
@@ -53,7 +60,7 @@ public class BattleSystem : MonoBehaviour
     private List<Unit>       _playerParty        = new List<Unit>();
     private Unit             _enemyUnit;
     private int              _currentUnitIndex   = 0;
-    private List<GameObject> _spawnedItemButtons = new List<GameObject>();
+    private List<GameObject> _itemButtonPool = new List<GameObject>();
 
     // timeScale = 0 에서도 동작하도록 Realtime 버전 사용
     private WaitForSecondsRealtime _wait1s;
@@ -78,6 +85,9 @@ public class BattleSystem : MonoBehaviour
     // 글리치 연출 중 중복 실행 방지
     private bool _isSwitching = false;
 
+    // GlitchEffect 코루틴용 StringBuilder (매 프레임 new 방지)
+    private readonly StringBuilder _glitchSB = new StringBuilder(20);
+
     // ════════════════════════════════════════
     //  초기화
     // ════════════════════════════════════════
@@ -94,11 +104,11 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator SetupBattle()
     {
-        // 플레이어 소환
-        SpawnUnit(playerPrefab, playerBattleStation, playerHPSlider, out Unit playerUnit);
-        if (playerUnit != null) _playerParty.Add(playerUnit);
+        // 플레이어 — 1인칭: 스프라이트 없이 PlayerStats 데이터로 가상 유닛 생성
+        Unit playerUnit = CreateVirtualPlayerUnit();
+        _playerParty.Add(playerUnit);
 
-        // 동료 소환 (선택)
+        // 동료 소환 (선택 — companionPrefab + companionBattleStation 연결 시에만)
         SpawnUnit(companionPrefab, companionBattleStation, companionHPSlider, out Unit companionUnit);
         if (companionUnit != null) _playerParty.Add(companionUnit);
 
@@ -134,8 +144,6 @@ public class BattleSystem : MonoBehaviour
         _currentUnitIndex = 0;
         ProcessPartyTurn();
 
-        // 항상 모드 전환 감시 시작 (BattleScene 은 항상 판타지씬 위 오버레이)
-        StartCoroutine(MonitorModeSwitch());
     }
 
     /// <summary>유닛 소환 + 슬라이더 주입 + SetHUD 호출을 한번에 처리.</summary>
@@ -153,6 +161,35 @@ public class BattleSystem : MonoBehaviour
 
         if (slider != null) unit.hpSlider = slider;
         unit.SetHUD();
+    }
+
+    /// <summary>
+    /// 1인칭 전투용: 스프라이트 없이 PlayerStats 데이터로만 구성된 가상 플레이어 유닛 생성.
+    /// </summary>
+    Unit CreateVirtualPlayerUnit()
+    {
+        var go = new GameObject("Player [Virtual]");
+        go.transform.SetParent(transform, false);
+
+        var unit       = go.AddComponent<Unit>();
+        unit.unitName  = playerUnitName;
+        unit.unitLevel = 1;
+        unit.damage    = playerBaseDamage;
+
+        if (PlayerStats.Instance != null)
+        {
+            unit.maxHP     = Mathf.RoundToInt(PlayerStats.Instance.maxHealth);
+            unit.currentHP = Mathf.RoundToInt(PlayerStats.Instance.currentHealth);
+        }
+        else
+        {
+            unit.maxHP     = 100;
+            unit.currentHP = 100;
+        }
+
+        if (playerHPSlider != null) unit.hpSlider = playerHPSlider;
+        unit.SetHUD();
+        return unit;
     }
 
     // ════════════════════════════════════════
@@ -210,27 +247,39 @@ public class BattleSystem : MonoBehaviour
 
     void PopulateItemButtons()
     {
-        // 이전 버튼 제거
-        foreach (var btn in _spawnedItemButtons)
-            if (btn != null) Destroy(btn);
-        _spawnedItemButtons.Clear();
-
         if (itemButtonContainer == null) return;
 
         List<ItemData> items = InventoryManager.Instance?.inventoryItems;
         bool hasItems = items != null && items.Count > 0;
 
         if (noItemText != null) noItemText.gameObject.SetActive(!hasItems);
+
+        // 풀의 모든 버튼 비활성화 (Destroy 금지)
+        foreach (var pooled in _itemButtonPool)
+            if (pooled != null) pooled.SetActive(false);
+
         if (!hasItems) return;
 
+        int poolIndex = 0;
         foreach (ItemData item in items)
         {
             if (item == null) continue;
 
-            GameObject btnObj = itemButtonPrefab != null
-                ? Instantiate(itemButtonPrefab, itemButtonContainer)
-                : CreateFallbackButton(item.itemName, itemButtonContainer);
+            GameObject btnObj;
+            if (poolIndex < _itemButtonPool.Count && _itemButtonPool[poolIndex] != null)
+            {
+                btnObj = _itemButtonPool[poolIndex];
+                btnObj.GetComponent<Button>()?.onClick.RemoveAllListeners();
+            }
+            else
+            {
+                btnObj = itemButtonPrefab != null
+                    ? Instantiate(itemButtonPrefab, itemButtonContainer)
+                    : CreateFallbackButton(item.itemName, itemButtonContainer);
+                _itemButtonPool.Add(btnObj);
+            }
 
+            btnObj.SetActive(true);
             SetButtonLabel(btnObj, item.DisplayName);
 
             Button btn = btnObj.GetComponent<Button>();
@@ -240,7 +289,7 @@ public class BattleSystem : MonoBehaviour
                 btn.onClick.AddListener(() => OnItemSelected(captured));
             }
 
-            _spawnedItemButtons.Add(btnObj);
+            poolIndex++;
         }
     }
 
@@ -402,6 +451,15 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator UseItemInBattle(ItemData item)
     {
+        // 전투 중 반복 사용 횟수 기록 (임계값 초과 시 특수 효과 발동)
+        ItemUseTracker.Instance?.RecordBattleUse(item);
+
+        // 특수 시스템 효과 (fantasyEffect.specialEffectCode 기준)
+        ItemEffectHandler.Instance?.HandleEffect(item.fantasyEffect.specialEffectCode);
+
+        // 버프/디버프 적용
+        BuffManager.Instance?.AddBuffs(item.fantasyEffect.buffs);
+
         Unit cur = _playerParty[_currentUnitIndex];
         float healHP  = item.fantasyEffect.healthChange;
         bool  used    = false;
@@ -425,6 +483,15 @@ public class BattleSystem : MonoBehaviour
         {
             if (mentalChange > 0) PlayerStats.Instance.RecoverMental(mentalChange);
             else                  PlayerStats.Instance.AddTrauma(-mentalChange);
+            used = true;
+        }
+
+        // 인형화 처리
+        float puppetChange = item.fantasyEffect.puppetizationChange;
+        if (puppetChange != 0 && PlayerStats.Instance != null)
+        {
+            PlayerStats.Instance.AddPuppetization(puppetChange);
+            used = true;
         }
 
         if (!used)
@@ -494,11 +561,18 @@ public class BattleSystem : MonoBehaviour
 
         yield return _wait3s;
 
+        // 아이템 사용 횟수 초기화 (다음 비전투 구간에서 각 아이템 재사용 가능)
+        ItemUseTracker.Instance?.ResetAll();
+
         // 재조우 방지 쿨타임
         GameState.battleReturn.SetReturning(GameState.returnSceneName, 2.5f);
 
         // 적 트리거 리셋
         EncounterManager.Instance?.OnBattleEnded();
+
+        // 가상 플레이어 유닛 HP → PlayerStats 동기화
+        if (_playerParty.Count > 0 && PlayerStats.Instance != null)
+            PlayerStats.Instance.currentHealth = _playerParty[0].currentHP;
 
         // timeScale 복구
         Time.timeScale = 1f;
@@ -518,31 +592,36 @@ public class BattleSystem : MonoBehaviour
     }
 
     // ════════════════════════════════════════
-    //  모드 전환 (판타지 턴제 → 핵앤슬래시)
+    //  모드 전환 (판타지 턴제 → 핵앤슬래시) — 이벤트 구독 방식
     // ════════════════════════════════════════
 
-    IEnumerator MonitorModeSwitch()
+    void OnEnable()
     {
-        while (!_isSwitching)
+        IsActive = true;
+        if (RealitySystem.Instance != null)
+            RealitySystem.Instance.OnRealityChanged += HandleRealityChanged;
+    }
+
+    void OnDisable()
+    {
+        IsActive = false;
+        if (RealitySystem.Instance != null)
+            RealitySystem.Instance.OnRealityChanged -= HandleRealityChanged;
+    }
+
+    void HandleRealityChanged(float currentReality)
+    {
+        if (_isSwitching) return;
+        if (State == BattleState.WON || State == BattleState.LOST) return;
+
+        bool realityIntruding = currentReality >= realityGaugeSwitchThreshold;
+        bool daggerEquipped   = DaggerSystem.IsEquipped;
+
+        if (realityIntruding || daggerEquipped)
         {
-            // 전투가 끝났으면 감시 중단
-            if (State == BattleState.WON || State == BattleState.LOST)
-                yield break;
-
-            bool realityIntruding = RealitySystem.Instance != null
-                && RealitySystem.Instance.CurrentReality >= realityGaugeSwitchThreshold;
-
-            bool daggerEquipped = DaggerSystem.IsEquipped;
-
-            if (realityIntruding || daggerEquipped)
-            {
-                _isSwitching = true;
-                string reason = daggerEquipped ? "단검을 꺼내들었다..." : "현실이 침식해온다...";
-                StartCoroutine(GlitchAndSwitchToHackSlash(reason));
-                yield break;
-            }
-
-            yield return new WaitForSecondsRealtime(0.3f);
+            _isSwitching = true;
+            string reason = daggerEquipped ? "단검을 꺼내들었다..." : "현실이 침식해온다...";
+            StartCoroutine(GlitchAndSwitchToHackSlash(reason));
         }
     }
 
@@ -605,10 +684,10 @@ public class BattleSystem : MonoBehaviour
             if (dialogueText != null && Random.value > 0.4f)
             {
                 int len = Random.Range(5, 20);
-                StringBuilder sb = new StringBuilder(len);
+                _glitchSB.Clear();
                 for (int i = 0; i < len; i++)
-                    sb.Append(glitchChars[Random.Range(0, glitchChars.Length)]);
-                dialogueText.text = sb.ToString();
+                    _glitchSB.Append(glitchChars[Random.Range(0, glitchChars.Length)]);
+                dialogueText.text = _glitchSB.ToString();
 
                 // 텍스트 색상 난폭하게 변경
                 dialogueText.color = new Color(

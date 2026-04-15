@@ -12,6 +12,11 @@ public class PauseSystem : MonoBehaviour
 
     private bool _isPaused = false;
 
+    void Start()
+    {
+        CloseAll();
+    }
+
     // 열려있는 서브 패널이 있는지
     private bool IsSubPanelOpen =>
         IsActive(inventoryPanel) ||
@@ -52,6 +57,13 @@ public class PauseSystem : MonoBehaviour
         CloseAll();
         Time.timeScale = 1f;
         _isPaused      = false;
+
+        // 대화 중이 아닐 때 플레이어 이동 잠금 해제 (도메인 리로드 대비)
+        if (DialogueManager.Instance == null || !DialogueManager.Instance.isTalking)
+        {
+            var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+            ctrl?.Unlock();
+        }
     }
 
     public void PauseGame()
@@ -71,7 +83,23 @@ public class PauseSystem : MonoBehaviour
     //  패널 전환 (인스펙터 버튼 / 코드 양쪽에서 호출 가능)
     // ─────────────────────────────────────────────
     public void OpenMainMenu()   => SetOnly(pauseMenuPanel);
-    public void OpenInventory()  => SetOnly(inventoryPanel);
+
+    public void OpenInventory()
+    {
+        // 일시정지 메뉴를 거치지 않고 직접 열 때 timeScale 정상화
+        if (!_isPaused) Time.timeScale = 1f;
+        SetOnly(inventoryPanel);
+    }
+
+    /// <summary>가방 버튼용: 일시정지 없이 인벤토리를 토글합니다.</summary>
+    public void ToggleInventory()
+    {
+        if (IsActive(inventoryPanel))
+            ResumeGame();
+        else
+            OpenInventory();
+    }
+
     public void OpenJournal()    => SetOnly(journalPanel);
     public void OpenSave()       => SetOnly(savePanel);
     public void OpenLoad()       => SetOnly(loadPanel);
@@ -97,6 +125,7 @@ public class PauseSystem : MonoBehaviour
         SetActive(journalPanel,   false);
         SetActive(savePanel,      false);
         SetActive(loadPanel,      false);
+        ItemDetailUI.Instance?.Hide();
     }
 
     static void SetActive(GameObject go, bool active)

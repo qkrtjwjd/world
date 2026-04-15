@@ -22,6 +22,12 @@ public class RealitySystem : MonoBehaviour
     /// <summary>현재 현실 침투 게이지 값 (0 ~ maxTime).</summary>
     public float CurrentReality => _currentReality;
 
+    /// <summary>
+    /// 현실 게이지가 변동될 때 발행됩니다.
+    /// BattleSystem 등이 구독하여 폴링 없이 반응할 수 있습니다.
+    /// </summary>
+    public event System.Action<float> OnRealityChanged;
+
     [Header("씬 전체 설정")]
     public bool sceneDefaultActive = false;
 
@@ -73,6 +79,7 @@ public class RealitySystem : MonoBehaviour
         float dynamicFillSpeed = fillSpeed * (1f + (1f - mentalRatio) * 0.5f);
         _currentReality += Time.deltaTime * dynamicFillSpeed;
         if (realityGauge != null) realityGauge.value = _currentReality;
+        OnRealityChanged?.Invoke(_currentReality);
 
         UpdateOverlay();
 

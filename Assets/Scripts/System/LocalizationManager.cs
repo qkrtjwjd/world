@@ -15,6 +15,10 @@ public class LocalizationManager : MonoBehaviour
 
     private Dictionary<string, string> _table = new Dictionary<string, string>();
 
+    // 언어별 파싱 결과 캐시 (ChangeLanguage 재호출 시 재파싱 방지)
+    private Dictionary<Language, Dictionary<string, string>> _cache
+        = new Dictionary<Language, Dictionary<string, string>>();
+
     void Awake()
     {
         if (Instance == null)
@@ -40,7 +44,13 @@ public class LocalizationManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void LoadLanguage(Language lang)
     {
-        _table.Clear();
+        // 이미 파싱된 언어라면 캐시에서 스왑 (재파싱 없음)
+        if (_cache.TryGetValue(lang, out Dictionary<string, string> cached))
+        {
+            _table = cached;
+            Debug.Log($"[LocalizationManager] {lang} 캐시에서 복원 ({_table.Count}개 키)");
+            return;
+        }
 
         string fileName = lang.ToString().ToLower(); // ko / en / jp
         TextAsset json  = Resources.Load<TextAsset>($"Localization/{fileName}");
@@ -51,8 +61,11 @@ public class LocalizationManager : MonoBehaviour
             return;
         }
 
-        // MiniJSON 없이 직접 평탄화 파싱
-        FlattenJson(json.text, "", _table);
+        // MiniJSON 없이 직접 평탄화 파싱 후 캐시에 저장
+        var newTable = new Dictionary<string, string>();
+        FlattenJson(json.text, "", newTable);
+        _cache[lang] = newTable;
+        _table = newTable;
         Debug.Log($"[LocalizationManager] {lang} 로드 완료 ({_table.Count}개 키)");
     }
 

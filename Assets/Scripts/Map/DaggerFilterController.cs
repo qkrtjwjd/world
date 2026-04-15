@@ -19,7 +19,7 @@ public class DaggerFilterController : MonoBehaviour
 
     [Header("설정")]
     [Tooltip("전환 페이드 시간 (초)")]
-    public float switchDuration = 0.15f;
+    public float switchDuration = 0.25f;
 
     [Tooltip("인형화 80%+ 시 강제 현실 유지 시간 (초)")]
     public float forcedRealityDuration = 0.5f;
@@ -30,6 +30,7 @@ public class DaggerFilterController : MonoBehaviour
     private Coroutine _fadeCoroutine;
     private Coroutine _forcedReturnCoroutine;
     private bool _hintGlitchActive = false;
+    private WaitForSeconds _forcedReturnWait;
 
     void Awake()
     {
@@ -49,6 +50,7 @@ public class DaggerFilterController : MonoBehaviour
 
     void Start()
     {
+        _forcedReturnWait = new WaitForSeconds(forcedRealityDuration);
         CacheFilterObjects();
         if (realityOverlay != null) realityOverlay.alpha = 0f;
     }
@@ -126,12 +128,12 @@ public class DaggerFilterController : MonoBehaviour
         IsReality = true;
 
         if (GlitchManager.Instance != null)
-            GlitchManager.Instance.PlayGlitch(switchDuration);
+            GlitchManager.Instance.PlayGlitch(switchDuration, GetGlitchPresetForCurrentState());
 
         StartFade(1f);
         ApplyFilter(true);
 
-        if (IsHighPuppetization())
+        if (GetCorruptionRatio() >= 0.8f)
         {
             if (_forcedReturnCoroutine != null) StopCoroutine(_forcedReturnCoroutine);
             _forcedReturnCoroutine = StartCoroutine(ForcedReturnRoutine());
@@ -154,15 +156,29 @@ public class DaggerFilterController : MonoBehaviour
         IsReality = false;
 
         if (GlitchManager.Instance != null)
-            GlitchManager.Instance.PlayGlitch(switchDuration);
+            GlitchManager.Instance.PlayGlitch(switchDuration, GetGlitchPresetForCurrentState());
 
         StartFade(0f);
         ApplyFilter(false);
     }
 
+    float GetCorruptionRatio()
+    {
+        if (CorruptionManager.instance == null) return 0f;
+        return CorruptionManager.instance.currentCorruption / CorruptionManager.instance.maxCorruption;
+    }
+
+    GlitchPreset GetGlitchPresetForCurrentState()
+    {
+        float ratio = GetCorruptionRatio();
+        if (ratio >= 0.8f)  return GlitchManager.PresetCrash;
+        if (ratio >= 0.31f) return GlitchManager.PresetStrong;
+        return GlitchManager.PresetMild;
+    }
+
     IEnumerator ForcedReturnRoutine()
     {
-        yield return new WaitForSeconds(forcedRealityDuration);
+        yield return _forcedReturnWait;
         DoSwitchToFantasy();
         _forcedReturnCoroutine = null;
     }
@@ -197,10 +213,4 @@ public class DaggerFilterController : MonoBehaviour
         _fadeCoroutine = null;
     }
 
-    bool IsHighPuppetization()
-    {
-        if (CorruptionManager.instance == null) return false;
-        float ratio = CorruptionManager.instance.currentCorruption / CorruptionManager.instance.maxCorruption;
-        return ratio >= 0.8f;
-    }
 }

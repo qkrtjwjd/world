@@ -4,7 +4,28 @@ using UnityEngine;
 
 public class InteractionManager : MonoBehaviour
 {
-    public static InteractionManager Instance;
+    public static InteractionManager Instance
+    {
+        get
+        {
+            if (_isQuitting) return null;
+            if (!_instance)
+            {
+                var go = new GameObject("InteractionManager [Auto]");
+                _instance = go.AddComponent<InteractionManager>();
+            }
+            return _instance;
+        }
+    }
+    private static InteractionManager _instance;
+    private static bool _isQuitting = false;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _instance  = null;
+        _isQuitting = false;
+    }
 
     private readonly List<InteractionTrigger> _triggers = new List<InteractionTrigger>();
     private InteractionTrigger _active;
@@ -17,16 +38,18 @@ public class InteractionManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
+        if (_instance == null)
         {
-            Instance = this;
+            _instance = this;
             DontDestroyOnLoad(gameObject);
         }
-        else
+        else if (_instance != this)
         {
             Destroy(gameObject);
         }
     }
+
+    void OnApplicationQuit() => _isQuitting = true;
 
     void Start()
     {
@@ -51,10 +74,13 @@ public class InteractionManager : MonoBehaviour
         }
 
         // 입력 감지
-        if (Input.GetKeyDown(KeyCode.E) && _cooldown <= 0f && _active != null)
+        if (Input.GetKeyDown(KeyCode.E))
         {
-            _active.Interact();
-            _cooldown = 0.5f;
+            if (_cooldown <= 0f && _active != null)
+            {
+                _active.Interact();
+                _cooldown = 0.5f;
+            }
         }
     }
 

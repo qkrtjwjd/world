@@ -164,9 +164,9 @@ public class SaveManager : MonoBehaviour
         GameState.inventoryItems = new List<ItemData>();
         foreach (string itemName in data.inventoryItemNames)
         {
-            ItemData item = Resources.Load<ItemData>($"Items/{itemName}");
+            ItemData item = ItemDatabase.Find(itemName);
             if (item != null) GameState.inventoryItems.Add(item);
-            else Debug.LogWarning($"[SaveManager] 아이템 없음: Items/{itemName}");
+            else Debug.LogWarning($"[SaveManager] 아이템 없음: {itemName}");
         }
 
         if (InventoryManager.Instance != null)

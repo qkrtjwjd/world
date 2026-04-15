@@ -16,7 +16,38 @@ public class InteractionTrigger : MonoBehaviour
     [Tooltip("E키를 눌렀을 때 실행할 기능을 여기에 연결하세요.")]
     public UnityEvent onInteract;
 
-    private bool _canInteract = false;
+    [Header("거리 감지 (Solid 콜라이더가 트리거 진입을 막는 경우 사용)")]
+    [SerializeField] private bool  useDistanceDetection = false;
+    [SerializeField] private float interactionRange     = 0f;
+
+    private bool      _canInteract     = false;
+    private Transform _playerTransform;
+
+    void Update()
+    {
+        if (!useDistanceDetection) return;
+
+        if (_playerTransform == null)
+        {
+            var p = GameObject.FindWithTag("Player");
+            if (p != null) _playerTransform = p.transform;
+            return;
+        }
+
+        float dist = Vector2.Distance(transform.position, _playerTransform.position);
+        bool inRange = dist <= interactionRange;
+
+        if (inRange && !_canInteract)
+        {
+            _canInteract = true;
+            InteractionManager.Instance?.RegisterTrigger(this);
+        }
+        else if (!inRange && _canInteract)
+        {
+            _canInteract = false;
+            InteractionManager.Instance?.UnregisterTrigger(this);
+        }
+    }
 
     public void Interact()
     {
@@ -33,13 +64,19 @@ public class InteractionTrigger : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (useDistanceDetection || !other.CompareTag("Player") || other.isTrigger) return;
+        StartCoroutine(EnableNextFrame());
+    }
+
+    private void OnTriggerStay2D(Collider2D other)
+    {
+        if (useDistanceDetection || _canInteract || !other.CompareTag("Player") || other.isTrigger) return;
         StartCoroutine(EnableNextFrame());
     }
 
     private void OnTriggerExit2D(Collider2D other)
     {
-        if (!other.CompareTag("Player")) return;
+        if (useDistanceDetection || !other.CompareTag("Player") || other.isTrigger) return;
         _canInteract = false;
         StopAllCoroutines();
         InteractionManager.Instance?.UnregisterTrigger(this);
@@ -51,7 +88,6 @@ public class InteractionTrigger : MonoBehaviour
         InteractionManager.Instance?.UnregisterTrigger(this);
     }
 
-    // 1프레임 대기 후 등록 (Enter 직후 바로 Interact 되는 오발 방지)
     IEnumerator EnableNextFrame()
     {
         yield return null;

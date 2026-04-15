@@ -135,10 +135,6 @@ public class MysteriousObject : MonoBehaviour
             GameObject heartInstance = Instantiate(heartEffectPrefab, spawnPos, Quaternion.identity);
             Destroy(heartInstance, 0.7f); // 0.7초 뒤에 자동 삭제
         }
-        else
-        {
-            Debug.LogWarning("[MysteriousObject] 하트 이펙트 프리팹이 연결되지 않았습니다! 인스펙터를 확인하세요.");
-        }
 
         // 5. 레벨업 체크
         if (currentExp >= maxExp)

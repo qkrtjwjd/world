@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 [System.Serializable]
 public struct GlitchPreset
@@ -12,36 +11,51 @@ public struct GlitchPreset
     public float blockDisplace;
 }
 
+/// <summary>
+/// 글리치 효과 제어 매니저.
+/// RawImage 방식 대신 GlitchRenderFeature (URP Renderer Feature) 를 사용.
+///
+/// [에디터 설정]
+/// - GlitchRenderFeature 를 URP Renderer Asset 에 추가하고 GlitchMaterial 연결
+/// - 기존 Canvas 의 GlitchPanel RawImage 오브젝트는 삭제해도 됩니다
+/// </summary>
 public class GlitchManager : MonoBehaviour
 {
     public static GlitchManager Instance;
 
-    [Header("연결 필수")]
-    [Tooltip("글리치 쉐이더가 적용된 UI 패널 (Image)")]
-    public Image glitchPanel;
-
     [Header("기본 설정")]
     [Range(0, 1)] public float defaultIntensity = 0.5f;
 
-    // ── 프리셋 ──
+    // ── 프리셋 ────────────────────────────────────────────────────────────
     public static readonly GlitchPreset PresetSubtle = new GlitchPreset
-        { intensity = 0.12f, colorDrift = 0.01f, scanLineJitter = 0.02f, staticNoise = 0.0f,  blockDisplace = 0.0f  };
+        { intensity = 0.28f, colorDrift = 0.012f, scanLineJitter = 0.05f, staticNoise = 0.02f,  blockDisplace = 0.005f };
     public static readonly GlitchPreset PresetMild = new GlitchPreset
-        { intensity = 0.25f, colorDrift = 0.02f, scanLineJitter = 0.05f, staticNoise = 0.03f, blockDisplace = 0.01f };
+        { intensity = 0.62f, colorDrift = 0.035f, scanLineJitter = 0.12f, staticNoise = 0.18f,  blockDisplace = 0.040f };
     public static readonly GlitchPreset PresetStrong = new GlitchPreset
-        { intensity = 0.65f, colorDrift = 0.04f, scanLineJitter = 0.08f, staticNoise = 0.08f, blockDisplace = 0.05f };
+        { intensity = 0.85f, colorDrift = 0.065f, scanLineJitter = 0.18f, staticNoise = 0.35f,  blockDisplace = 0.110f };
     public static readonly GlitchPreset PresetCrash = new GlitchPreset
-        { intensity = 0.9f,  colorDrift = 0.06f, scanLineJitter = 0.12f, staticNoise = 0.15f, blockDisplace = 0.10f };
+        { intensity = 1.00f, colorDrift = 0.100f, scanLineJitter = 0.24f, staticNoise = 0.55f,  blockDisplace = 0.200f };
 
-    // 셰이더 프로퍼티 ID 캐싱 (string 룩업 제거)
+    // 단검 미장착 시 배경 루프용 — 단검 플래시보다 약하게, 인형화 구간별로 사용
+    public static readonly GlitchPreset PresetAmbientLow = new GlitchPreset
+        { intensity = 0.09f, colorDrift = 0.003f, scanLineJitter = 0.015f, staticNoise = 0.02f,  blockDisplace = 0.003f };
+    public static readonly GlitchPreset PresetAmbientMid = new GlitchPreset
+        { intensity = 0.16f, colorDrift = 0.008f, scanLineJitter = 0.035f, staticNoise = 0.04f,  blockDisplace = 0.010f };
+    public static readonly GlitchPreset PresetAmbientHigh = new GlitchPreset
+        { intensity = 0.24f, colorDrift = 0.014f, scanLineJitter = 0.055f, staticNoise = 0.08f,  blockDisplace = 0.018f };
+
+    // ── 셰이더 프로퍼티 ID 캐싱 ───────────────────────────────────────────
     static readonly int PropIntensity      = Shader.PropertyToID("_Intensity");
     static readonly int PropColorDrift     = Shader.PropertyToID("_ColorDrift");
     static readonly int PropScanLineJitter = Shader.PropertyToID("_ScanLineJitter");
     static readonly int PropStaticNoise    = Shader.PropertyToID("_StaticNoise");
     static readonly int PropBlockDisplace  = Shader.PropertyToID("_BlockDisplace");
 
-    private Material _glitchMat;
-    private Coroutine _activeCoroutine;
+    private GlitchRenderFeature _feature;
+    private Material            _glitchMat;
+    private Coroutine           _activeCoroutine;
+
+    // ── 라이프사이클 ──────────────────────────────────────────────────────
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void AutoCreate()
@@ -66,45 +80,61 @@ public class GlitchManager : MonoBehaviour
 
     void Start()
     {
-        if (glitchPanel != null)
-        {
-            _glitchMat = glitchPanel.material;
-            // 새 프로퍼티 기본값 초기화
-            _glitchMat.SetFloat(PropStaticNoise,   0f);
-            _glitchMat.SetFloat(PropBlockDisplace, 0f);
-            glitchPanel.gameObject.SetActive(false);
-        }
+        StartCoroutine(InitAfterFrame());
     }
 
-    // ── PlayGlitch ──
+    IEnumerator InitAfterFrame()
+    {
+        // URP 렌더러 초기화(Create) 가 Start 보다 늦게 완료될 수 있으므로 한 프레임 대기
+        yield return null;
+
+        _feature = GlitchRenderFeature.Instance;
+        if (_feature == null)
+        {
+            Debug.LogWarning("[GlitchManager] GlitchRenderFeature 를 찾을 수 없습니다. " +
+                             "URP Renderer Asset 에 GlitchRenderFeature 를 추가했는지 확인하세요.");
+            yield break;
+        }
+
+        _glitchMat = _feature.Material;
+        if (_glitchMat == null)
+        {
+            Debug.LogWarning("[GlitchManager] GlitchRenderFeature 의 Material 슬롯이 비어 있습니다.");
+            yield break;
+        }
+
+        ResetShader();
+        _feature.SetActive(false);
+    }
+
+    // ── 퍼블릭 API ────────────────────────────────────────────────────────
 
     /// <summary>duration 초 동안 프리셋으로 글리치 재생</summary>
     public void PlayGlitch(float duration, GlitchPreset preset)
     {
-        if (glitchPanel == null) return;
+        if (!IsReady()) return;
         if (_activeCoroutine != null) StopCoroutine(_activeCoroutine);
-        _activeCoroutine = StartCoroutine(GlitchRoutinePreset(duration, preset));
+        _activeCoroutine = StartCoroutine(RoutinePreset(duration, preset));
     }
 
     /// <summary>duration 초 동안 강도로 글리치 재생 (기존 호환)</summary>
     public void PlayGlitch(float duration, float intensity = -1f)
     {
-        if (glitchPanel == null) return;
-        if (intensity < 0) intensity = defaultIntensity;
+        if (!IsReady()) return;
+        GlitchPreset p = PresetMild;
+        if (intensity >= 0f) p.intensity = intensity;
         if (_activeCoroutine != null) StopCoroutine(_activeCoroutine);
-        _activeCoroutine = StartCoroutine(GlitchRoutine(duration, intensity));
+        _activeCoroutine = StartCoroutine(RoutinePreset(duration, p));
     }
-
-    // ── SetGlitchLoop ──
 
     /// <summary>프리셋으로 글리치 루프 켜기/끄기</summary>
     public void SetGlitchLoop(bool isActive, GlitchPreset preset)
     {
-        if (glitchPanel == null) return;
+        if (!IsReady()) return;
         if (isActive)
         {
-            glitchPanel.gameObject.SetActive(true);
-            ApplyPreset(preset);
+            _feature.SetActive(true);
+            ApplyPreset(preset, 1f, 1f);
         }
         else
         {
@@ -115,12 +145,14 @@ public class GlitchManager : MonoBehaviour
     /// <summary>강도로 글리치 루프 켜기/끄기 (기존 호환)</summary>
     public void SetGlitchLoop(bool isActive, float intensity = -1f)
     {
-        if (glitchPanel == null) return;
+        if (!IsReady()) return;
         if (isActive)
         {
-            if (intensity < 0) intensity = defaultIntensity;
-            glitchPanel.gameObject.SetActive(true);
-            _glitchMat.SetFloat(PropIntensity, intensity);
+            if (intensity < 0f) intensity = defaultIntensity;
+            GlitchPreset p = PresetMild;
+            p.intensity = intensity;
+            _feature.SetActive(true);
+            ApplyPreset(p, 1f, 1f);
         }
         else
         {
@@ -128,59 +160,79 @@ public class GlitchManager : MonoBehaviour
         }
     }
 
-    // ── 내부 ──
+    // ── 내부 ──────────────────────────────────────────────────────────────
+
+    bool IsReady() => _feature != null && _glitchMat != null;
 
     void TurnOffLoop()
     {
-        // PlayGlitch 코루틴이 실행 중이면 패널 끄지 않음 (스토리 글리치 보호)
+        // PlayGlitch 코루틴이 실행 중이면 패스를 끄지 않음
         if (_activeCoroutine != null) return;
-        glitchPanel.gameObject.SetActive(false);
+        _feature.SetActive(false);
     }
 
-    void ApplyPreset(GlitchPreset p)
+    void ApplyPreset(GlitchPreset p, float noise, float envelope)
     {
-        _glitchMat.SetFloat(PropIntensity,      p.intensity);
-        _glitchMat.SetFloat(PropColorDrift,     p.colorDrift);
-        _glitchMat.SetFloat(PropScanLineJitter, p.scanLineJitter);
-        _glitchMat.SetFloat(PropStaticNoise,    p.staticNoise);
-        _glitchMat.SetFloat(PropBlockDisplace,  p.blockDisplace);
+        float scale = noise * envelope;
+        _glitchMat.SetFloat(PropIntensity,      p.intensity      * scale);
+        _glitchMat.SetFloat(PropColorDrift,     p.colorDrift     * scale);
+        _glitchMat.SetFloat(PropScanLineJitter, p.scanLineJitter * scale);
+        _glitchMat.SetFloat(PropStaticNoise,    p.staticNoise    * scale);
+        _glitchMat.SetFloat(PropBlockDisplace,  p.blockDisplace  * scale);
     }
 
-    IEnumerator GlitchRoutinePreset(float duration, GlitchPreset preset)
+    void ResetShader()
     {
-        glitchPanel.gameObject.SetActive(true);
+        _glitchMat.SetFloat(PropIntensity,      0f);
+        _glitchMat.SetFloat(PropColorDrift,     0f);
+        _glitchMat.SetFloat(PropScanLineJitter, 0f);
+        _glitchMat.SetFloat(PropStaticNoise,    0f);
+        _glitchMat.SetFloat(PropBlockDisplace,  0f);
+    }
 
-        float timer = 0f;
+    /// <summary>
+    /// 핵심 코루틴 — fade-in/out envelope + 프레임마다 노이즈 플리커 적용.
+    /// 구조는 기존과 동일, glitchPanel 참조만 feature.SetActive 로 교체.
+    /// </summary>
+    IEnumerator RoutinePreset(float duration, GlitchPreset preset)
+    {
+        _feature.SetActive(true);
+
+        float timer           = 0f;
+        float flickerTimer    = 0f;
+        float flickerInterval = Random.Range(0.008f, 0.05f);
+        float currentNoise    = Random.Range(0.3f, 1.5f);
+
         while (timer < duration)
         {
+            float progress = timer / duration;
+
+            // Fade-in 0~20%, Fade-out 80~100%
+            float envelope;
+            if (progress < 0.2f)
+                envelope = progress / 0.2f;
+            else if (progress > 0.8f)
+                envelope = (1f - progress) / 0.2f;
+            else
+                envelope = 1f;
+
+            // flickerInterval 마다 노이즈 값 갱신
+            flickerTimer += Time.deltaTime;
+            if (flickerTimer >= flickerInterval)
+            {
+                flickerTimer    = 0f;
+                flickerInterval = Random.Range(0.008f, 0.05f);
+                currentNoise    = Random.Range(0.3f, 1.5f);
+            }
+
+            ApplyPreset(preset, currentNoise, envelope);
+
             timer += Time.deltaTime;
-            float noise = Random.Range(0.5f, 1.5f);
-            _glitchMat.SetFloat(PropIntensity,      preset.intensity      * noise);
-            _glitchMat.SetFloat(PropColorDrift,     preset.colorDrift);
-            _glitchMat.SetFloat(PropScanLineJitter, preset.scanLineJitter);
-            _glitchMat.SetFloat(PropStaticNoise,    preset.staticNoise    * noise);
-            _glitchMat.SetFloat(PropBlockDisplace,  preset.blockDisplace  * noise);
             yield return null;
         }
 
-        glitchPanel.gameObject.SetActive(false);
-        _activeCoroutine = null;
-    }
-
-    IEnumerator GlitchRoutine(float duration, float targetIntensity)
-    {
-        glitchPanel.gameObject.SetActive(true);
-
-        float timer = 0f;
-        while (timer < duration)
-        {
-            timer += Time.deltaTime;
-            float noise = Random.Range(0.5f, 1.5f);
-            _glitchMat.SetFloat(PropIntensity, targetIntensity * noise);
-            yield return null;
-        }
-
-        glitchPanel.gameObject.SetActive(false);
+        ResetShader();
+        _feature.SetActive(false);
         _activeCoroutine = null;
     }
 }

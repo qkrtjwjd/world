@@ -9,6 +9,8 @@ public class Teleport : MonoBehaviour
     public Transform    targetDestination;
     [Tooltip("반응할 콜라이더를 직접 지정하세요. (방 전체 트리거와 구분하기 위해 필수)")]
     public Collider2D   specificTrigger;
+    [Tooltip("체크하면 야간 시퀀스 미완료 시 이동 차단 (현관문 등에 사용)")]
+    public bool         blockBeforeNightComplete = false;
 
     private void OnTriggerEnter2D(Collider2D other)
     {
@@ -20,6 +22,9 @@ public class Teleport : MonoBehaviour
 
         if (!other.IsTouching(specificTrigger)) return;
         if (!other.CompareTag("Player"))        return;
+
+        // 야간 시퀀스 미완료 시 차단
+        if (blockBeforeNightComplete && !GameState.hasWatchedNightSequence) return;
 
         // 쿨타임 중이면 무시
         if (InteractionManager.Instance != null && InteractionManager.Instance.IsCoolingDown)

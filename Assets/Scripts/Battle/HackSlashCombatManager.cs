@@ -12,6 +12,9 @@ public class HackSlashCombatManager : MonoBehaviour
 {
     public static HackSlashCombatManager Instance { get; private set; }
 
+    /// <summary>핵앤슬래시 전투가 진행 중인지 여부. 전투 중 여부 판단에 사용.</summary>
+    public static bool IsActive => Instance != null && Instance._isCombatActive;
+
     // ─────────────────────────────────────────────
     //  인스펙터 연결
     // ─────────────────────────────────────────────

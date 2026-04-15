@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -15,6 +16,13 @@ public class ItemPickup : MonoBehaviour
     public ItemData itemData;
     [Min(1)] public int quantity = 1;                                    // itemData 수량
     public List<ExtraItemEntry> extraItems = new List<ExtraItemEntry>(); // 다른 종류 추가 아이템
+
+    [Header("획득 후 대사 (없으면 비워두세요)")]
+    public DialogueData dialogueAfterPickup;
+
+    [Header("순서 설정")]
+    [Tooltip("체크 시: 대사를 먼저 재생한 후 아이템을 획득합니다.\n해제 시: 아이템 먼저 획득 후 대사를 재생합니다.")]
+    public bool dialogueFirst = false;
 
     private InteractionTrigger _trigger;
 
@@ -78,18 +86,62 @@ public class ItemPickup : MonoBehaviour
             return;
         }
 
+        string fullMsg = LocalizationManager.Instance != null
+            ? LocalizationManager.Instance.GetText("messages.inventory_full")
+            : "인벤토리가 가득 찼습니다!";
+
+        if (InventoryManager.Instance.FreeSlots < toAdd.Count)
+        {
+            InteractionTextUI.Instance?.Show(fullMsg);
+            return;
+        }
+
+        // 대사 먼저: DialogueManager 코루틴에서 실행 (Destroy 후에도 안전)
+        if (dialogueFirst && dialogueAfterPickup != null)
+        {
+            var dm = DialogueManager.Instance;
+            if (dm != null)
+            {
+                dm.StartCoroutine(TalkFirstCoroutine(toAdd, dialogueAfterPickup, gameObject));
+                return;
+            }
+        }
+
+        // 아이템 먼저 (기존 동작)
         int added = InventoryManager.Instance.AddItems(toAdd);
         if (added > 0)
         {
+            if (dialogueAfterPickup != null)
+                ItemAcquisitionUI.Instance?.SetPendingDialogue(dialogueAfterPickup);
             InteractionTextUI.Instance?.Hide();
             Destroy(gameObject);
         }
         else
         {
-            string msg = LocalizationManager.Instance != null
+            InteractionTextUI.Instance?.Show(fullMsg);
+        }
+    }
+
+    // 대사 먼저 재생 후 아이템 획득
+    private static IEnumerator TalkFirstCoroutine(
+        List<ItemData> items, DialogueData dialogue, GameObject pickupObject)
+    {
+        yield return DialogueRunner.PlayAndWait(dialogue);
+
+        if (InventoryManager.Instance == null) yield break;
+
+        int added = InventoryManager.Instance.AddItems(items);
+        if (added > 0)
+        {
+            InteractionTextUI.Instance?.Hide();
+            if (pickupObject != null) Destroy(pickupObject);
+        }
+        else
+        {
+            string fullMsg = LocalizationManager.Instance != null
                 ? LocalizationManager.Instance.GetText("messages.inventory_full")
                 : "인벤토리가 가득 찼습니다!";
-            InteractionTextUI.Instance?.Show(msg);
+            InteractionTextUI.Instance?.Show(fullMsg);
         }
     }
 }

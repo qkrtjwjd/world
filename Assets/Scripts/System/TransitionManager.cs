@@ -137,6 +137,26 @@ public class TransitionManager : MonoBehaviour
     }
 
     /// <summary>
+    /// 검은 화면으로 페이드 아웃만 수행합니다.
+    /// 페이드 인은 FadeFromBlack() 으로 별도 호출하세요.
+    /// </summary>
+    public IEnumerator FadeToBlack(float fadeDuration = -1f)
+    {
+        float dur = fadeDuration < 0f ? defaultFadeDuration : fadeDuration;
+        yield return StartCoroutine(FadeRoutine(1f, dur, null));
+    }
+
+    /// <summary>
+    /// 검은 화면에서 페이드 인만 수행합니다.
+    /// FadeToBlack() 이후에 호출하세요.
+    /// </summary>
+    public IEnumerator FadeFromBlack(float fadeDuration = -1f)
+    {
+        float dur = fadeDuration < 0f ? defaultFadeDuration : fadeDuration;
+        yield return StartCoroutine(FadeRoutine(0f, dur, null));
+    }
+
+    /// <summary>
     /// 검은 화면으로 페이드 아웃 → 씬 로드 → 새 씬에서 페이드 인.
     /// </summary>
     public void DoSceneTransition(string sceneName, float fadeDuration = -1f)
@@ -220,7 +240,7 @@ public class TransitionManager : MonoBehaviour
             if (_ctrl != null) _playerRb = _ctrl.GetComponent<Rigidbody2D>();
         }
         if (!_ctrl) return;
-        _ctrl.enabled = false;
+        _ctrl.Lock();
         if (_playerRb != null) _playerRb.linearVelocity = Vector2.zero;
     }
 
@@ -228,6 +248,6 @@ public class TransitionManager : MonoBehaviour
     {
         if (!_ctrl)
             _ctrl = FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (_ctrl != null) _ctrl.enabled = true;
+        if (_ctrl != null) _ctrl.Unlock();
     }
 }

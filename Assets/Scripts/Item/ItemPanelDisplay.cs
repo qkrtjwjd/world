@@ -37,8 +37,8 @@ public class ItemPanelDisplay : MonoBehaviour
 
             if (iconImage != null)
             {
-                iconImage.sprite = item.itemIcon;
-                iconImage.enabled = item.itemIcon != null;
+                iconImage.sprite = item.CurrentIcon;
+                iconImage.enabled = item.CurrentIcon != null;
             }
         }
     }

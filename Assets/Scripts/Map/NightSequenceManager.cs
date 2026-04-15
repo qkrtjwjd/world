@@ -57,9 +57,20 @@ public class NightSequenceManager : MonoBehaviour
     public GameObject nightLightingRoot;         // 야간 조명 부모 오브젝트
     public GameObject dayLightingRoot;           // 주간 조명 부모 오브젝트
 
+    // ── 캐싱된 WaitForSeconds (GC 방지) ───────────────
+    private static readonly WaitForSeconds _wait05s = new WaitForSeconds(0.5f);
+    private static readonly WaitForSeconds _wait07s = new WaitForSeconds(0.7f);
+    private static readonly WaitForSeconds _wait08s = new WaitForSeconds(0.8f);
+    private static readonly WaitForSeconds _wait1s  = new WaitForSeconds(1f);
+    private static readonly WaitForSeconds _wait15s = new WaitForSeconds(1.5f);
+    private static readonly WaitForSeconds _wait25s = new WaitForSeconds(2.5f);
+
     // ── 내부 상태 ─────────────────────────────────
     private bool _windowReached = false;
     private Coroutine _heartbeatCoroutine;
+
+    [Header("── 테스트 전용 (빌드 전 해제) ──")]
+    [SerializeField] private bool _skipForTesting = false;
 
     /// <summary>WindowTrigger에서 호출 — S#2 창문 도달 신호.</summary>
     public void OnWindowReached() => _windowReached = true;
@@ -68,13 +79,22 @@ public class NightSequenceManager : MonoBehaviour
     void Start()
     {
         if (GameState.hasWatchedNightSequence) return;
+
+        if (_skipForTesting)
+        {
+            GameState.hasWatchedNightSequence = true;
+            if (nightLightingRoot != null) nightLightingRoot.SetActive(false);
+            if (dayLightingRoot   != null) dayLightingRoot.SetActive(true);
+            return;
+        }
+
         StartCoroutine(RunNightSequence());
     }
 
     IEnumerator RunNightSequence()
     {
         // TransitionManager 페이드인 완료 대기 (기본 0.3s + 여유 0.2s)
-        yield return new WaitForSeconds(0.5f);
+        yield return _wait05s;
 
         yield return StartCoroutine(RunScene2());
         yield return StartCoroutine(RunScene3());
@@ -82,15 +102,16 @@ public class NightSequenceManager : MonoBehaviour
 
         GameState.hasWatchedNightSequence = true;
 
-        // 야간 → 주간 조명 전환 (암전 중 스왑)
+        // 야간 → 주간 조명 전환 (암전 중 스왑) + 부엌 스폰
         TransitionManager.Instance?.DoTransition(() =>
         {
             if (nightLightingRoot != null) nightLightingRoot.SetActive(false);
             if (dayLightingRoot   != null) dayLightingRoot.SetActive(true);
+            KitchenTriggerCutscene.Instance?.TeleportToKitchen(); // 암전 중 스폰
         });
 
         // 전환 완료 대기 후 S#5 아침 컷씬 바로 시작
-        yield return new WaitForSeconds(1f);
+        yield return _wait07s; // DoTransition 완료(0.6s) + 여유
         KitchenTriggerCutscene.Instance?.BeginCutscene();
     }
 
@@ -100,7 +121,7 @@ public class NightSequenceManager : MonoBehaviour
         LockPlayer();
 
         // 루 반응 대사: "...뭐야 이 소리."
-        yield return PlayDialogueAndWait(lu_S2_Reaction);
+        yield return DialogueRunner.PlayAndWait(lu_S2_Reaction);
 
         // 목표 UI 표시
         ObjectiveManager.Instance?.ShowObjective(
@@ -128,21 +149,21 @@ public class NightSequenceManager : MonoBehaviour
         if (droneObject)         droneObject.SetActive(true);
         if (droneWreckageObject) droneWreckageObject.SetActive(false);
 
-        yield return new WaitForSeconds(1f);
+        yield return _wait1s;
 
         // 루 내면 독백: "저게 뭐지..."
-        yield return PlayDialogueAndWait(lu_S3_Monologue);
+        yield return DialogueRunner.PlayAndWait(lu_S3_Monologue);
 
         // 세라 등장 (어둠 속에서 걸어나옴)
         if (seraAnimator) seraAnimator.SetTrigger(seraWalkInTrigger);
-        yield return new WaitForSeconds(1.5f);
+        yield return _wait15s;
 
         // 세라 대사 1: "...시끄러워."
-        yield return PlayDialogueAndWait(sera_S3_Line1);
+        yield return DialogueRunner.PlayAndWait(sera_S3_Line1);
 
         // 빛의 구속 이펙트 → 드론 파괴
         if (lightBindingEffect) lightBindingEffect.SetActive(true);
-        yield return new WaitForSeconds(0.5f);
+        yield return _wait05s;
 
         if (droneObject)         droneObject.SetActive(false);
         if (droneWreckageObject) droneWreckageObject.SetActive(true);
@@ -152,22 +173,22 @@ public class NightSequenceManager : MonoBehaviour
         StartCoroutine(ShowFlashText());
         GlitchManager.Instance?.PlayGlitch(0.5f, GlitchManager.PresetStrong);
 
-        yield return new WaitForSeconds(0.8f);
+        yield return _wait08s;
 
         // 세라 대사 2: "더러운 게..."
-        yield return PlayDialogueAndWait(sera_S3_Line2);
+        yield return DialogueRunner.PlayAndWait(sera_S3_Line2);
 
         // 세라 발로 잔해 차는 모션
         if (seraAnimator) seraAnimator.SetTrigger(seraKickTrigger);
-        yield return new WaitForSeconds(1f);
+        yield return _wait1s;
 
         // 세라 대사 3: "...깨우면 안 되는데." (창문 올려다보며)
         if (seraAnimator) seraAnimator.SetTrigger(seraLookUpTrigger);
-        yield return PlayDialogueAndWait(sera_S3_Line3);
+        yield return DialogueRunner.PlayAndWait(sera_S3_Line3);
 
         // 커튼 닫기 → 암전 전환
         TransitionManager.Instance?.DoTransition(null);
-        yield return new WaitForSeconds(0.7f);
+        yield return _wait07s;
     }
 
     // ─── S#4 ─────────────────────────────────────
@@ -179,21 +200,21 @@ public class NightSequenceManager : MonoBehaviour
         _heartbeatCoroutine = StartCoroutine(HeartbeatPulse());
 
         // 루 내면 독백: "엄마 표정이... 왜 저래?..."
-        yield return PlayDialogueAndWait(lu_S4_Monologue);
+        yield return DialogueRunner.PlayAndWait(lu_S4_Monologue);
 
         // 도자기 손가락 클로즈업
         if (closeupImage != null && ceramicFingerSprite != null)
         {
             closeupImage.sprite = ceramicFingerSprite;
             closeupImage.gameObject.SetActive(true);
-            yield return new WaitForSeconds(1.5f);
+            yield return _wait15s;
             closeupImage.gameObject.SetActive(false);
         }
 
         // 세라 차가운 눈빛 오버랩 (HallucinationManager)
         if (HallucinationManager.Instance != null && seraGazeSprite != null)
             HallucinationManager.Instance.TriggerHallucination(seraGazeSprite, 1.5f);
-        yield return new WaitForSeconds(2.5f); // fadeIn(0.5) + 1.5s + fadeOut(0.5)
+        yield return _wait25s; // fadeIn(0.5) + 1.5s + fadeOut(0.5)
 
         // 심장 박동 종료
         if (_heartbeatCoroutine != null)
@@ -213,26 +234,12 @@ public class NightSequenceManager : MonoBehaviour
 
     // ─── 헬퍼 ────────────────────────────────────
 
-    /// <summary>대사 재생 후 Space/클릭으로 진행. DialogueTrigger 없이 동작.</summary>
-    IEnumerator PlayDialogueAndWait(DialogueData data)
-    {
-        if (data == null || DialogueManager.Instance == null) yield break;
-        DialogueManager.Instance.StartDialogue(data);
-        yield return null; // 1프레임 대기 — isTalking 활성화 보장
-        while (DialogueManager.Instance != null && DialogueManager.Instance.isTalking)
-        {
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
-                DialogueManager.Instance.DisplayNextSentence();
-            yield return null;
-        }
-    }
-
     IEnumerator ShowFlashText()
     {
         if (flashText == null) yield break;
         flashText.text = flashSentence_ko;
         flashText.gameObject.SetActive(true);
-        yield return new WaitForSeconds(0.5f);
+        yield return _wait05s;
         flashText.gameObject.SetActive(false);
     }
 
@@ -252,18 +259,9 @@ public class NightSequenceManager : MonoBehaviour
         }
     }
 
-    static void LockPlayer()
-    {
-        var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (ctrl == null) return;
-        ctrl.enabled = false;
-        var rb = ctrl.GetComponent<Rigidbody2D>();
-        if (rb != null) rb.linearVelocity = Vector2.zero;
-    }
-
-    static void UnlockPlayer()
-    {
-        var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (ctrl != null) ctrl.enabled = true;
-    }
+    static void LockPlayer()   => DialogueRunner.LockPlayer();
+    static void UnlockPlayer() => DialogueRunner.UnlockPlayer(
+        PlayerStats.Instance != null
+            ? PlayerStats.Instance.GetComponent<ClearSky.SimplePlayerController>()
+            : Object.FindAnyObjectByType<ClearSky.SimplePlayerController>());
 }

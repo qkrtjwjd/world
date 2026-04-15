@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 [RequireComponent(typeof(InteractionTrigger))]
@@ -7,6 +8,12 @@ public class TeleportInteraction : MonoBehaviour
     [Tooltip("플레이어가 이동할 목적지 위치")]
     public Transform targetLocation;
 
+    [Header("야간 시퀀스 차단")]
+    [Tooltip("체크하면 야간 시퀀스 미완료 시 이동을 차단합니다.")]
+    public bool blockDuringNightSequence = false;
+    [Tooltip("차단 시 표시할 대사 (비워두면 대사 없이 막기만 함)")]
+    public DialogueData nightBlockedDialogue;
+
     void Awake()
     {
         GetComponent<InteractionTrigger>().onInteract.AddListener(Teleport);
@@ -14,6 +21,13 @@ public class TeleportInteraction : MonoBehaviour
 
     public void Teleport()
     {
+        if (blockDuringNightSequence && !GameState.hasWatchedNightSequence)
+        {
+            if (nightBlockedDialogue != null)
+                StartCoroutine(DialogueRunner.PlayAndWait(nightBlockedDialogue, lockPlayer: true));
+            return;
+        }
+
         if (targetLocation == null)
         {
             Debug.LogError("[TeleportInteraction] Target Location 이 비어있습니다!");

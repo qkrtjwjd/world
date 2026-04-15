@@ -20,6 +20,7 @@ public class PlayerStats : MonoBehaviour
     private float _lastMental = -1f;
 
     private bool _gameStateDirty = false;
+    private PlayerStatusUI _statusUI;
 
     void Awake()
     {
@@ -39,9 +40,10 @@ public class PlayerStats : MonoBehaviour
         {
             currentHealth        = maxHealth;
             currentMental        = maxMental;
-            currentPuppetization = 0f;
+            currentPuppetization = 20f;
         }
 
+        _statusUI = PlayerStatusUI.Instance;
         UpdateUI(true);
     }
 
@@ -98,16 +100,16 @@ public class PlayerStats : MonoBehaviour
     // ── UI 갱신 ──
     public void UpdateUI(bool force = false)
     {
-        if (PlayerStatusUI.Instance == null) return;
+        if (_statusUI == null) return;
 
         if (force || Mathf.Abs(currentHealth - _lastHealth) > 0.01f)
         {
-            PlayerStatusUI.Instance.UpdateHP(currentHealth, maxHealth);
+            _statusUI.UpdateHP(currentHealth, maxHealth);
             _lastHealth = currentHealth;
         }
         if (force || Mathf.Abs(currentMental - _lastMental) > 0.01f)
         {
-            PlayerStatusUI.Instance.UpdateMental(currentMental, maxMental);
+            _statusUI.UpdateMental(currentMental, maxMental);
             _lastMental = currentMental;
         }
     }
@@ -122,8 +124,15 @@ public class PlayerStats : MonoBehaviour
         if (currentHealth / maxHealth <= 0.3f)
             AddTrauma(5f);
 
-        PlayerStatusUI.Instance?.UpdateHP(currentHealth, maxHealth);
+        _statusUI?.UpdateHP(currentHealth, maxHealth);
         StaticUIManager.Instance?.UpdateHealthBars();
+    }
+
+    public void RecoverHealth(float amount)
+    {
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        _gameStateDirty = true;
+        _statusUI?.UpdateHP(currentHealth, maxHealth);
     }
 
     public void AddTrauma(float amount)
@@ -131,14 +140,14 @@ public class PlayerStats : MonoBehaviour
         currentMental = Mathf.Max(0f, currentMental - amount);
         _gameStateDirty = true;
         ReducePuppetization(amount * 0.5f);
-        PlayerStatusUI.Instance?.UpdateMental(currentMental, maxMental);
+        _statusUI?.UpdateMental(currentMental, maxMental);
     }
 
     public void RecoverMental(float amount)
     {
         currentMental = Mathf.Min(maxMental, currentMental + amount);
         _gameStateDirty = true;
-        PlayerStatusUI.Instance?.UpdateMental(currentMental, maxMental);
+        _statusUI?.UpdateMental(currentMental, maxMental);
     }
 
     public void AddPuppetization(float amount)

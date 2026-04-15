@@ -69,7 +69,8 @@ public class EnemyAI : MonoBehaviour
 
     void OnEnable()
     {
-        // 활성화될 때 플레이어 참조 갱신
+        // 참조가 이미 유효하면 재탐색 생략
+        if (_player != null) return;
         FindPlayer();
     }
 

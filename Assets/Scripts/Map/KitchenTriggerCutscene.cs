@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 /// <summary>
 /// S#5 거실 / 아침 컷씬 트리거.
@@ -11,7 +10,11 @@ public class KitchenTriggerCutscene : MonoBehaviour
 {
     public static KitchenTriggerCutscene Instance { get; private set; }
 
-    void Awake() => Instance = this;
+    void Awake()
+    {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+    }
     // ── 대사 ─────────────────────────────────────
     [Header("S#5 — 대사")]
     public DialogueData dialogue_Part1;    // 세라↔루 (미소 굳기 전): "우리 아가..." ~ "정원에 계시던데"
@@ -29,10 +32,6 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public Transform playerKitchenSpawn; // 빈 GameObject로 위치 지정
     public Transform seraKitchenSpawn;   // 빈 GameObject로 위치 지정
     public RoomTransfer kitchenRoom;     // 부엌 RoomTransfer → 카메라 바운드 적용
-
-    // ── 효과음 ───────────────────────────────────
-    [Header("S#5 — 효과음")]
-    public AudioSource doorCloseAudio; // 현관문 닫히는 소리
 
     // ─────────────────────────────────────────────
 
@@ -55,10 +54,10 @@ public class KitchenTriggerCutscene : MonoBehaviour
     {
         TeleportToKitchen();
         ObjectiveManager.Instance?.HideHUD(); // 컷씬 동안 HUD 숨김
-        var ctrl = LockPlayer();
+        var ctrl = DialogueRunner.LockPlayer();
 
         // Part1: 세라↔루 대사 (세라 미소 굳기 전)
-        yield return PlayDialogueAndWait(dialogue_Part1);
+        yield return DialogueRunner.PlayAndWait(dialogue_Part1);
 
         // 세라 미소 굳는 연출 (0.5초)
         if (seraAnimator != null)
@@ -66,7 +65,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // Part2: 세라↔루 대사 (해충 발언 ~ 루 "...네.")
-        yield return PlayDialogueAndWait(dialogue_Part2);
+        yield return DialogueRunner.PlayAndWait(dialogue_Part2);
 
         // 세라 이마 입맞춤 + 퇴장
         if (seraAnimator != null)
@@ -74,35 +73,20 @@ public class KitchenTriggerCutscene : MonoBehaviour
         yield return new WaitForSeconds(1.5f);
 
         // 현관문 소리
-        if (doorCloseAudio != null)
-            doorCloseAudio.Play();
+        AudioManager.Instance?.Play("doorClose");
         yield return new WaitForSeconds(0.5f);
 
         // 루 내면 독백: 『다락방. 엄마가 유일하게 못 들어가게 하는 곳.』
-        yield return PlayDialogueAndWait(lu_InnerMonologue);
+        yield return DialogueRunner.PlayAndWait(lu_InnerMonologue);
 
-        UnlockPlayer(ctrl);
+        DialogueRunner.UnlockPlayer(ctrl);
 
         // 컷씬 완전 종료 후 Objective 초기화, 일반 HUD 복원
+        ObjectiveManager.Instance?.ResetCutscene();
         ObjectiveManager.Instance?.ShowObjective("현재 목표", "엄마 몰래 단서를 찾으세요");
     }
 
-    // ─── 헬퍼 ────────────────────────────────────
-
-    IEnumerator PlayDialogueAndWait(DialogueData data)
-    {
-        if (data == null || DialogueManager.Instance == null) yield break;
-        DialogueManager.Instance.StartDialogue(data);
-        yield return null; // 1프레임 대기 — isTalking 활성화 보장
-        while (DialogueManager.Instance != null && DialogueManager.Instance.isTalking)
-        {
-            if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
-                DialogueManager.Instance.DisplayNextSentence();
-            yield return null;
-        }
-    }
-
-    void TeleportToKitchen()
+    public void TeleportToKitchen()
     {
         var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
         if (ctrl != null && playerKitchenSpawn != null)
@@ -124,18 +108,4 @@ public class KitchenTriggerCutscene : MonoBehaviour
         }
     }
 
-    static ClearSky.SimplePlayerController LockPlayer()
-    {
-        var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (ctrl == null) return null;
-        var rb = ctrl.GetComponent<Rigidbody2D>();
-        ctrl.enabled = false;
-        if (rb != null) rb.linearVelocity = Vector2.zero;
-        return ctrl;
-    }
-
-    static void UnlockPlayer(ClearSky.SimplePlayerController ctrl)
-    {
-        if (ctrl != null) ctrl.enabled = true;
-    }
 }

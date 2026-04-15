@@ -21,6 +21,24 @@ public class ShelterFeedingSystem : MonoBehaviour
     {
         if (InventoryManager.Instance == null) return;
 
+        // foodItem 미연결 방어
+        if (foodItem == null)
+        {
+            Debug.LogWarning("[ShelterFeedingSystem] foodItem이 설정되지 않았습니다. 인스펙터를 확인하세요.");
+            return;
+        }
+
+        // 먹일 수 없는 아이템이면 조용히 종료
+        if (!foodItem.canFeed)
+        {
+            if (InteractionTextUI.Instance != null)
+            {
+                InteractionTextUI.Instance.Show(failMessage);
+                Invoke("HideText", 2f);
+            }
+            return;
+        }
+
         // 인벤토리에서 해당 아이템 찾기
         ItemData foundItem = InventoryManager.Instance.inventoryItems.Find(x => x.itemName == foodItem.itemName);
 

@@ -51,8 +51,8 @@ public class ItemQuickSlotUI : MonoBehaviour
 
             // 아이콘 이미지
             Image icon = slot.GetComponentInChildren<Image>();
-            if (icon != null && item.itemIcon != null)
-                icon.sprite = item.itemIcon;
+            if (icon != null && item.CurrentIcon != null)
+                icon.sprite = item.CurrentIcon;
 
             // 호버 이벤트 연결
             var hover = slot.AddComponent<QuickSlotHover>();
@@ -80,7 +80,7 @@ public class ItemQuickSlotUI : MonoBehaviour
     {
         yield return _waitPopup;
 
-        if (popupItemImage != null) popupItemImage.sprite = item.itemIcon;
+        if (popupItemImage != null) popupItemImage.sprite = item.CurrentIcon;
         if (popupItemName  != null) popupItemName.text   = item.DisplayName;
         if (popupPanel     != null) popupPanel.SetActive(true);
     }

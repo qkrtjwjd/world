@@ -33,15 +33,32 @@ public class BodyMemoryDrawer : MonoBehaviour
     {
         var ctrl = LockPlayer();
 
-        if (memoryDialogue != null)
-            DialogueManager.Instance?.StartDialogue(memoryDialogue);
-
-        yield return null;
-        while (DialogueManager.Instance != null && DialogueManager.Instance.isTalking)
-            yield return null;
-
+        // 아이템 획득 → 알림 표시
         if (atticKeyItem != null)
+        {
+            Debug.Log($"[Debug] ItemAcquisitionUI.Instance = {ItemAcquisitionUI.Instance}");
+            Debug.Log($"[Debug] InventoryManager.Instance = {InventoryManager.Instance}");
             InventoryManager.Instance?.AddItem(atticKeyItem);
+        }
+
+        // 알림 표시 시간만큼 대기
+        float wait = ItemAcquisitionUI.Instance != null
+            ? ItemAcquisitionUI.Instance.displayDuration
+            : 2f;
+        yield return new WaitForSeconds(wait);
+
+        // 대사 직접 시작 (ItemAcquisitionUI 체인에 의존하지 않음)
+        if (memoryDialogue != null && DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.StartDialogue(memoryDialogue);
+            yield return null; // isTalking 활성화 보장
+            while (DialogueManager.Instance.isTalking)
+            {
+                if (Input.GetKeyDown(KeyCode.Space) || Input.GetMouseButtonDown(0))
+                    DialogueManager.Instance.DisplayNextSentence();
+                yield return null;
+            }
+        }
 
         UnlockPlayer(ctrl);
     }
@@ -50,14 +67,14 @@ public class BodyMemoryDrawer : MonoBehaviour
     {
         var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
         if (ctrl == null) return null;
-        var rb = ctrl.GetComponent<Rigidbody2D>();
-        ctrl.enabled = false;
-        if (rb != null) rb.linearVelocity = Vector2.zero;
+        ctrl.Lock();
         return ctrl;
     }
 
     static void UnlockPlayer(ClearSky.SimplePlayerController ctrl)
     {
-        if (ctrl != null) ctrl.enabled = true;
+        if (ctrl != null) ctrl.Unlock();
     }
+
+
 }

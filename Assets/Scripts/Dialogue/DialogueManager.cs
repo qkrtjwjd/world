@@ -26,8 +26,10 @@ public class DialogueManager : MonoBehaviour
     [Tooltip("대화/독백 판정에 사용할 주인공 이름")]
     public string playerName = "루";
 
-    private Queue<DialogueLine> sentences;   // 대사들을 담아둘 큐
+    private Queue<DialogueLine> sentences = new Queue<DialogueLine>();   // 대사들을 담아둘 큐
     private bool _isConversation = false;    // 복수 발화자 여부
+    private LocalizationManager _locMan;     // 매 대사마다 싱글톤 역참조 방지
+    private int  _playerNameHash;            // speakerName 비교 최적화
 
     // 대화 중인지 확인하는 변수 (플레이어 이동 막기 등에 사용)
     public bool isTalking = false;
@@ -37,15 +39,13 @@ public class DialogueManager : MonoBehaviour
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
         if (dialoguePanel != null) dialoguePanel.SetActive(false); // 첫 프레임 전에 숨김
-    }
-
-    void Start()
-    {
-        sentences = new Queue<DialogueLine>();
+        _locMan          = LocalizationManager.Instance;
+        _playerNameHash  = playerName != null ? playerName.GetHashCode() : 0;
     }
 
     public void StartDialogue(DialogueData dialogue)
     {
+        if (dialogue == null) { Debug.LogWarning("[DialogueManager] StartDialogue: dialogue is null"); return; }
         isTalking = true;
         dialoguePanel.SetActive(true);
         ObjectiveManager.Instance?.HideHUD();
@@ -86,15 +86,17 @@ public class DialogueManager : MonoBehaviour
         DialogueLine currentLine = sentences.Dequeue();
 
         // 1. 이름 및 초상화 방향 결정
-        bool useRight  = _isConversation && currentLine.speakerName == playerName;
+        bool useRight  = _isConversation &&
+                         currentLine.speakerName.GetHashCode() == _playerNameHash &&
+                         currentLine.speakerName == playerName;
         nameText.text  = currentLine.speakerName;
         
         // 언어 설정에 따라 대사 선택
         string sentenceToDisplay = currentLine.sentence_ko; // 기본값
 
-        if (LocalizationManager.Instance != null)
+        if (_locMan != null)
         {
-            switch (LocalizationManager.Instance.currentLanguage)
+            switch (_locMan.currentLanguage)
             {
                 case LocalizationManager.Language.EN:
                     sentenceToDisplay = string.IsNullOrEmpty(currentLine.sentence_en) ? currentLine.sentence_ko : currentLine.sentence_en;
@@ -112,9 +114,9 @@ public class DialogueManager : MonoBehaviour
         {
             string realitySentence = currentLine.sentence_reality_ko;
 
-            if (LocalizationManager.Instance != null)
+            if (_locMan != null)
             {
-                switch (LocalizationManager.Instance.currentLanguage)
+                switch (_locMan.currentLanguage)
                 {
                     case LocalizationManager.Language.EN:
                         realitySentence = string.IsNullOrEmpty(currentLine.sentence_reality_en)
@@ -163,14 +165,17 @@ public class DialogueManager : MonoBehaviour
 
         if (inactivePortrait != null) inactivePortrait.gameObject.SetActive(false);
 
-        if (currentLine.portrait != null)
+        if (activePortrait != null)
         {
-            activePortrait.sprite = currentLine.portrait;
-            activePortrait.gameObject.SetActive(true);
-        }
-        else
-        {
-            activePortrait.gameObject.SetActive(false);
+            if (currentLine.portrait != null)
+            {
+                activePortrait.sprite = currentLine.portrait;
+                activePortrait.gameObject.SetActive(true);
+            }
+            else
+            {
+                activePortrait.gameObject.SetActive(false);
+            }
         }
 
         // TODO: 여기서 타이핑 효과(타자 치는 듯한 연출) 코루틴을 넣을 수도 있음
@@ -182,7 +187,7 @@ public class DialogueManager : MonoBehaviour
         dialoguePanel.SetActive(false);
         nameText.gameObject.SetActive(false);
         dialogueText.gameObject.SetActive(false);
-        portraitImage.gameObject.SetActive(false);
+        if (portraitImage != null) portraitImage.gameObject.SetActive(false);
         if (portraitImageRight != null) portraitImageRight.gameObject.SetActive(false);
         ObjectiveManager.Instance?.RestoreHUD();
         Debug.Log("대화 종료");
