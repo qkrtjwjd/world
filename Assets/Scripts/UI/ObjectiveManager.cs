@@ -29,6 +29,14 @@ public class ObjectiveManager : MonoBehaviour
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        DialogueEvents.OnDialogueStarted += HideHUD;
+        DialogueEvents.OnDialogueEnded   += RestoreHUD;
+    }
+
+    void OnDestroy()
+    {
+        DialogueEvents.OnDialogueStarted -= HideHUD;
+        DialogueEvents.OnDialogueEnded   -= RestoreHUD;
     }
 
     /// <summary>전체 패널을 표시하고 5초 후 자동으로 HUD로 전환한다.</summary>

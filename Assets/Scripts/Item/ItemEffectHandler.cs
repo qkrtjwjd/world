@@ -22,11 +22,24 @@ public class ItemEffectHandler : MonoBehaviour
 
     // 효과를 추가할 때 여기에 [SerializeField] 필드를 추가하세요.
 
+    private WaitForSecondsRealtime _blurWait;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        _blurWait = new WaitForSecondsRealtime(blurDuration);
         if (blurOverlayPanel != null) blurOverlayPanel.SetActive(false);
+    }
+
+    void OnEnable()  { BattleEvents.OnItemUsed += OnBattleItemUsed; }
+    void OnDisable() { BattleEvents.OnItemUsed -= OnBattleItemUsed; }
+
+    /// <summary>BattleEvents.OnItemUsed 구독 핸들러 — 기존 HandleEffect 직접 호출을 대체.</summary>
+    void OnBattleItemUsed(ItemData item, Unit user)
+    {
+        if (item == null) return;
+        HandleEffect(item.fantasyEffect.specialEffectCode);
     }
 
     // ─────────────────────────────────────────────
@@ -67,7 +80,7 @@ public class ItemEffectHandler : MonoBehaviour
         }
 
         blurOverlayPanel.SetActive(true);
-        yield return new WaitForSecondsRealtime(blurDuration);
+        yield return _blurWait;
         blurOverlayPanel.SetActive(false);
     }
 

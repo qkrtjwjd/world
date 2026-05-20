@@ -86,14 +86,14 @@ public class MysteriousObject : MonoBehaviour
         // 1. 체했으면 못 먹음
         if (isSick)
         {
-            Debug.Log("우욱... (체해서 더 이상 못 먹습니다. 남은 시간: " + (int)sickTimer + "초)");
+            Dbg.Log("우욱... (체해서 더 이상 못 먹습니다. 남은 시간: " + (int)sickTimer + "초)");
             return;
         }
 
         // 2. 시간 경과 체크: 5분(300초) 이상 지났으면 먹은 횟수 초기화
         if (Time.time - lastFedTime >= resetEatCountTime)
         {
-            Debug.Log("오랜만에 먹어서 소화가 다 됐어! (횟수 초기화)");
+            Dbg.Log("오랜만에 먹어서 소화가 다 됐어! (횟수 초기화)");
             highGradeEatCount = 0;
             totalEatCount = 0;
         }
@@ -122,7 +122,7 @@ public class MysteriousObject : MonoBehaviour
 
         // 4. 아이템 먹기 성공
         currentExp += item.feedValue;
-        Debug.Log($"{item.itemName} 냠냠! (Lv.{currentLevel} | Exp: {currentExp}/{maxExp})");
+        Dbg.Log($"{item.itemName} 냠냠! (Lv.{currentLevel} | Exp: {currentExp}/{maxExp})");
 
         // 하트 이펙트 띄우기
         // Debug.Log($"[MysteriousObject] 하트 프리팹 확인: {heartEffectPrefab}");
@@ -148,7 +148,7 @@ public class MysteriousObject : MonoBehaviour
     {
         isSick = true;
         sickTimer = sickDuration;
-        Debug.Log($"[급체 발생] {message} ({sickDuration}초 동안 아이템 거부)");
+        Dbg.Log($"[급체 발생] {message} ({sickDuration}초 동안 아이템 거부)");
         // 시각적 효과 추가 가능
     }
 
@@ -157,13 +157,13 @@ public class MysteriousObject : MonoBehaviour
     {
         isSick = false;
         sickTimer = 0;
-        Debug.Log("꺼억~ 소화 다 됐다! 다시 먹을 수 있어.");
+        Dbg.Log("꺼억~ 소화 다 됐다! 다시 먹을 수 있어.");
     }
 
     // 레벨업 및 보상
     void LevelUp()
     {
-        Debug.Log($"🎉 레벨 업! {currentLevel} -> {currentLevel + 1}");
+        Dbg.Log($"🎉 레벨 업! {currentLevel} -> {currentLevel + 1}");
         
         // 보상 뱉기
         SpitReward();
@@ -183,7 +183,7 @@ public class MysteriousObject : MonoBehaviour
     // 보상 뱉기
     void SpitReward()
     {
-        Debug.Log("끄억! 보상을 뱉습니다.");
+        Dbg.Log("끄억! 보상을 뱉습니다.");
 
         GameObject rewardToSpawn = null;
         int randomValue = Random.Range(0, 100); 

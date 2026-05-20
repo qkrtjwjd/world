@@ -24,7 +24,7 @@ public class Teleport : MonoBehaviour
         if (!other.CompareTag("Player"))        return;
 
         // 야간 시퀀스 미완료 시 차단
-        if (blockBeforeNightComplete && !GameState.hasWatchedNightSequence) return;
+        if (blockBeforeNightComplete && !GameState.isNightSequenceWatched) return;
 
         // 쿨타임 중이면 무시
         if (InteractionManager.Instance != null && InteractionManager.Instance.IsCoolingDown)

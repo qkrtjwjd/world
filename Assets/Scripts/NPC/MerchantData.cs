@@ -35,15 +35,15 @@ public class BarterDeal
     [Tooltip("false 로 설정하면 상인이 거절합니다 (대사는 rejectDialogue 사용)")]
     public bool merchantAccepts = true;
 
-    [Header("대사")]
-    [Tooltip("플레이어가 거래를 제안할 때 재생되는 대사")]
-    public DialogueData proposeDialogue;
+    [Header("대사 (Yarn 노드 이름)")]
+    [Tooltip("플레이어가 거래를 제안할 때 재생할 Yarn 노드 이름")]
+    public string yarnNode_propose;
 
-    [Tooltip("상인이 거래를 수락할 때 재생되는 대사")]
-    public DialogueData acceptDialogue;
+    [Tooltip("상인이 거래를 수락할 때 재생할 Yarn 노드 이름")]
+    public string yarnNode_accept;
 
-    [Tooltip("상인이 거래를 거절할 때 재생되는 대사")]
-    public DialogueData rejectDialogue;
+    [Tooltip("상인이 거래를 거절할 때 재생할 Yarn 노드 이름")]
+    public string yarnNode_reject;
 
     [Header("옵션")]
     [Tooltip("체크 시: 거래 완료 후 목록에서 제거됩니다.")]

@@ -107,22 +107,6 @@ public class TransitionSFXController : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    //  공개 API — PlayOneShot 스텁 (BattleTransitionManager에서 호출)
-    // ─────────────────────────────────────────────
-
-    /// <summary>유리 산산조각 효과음을 재생합니다.</summary>
-    // TODO: _glassShatterClip 필드 추가 후 PlayClip(_glassShatterClip, ...) 연결
-    public void PlayGlassShatter() { }
-
-    /// <summary>균열 루프 효과음을 재생합니다.</summary>
-    // TODO: 루프용 AudioSource 별도 추가 및 재생/정지 메서드 구현
-    public void PlayCrackingLoop() { }
-
-    /// <summary>금속 긁힘(스크레이프) 효과음을 재생합니다.</summary>
-    // TODO: _metalScrapeClip 필드 추가 후 PlayClip(_metalScrapeClip, ...) 연결
-    public void PlayMetalScrape() { }
-
-    // ─────────────────────────────────────────────
     //  공개 API — BGM 크로스페이드
     // ─────────────────────────────────────────────
 

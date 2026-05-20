@@ -12,6 +12,7 @@ public class EnemyHealthUI : MonoBehaviour
 
     private Camera mainCamera;
     private Canvas parentCanvas;
+    private float  _lastKnownHealth = -1f;
 
     void Start()
     {
@@ -52,11 +53,12 @@ public class EnemyHealthUI : MonoBehaviour
     {
         if (targetEnemy == null || enemyHPSlider == null) return;
 
-        // 1. HP 업데이트 로직
-        // 조건: Slider.value = currentHP / maxHP 공식 사용
-        if (targetEnemy.maxHealth > 0)
+        // HP가 변경된 경우에만 슬라이더 갱신
+        if (!Mathf.Approximately(targetEnemy.currentHealth, _lastKnownHealth))
         {
-            enemyHPSlider.value = targetEnemy.currentHealth / targetEnemy.maxHealth;
+            _lastKnownHealth = targetEnemy.currentHealth;
+            if (targetEnemy.maxHealth > 0)
+                enemyHPSlider.value = targetEnemy.currentHealth / targetEnemy.maxHealth;
         }
 
         // 2. World-to-Screen: 적의 발밑 또는 머리 위 위치를 유지하도록 설정

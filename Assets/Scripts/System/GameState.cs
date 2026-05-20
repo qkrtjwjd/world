@@ -34,14 +34,12 @@ public static class GameState
     {
         public bool   isComingFromBattle;
         public float  cooldown;
-        public float  savedGaugeValue;
         public string returnSceneName;
 
         public static BattleReturnState Default => new BattleReturnState
         {
             isComingFromBattle = false,
             cooldown           = 0f,
-            savedGaugeValue    = 0f,
             returnSceneName    = SceneNames.Map,
         };
 
@@ -74,12 +72,15 @@ public static class GameState
     // ──────────────────────────────────────────
     //  스토리 진행 플래그
     // ──────────────────────────────────────────
+    /// <summary>튜토리얼 전투 진행 단계. 0=미시작, 1=첫번째(턴제) 완료, 2=두번째(핵앤슬래시) 완료.</summary>
+    public static int tutorialBattleStep = 0;
+
     /// <summary>S#2~S#4 야간 시퀀스(튜토리얼) 시청 여부. 한 번만 발동.</summary>
-    public static bool hasWatchedNightSequence = false;
+    public static bool isNightSequenceWatched = false;
     /// <summary>S#8 아버지 메시지 이후 루의 결심 여부. true 이면 현관문이 열린다.</summary>
-    public static bool hasResolve = false;
+    public static bool isResolved = false;
     /// <summary>S#5 아침 식사 컷씬 시청 여부. 한 번만 발동.</summary>
-    public static bool hasWatchedBreakfast = false;
+    public static bool isBreakfastWatched = false;
 
     // ──────────────────────────────────────────
     //  위치 / 멘탈 붕괴 / 기타
@@ -92,55 +93,19 @@ public static class GameState
     // ──────────────────────────────────────────
     //  처치된 적 ID
     // ──────────────────────────────────────────
-    public static HashSet<string> defeatedEnemyIDs = new HashSet<string>();
+    public static HashSet<string> defeatedEnemyIDs    = new HashSet<string>();
+    public static HashSet<string> chosenDialogueKeys  = new HashSet<string>();
 
     public static void RegisterDefeatedEnemy(string id)
     {
         if (!string.IsNullOrEmpty(id))
-            defeatedEnemyIDs.Add(id); // HashSet은 중복 자동 무시
+            defeatedEnemyIDs.Add(id);
     }
 
     // ──────────────────────────────────────────
     //  인벤토리
     // ──────────────────────────────────────────
     public static List<ItemData> inventoryItems = null;
-
-    // ──────────────────────────────────────────
-    //  하위 호환 프로퍼티 (기존 코드 참조 유지)
-    // ──────────────────────────────────────────
-    public static bool   isComingFromBattle
-    {
-        get => battleReturn.isComingFromBattle;
-        set => battleReturn.isComingFromBattle = value;
-    }
-    public static float  savedGaugeValue
-    {
-        get => battleReturn.savedGaugeValue;
-        set => battleReturn.savedGaugeValue = value;
-    }
-    public static string returnSceneName
-    {
-        get => battleReturn.returnSceneName;
-        set => battleReturn.returnSceneName = value;
-    }
-    public static float battleReturnCooldown
-    {
-        get => battleReturn.cooldown;
-        set => battleReturn.cooldown = value;
-    }
-
-    public static float playerHealth
-    {
-        get => player.health;        set => player.health = value;
-    }
-    public static float playerMental
-    {
-        get => player.mental;        set => player.mental = value;
-    }
-    public static float playerPuppetization
-    {
-        get => player.puppetization; set => player.puppetization = value;
-    }
 
     // SceneNames 위임
     public static string GetFantasyScene(string scene) => SceneNames.GetFantasyScene(scene);
@@ -153,16 +118,21 @@ public static class GameState
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
     static void ResetOnPlay()
     {
+        player                   = PlayerState.Default;
+        mentalBreakdownTimer     = 0f;
         battleReturn             = BattleReturnState.Default;
         lastPosition             = Vector3.zero;
         hasPositionSaved         = false;
         pendingSwitchToHackSlash = false;
         pendingEnemyPrefab       = null;
-        hasWatchedNightSequence  = false;
-        hasResolve               = false;
-        hasWatchedBreakfast      = false;
-        // returnSceneName은 battleReturn = Default 에서 이미 SceneNames.Map 으로 설정됨
+        pendingModeSelection     = false;
+        tutorialBattleStep       = 0;
+        isNightSequenceWatched  = false;
+        isResolved               = false;
+        isBreakfastWatched      = false;
+        isZombieDefeated         = false;
         defeatedEnemyIDs         = new HashSet<string>();
+        chosenDialogueKeys       = new HashSet<string>();
     }
 
     // ──────────────────────────────────────────
@@ -172,4 +142,7 @@ public static class GameState
     public static bool pendingSwitchToHackSlash = false;
     /// <summary>모드 전환 시 넘겨줄 적 프리팹 (에셋 참조이므로 씬 로드에서 유지됨).</summary>
     public static GameObject pendingEnemyPrefab = null;
+
+    /// <summary>PendingMode 선택 UI 대기 중. BattleSystem이 전투를 즉시 시작하지 않도록 막음.</summary>
+    public static bool pendingModeSelection = false;
 }

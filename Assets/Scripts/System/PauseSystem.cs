@@ -10,6 +10,10 @@ public class PauseSystem : MonoBehaviour
     public GameObject savePanel;
     public GameObject loadPanel;
 
+    [Header("스탯 바 (일시정지·인벤토리에서만 표시)")]
+    public GameObject hpBar;
+    public GameObject mentalBar;
+
     private bool _isPaused = false;
 
     void Start()
@@ -22,14 +26,30 @@ public class PauseSystem : MonoBehaviour
         IsActive(inventoryPanel) ||
         IsActive(journalPanel)   ||
         IsActive(savePanel)      ||
-        IsActive(loadPanel);
+        IsActive(loadPanel)      ||
+        SettingsPanelUI.IsOpen;
 
     static bool IsActive(GameObject go) => go != null && go.activeSelf;
 
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            if (!YarnDialogue.IsRunning)
+                if (!IsActive(pauseMenuPanel))
+                    ToggleInventory();
+            return;
+        }
+
         if (!Input.GetKeyDown(KeyCode.Escape) && !Input.GetKeyDown(KeyCode.Backspace))
             return;
+
+        // 설정 패널이 열려 있으면 먼저 닫기
+        if (SettingsPanelUI.IsOpen)
+        {
+            SettingsPanelUI.Hide();
+            return;
+        }
 
         if (IsSubPanelOpen)
         {
@@ -59,7 +79,7 @@ public class PauseSystem : MonoBehaviour
         _isPaused      = false;
 
         // 대화 중이 아닐 때 플레이어 이동 잠금 해제 (도메인 리로드 대비)
-        if (DialogueManager.Instance == null || !DialogueManager.Instance.isTalking)
+        if (!YarnDialogue.IsRunning)
         {
             var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
             ctrl?.Unlock();
@@ -103,6 +123,7 @@ public class PauseSystem : MonoBehaviour
     public void OpenJournal()    => SetOnly(journalPanel);
     public void OpenSave()       => SetOnly(savePanel);
     public void OpenLoad()       => SetOnly(loadPanel);
+    public void OpenSettings()   { SetOnly(null); SettingsPanelUI.Show(); }
 
     // ─────────────────────────────────────────────
     //  헬퍼
@@ -116,6 +137,10 @@ public class PauseSystem : MonoBehaviour
         SetActive(journalPanel,   journalPanel   == target);
         SetActive(savePanel,      savePanel      == target);
         SetActive(loadPanel,      loadPanel      == target);
+
+        bool showStats = target == pauseMenuPanel || target == inventoryPanel;
+        SetActive(hpBar,     showStats);
+        SetActive(mentalBar, showStats);
     }
 
     void CloseAll()
@@ -125,6 +150,9 @@ public class PauseSystem : MonoBehaviour
         SetActive(journalPanel,   false);
         SetActive(savePanel,      false);
         SetActive(loadPanel,      false);
+        SettingsPanelUI.Hide();
+        SetActive(hpBar,     false);
+        SetActive(mentalBar, false);
         ItemDetailUI.Instance?.Hide();
     }
 

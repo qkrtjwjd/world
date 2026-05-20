@@ -28,14 +28,29 @@ public class BattleCompanionUI : MonoBehaviour
 
     private bool _isDead = false;
     private bool _isMoving = false;
-    private WaitForSecondsRealtime _wait25s;
+    private bool _hasRolledDeath = false;  // 한 전투당 1회만 확률 굴림
+    private WaitForSecondsRealtime _wait2_5s;
 
     public static BattleCompanionUI Instance { get; private set; }
 
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else { Destroy(gameObject); return; }
+
+        // 다른 Start()보다 먼저 대화창을 확실히 숨기기
+        if (dialogueArea != null)
+        {
+            dialogueArea.SetActive(false);
+        }
+        else if (companionDialogue != null)
+        {
+            Debug.LogWarning("[BattleCompanionUI] dialogueArea가 연결되지 않았습니다. 인스펙터에서 연결해주세요.");
+            companionDialogue.gameObject.SetActive(false);
+        }
+
+        // 인스펙터에 기본 텍스트가 남아있을 경우 초기화
+        if (companionDialogue != null) companionDialogue.text = string.Empty;
     }
 
     void OnDestroy()
@@ -45,15 +60,19 @@ public class BattleCompanionUI : MonoBehaviour
 
     void Start()
     {
-        _wait25s = new WaitForSecondsRealtime(2.5f);
+        _wait2_5s = new WaitForSecondsRealtime(2.5f);
+        // Awake에서 이미 처리했지만 안전을 위해 재확인
         if (dialogueArea != null) dialogueArea.SetActive(false);
+        if (companionDialogue != null && string.IsNullOrEmpty(companionDialogue.text) == false)
+            companionDialogue.text = string.Empty;
         SnapToIdle();
     }
 
     /// <summary>플레이어 HP가 0이 됐을 때 BattleSystem에서 호출.</summary>
     public void OnPlayerDied()
     {
-        if (_isDead) return;
+        if (_isDead || _hasRolledDeath) return;
+        _hasRolledDeath = true;
 
         if (Random.value < deathChance)
             StartCoroutine(CompanionDeathEvent());
@@ -72,16 +91,33 @@ public class BattleCompanionUI : MonoBehaviour
         // 대화창으로 이동 후 마지막 대사
         yield return StartCoroutine(MoveToPosition(dialoguePosition));
 
-        if (dialogueArea != null)   dialogueArea.SetActive(true);
+        if (dialogueArea != null)
+        {
+            dialogueArea.SetActive(true);
+        }
+        else if (companionDialogue != null)
+        {
+            companionDialogue.gameObject.SetActive(true);
+        }
+
         if (companionDialogue != null) companionDialogue.text = "...미안해. 나 여기까지인 것 같아.";
 
-        yield return _wait25s;
+        yield return _wait2_5s;
 
         // 페이드 아웃
         if (portraitImage != null)
             yield return StartCoroutine(FadeOut(portraitImage, 1.5f));
 
-        if (dialogueArea != null) dialogueArea.SetActive(false);
+        if (dialogueArea != null)
+        {
+            dialogueArea.SetActive(false);
+        }
+        else if (companionDialogue != null)
+        {
+            companionDialogue.text = string.Empty;
+            companionDialogue.gameObject.SetActive(false);
+        }
+
         gameObject.SetActive(false);
     }
 
@@ -91,12 +127,28 @@ public class BattleCompanionUI : MonoBehaviour
 
         yield return StartCoroutine(MoveToPosition(dialoguePosition));
 
-        if (dialogueArea != null)      dialogueArea.SetActive(true);
+        if (dialogueArea != null)
+        {
+            dialogueArea.SetActive(true);
+        }
+        else if (companionDialogue != null)
+        {
+            companionDialogue.gameObject.SetActive(true);
+        }
+
         if (companionDialogue != null) companionDialogue.text = text;
 
         yield return new WaitForSecondsRealtime(duration);
 
-        if (dialogueArea != null) dialogueArea.SetActive(false);
+        if (dialogueArea != null)
+        {
+            dialogueArea.SetActive(false);
+        }
+        else if (companionDialogue != null)
+        {
+            companionDialogue.text = string.Empty;
+            companionDialogue.gameObject.SetActive(false);
+        }
 
         yield return StartCoroutine(MoveToPosition(idlePosition));
     }

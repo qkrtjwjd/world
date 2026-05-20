@@ -5,22 +5,22 @@ using HallucinationSystem;
 
 /// <summary>
 /// S#2(루의 방/심야 인게임) → S#3(정원 컷씬) → S#4(루의 방 컷씬) 시퀀스 관리.
-/// hasWatchedNightSequence 플래그로 한 번만 발동된다.
+/// isNightSequenceWatched 플래그로 한 번만 발동된다.
 /// IntroScene 종료 후 Home 씬이 로드되면 Start()에서 자동 실행되며,
 /// 완료 후 기존 S#5 KitchenTriggerCutscene으로 자연스럽게 이어진다.
 /// </summary>
 public class NightSequenceManager : MonoBehaviour
 {
     // ── S#2 ──────────────────────────────────────
-    [Header("S#2 — 루의 방 / 심야")]
-    public DialogueData lu_S2_Reaction;          // "...뭐야 이 소리."
+    [Header("S#2 — 루의 방 / 심야 (Yarn 노드 이름)")]
+    public string yarnNode_lu_S2_Reaction;       // "...뭐야 이 소리."
 
     // ── S#3 ──────────────────────────────────────
-    [Header("S#3 — 정원 컷씬 대사")]
-    public DialogueData lu_S3_Monologue;         // "저게 뭐지. 새가 아닌 것 같은데... 기계?"
-    public DialogueData sera_S3_Line1;           // "...시끄러워."
-    public DialogueData sera_S3_Line2;           // "더러운 게... 감히 내 집에 기어들어 와?"
-    public DialogueData sera_S3_Line3;           // "...깨우면 안 되는데."
+    [Header("S#3 — 정원 컷씬 대사 (Yarn 노드 이름)")]
+    public string yarnNode_lu_S3_Monologue;      // "저게 뭐지. 새가 아닌 것 같은데... 기계?"
+    public string yarnNode_sera_S3_Line1;        // "...시끄러워."
+    public string yarnNode_sera_S3_Line2;        // "더러운 게... 감히 내 집에 기어들어 와?"
+    public string yarnNode_sera_S3_Line3;        // "...깨우면 안 되는데."
 
     [Header("S#3 — 오브젝트")]
     public GameObject droneObject;              // 드론 GameObject (초기 비활성)
@@ -38,8 +38,8 @@ public class NightSequenceManager : MonoBehaviour
     public string flashSentence_ko = "저건 어떤 원리로 작동하는 거지?";
 
     // ── S#4 ──────────────────────────────────────
-    [Header("S#4 — 루의 방 / 심야 컷씬 대사")]
-    public DialogueData lu_S4_Monologue;         // "엄마 표정이... 왜 저래?..."
+    [Header("S#4 — 루의 방 / 심야 컷씬 대사 (Yarn 노드 이름)")]
+    public string yarnNode_lu_S4_Monologue;      // "엄마 표정이... 왜 저래?..."
 
     [Header("S#4 — 심장박동 이펙트 (붉은 Image, 초기 alpha=0)")]
     public Image heartbeatOverlay;
@@ -78,11 +78,11 @@ public class NightSequenceManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void Start()
     {
-        if (GameState.hasWatchedNightSequence) return;
+        if (GameState.isNightSequenceWatched) return;
 
         if (_skipForTesting)
         {
-            GameState.hasWatchedNightSequence = true;
+            GameState.isNightSequenceWatched = true;
             if (nightLightingRoot != null) nightLightingRoot.SetActive(false);
             if (dayLightingRoot   != null) dayLightingRoot.SetActive(true);
             return;
@@ -100,7 +100,7 @@ public class NightSequenceManager : MonoBehaviour
         yield return StartCoroutine(RunScene3());
         yield return StartCoroutine(RunScene4());
 
-        GameState.hasWatchedNightSequence = true;
+        GameState.isNightSequenceWatched = true;
 
         // 야간 → 주간 조명 전환 (암전 중 스왑) + 부엌 스폰
         TransitionManager.Instance?.DoTransition(() =>
@@ -121,7 +121,7 @@ public class NightSequenceManager : MonoBehaviour
         LockPlayer();
 
         // 루 반응 대사: "...뭐야 이 소리."
-        yield return DialogueRunner.PlayAndWait(lu_S2_Reaction);
+        yield return YarnDialogue.PlayAndWait(yarnNode_lu_S2_Reaction);
 
         // 목표 UI 표시
         ObjectiveManager.Instance?.ShowObjective(
@@ -152,14 +152,14 @@ public class NightSequenceManager : MonoBehaviour
         yield return _wait1s;
 
         // 루 내면 독백: "저게 뭐지..."
-        yield return DialogueRunner.PlayAndWait(lu_S3_Monologue);
+        yield return YarnDialogue.PlayAndWait(yarnNode_lu_S3_Monologue);
 
         // 세라 등장 (어둠 속에서 걸어나옴)
         if (seraAnimator) seraAnimator.SetTrigger(seraWalkInTrigger);
         yield return _wait15s;
 
         // 세라 대사 1: "...시끄러워."
-        yield return DialogueRunner.PlayAndWait(sera_S3_Line1);
+        yield return YarnDialogue.PlayAndWait(yarnNode_sera_S3_Line1);
 
         // 빛의 구속 이펙트 → 드론 파괴
         if (lightBindingEffect) lightBindingEffect.SetActive(true);
@@ -176,7 +176,7 @@ public class NightSequenceManager : MonoBehaviour
         yield return _wait08s;
 
         // 세라 대사 2: "더러운 게..."
-        yield return DialogueRunner.PlayAndWait(sera_S3_Line2);
+        yield return YarnDialogue.PlayAndWait(yarnNode_sera_S3_Line2);
 
         // 세라 발로 잔해 차는 모션
         if (seraAnimator) seraAnimator.SetTrigger(seraKickTrigger);
@@ -184,7 +184,7 @@ public class NightSequenceManager : MonoBehaviour
 
         // 세라 대사 3: "...깨우면 안 되는데." (창문 올려다보며)
         if (seraAnimator) seraAnimator.SetTrigger(seraLookUpTrigger);
-        yield return DialogueRunner.PlayAndWait(sera_S3_Line3);
+        yield return YarnDialogue.PlayAndWait(yarnNode_sera_S3_Line3);
 
         // 커튼 닫기 → 암전 전환
         TransitionManager.Instance?.DoTransition(null);
@@ -200,7 +200,7 @@ public class NightSequenceManager : MonoBehaviour
         _heartbeatCoroutine = StartCoroutine(HeartbeatPulse());
 
         // 루 내면 독백: "엄마 표정이... 왜 저래?..."
-        yield return DialogueRunner.PlayAndWait(lu_S4_Monologue);
+        yield return YarnDialogue.PlayAndWait(yarnNode_lu_S4_Monologue);
 
         // 도자기 손가락 클로즈업
         if (closeupImage != null && ceramicFingerSprite != null)
@@ -259,8 +259,8 @@ public class NightSequenceManager : MonoBehaviour
         }
     }
 
-    static void LockPlayer()   => DialogueRunner.LockPlayer();
-    static void UnlockPlayer() => DialogueRunner.UnlockPlayer(
+    static void LockPlayer()   => YarnDialogue.LockPlayer();
+    static void UnlockPlayer() => YarnDialogue.UnlockPlayer(
         PlayerStats.Instance != null
             ? PlayerStats.Instance.GetComponent<ClearSky.SimplePlayerController>()
             : Object.FindAnyObjectByType<ClearSky.SimplePlayerController>());

@@ -14,9 +14,11 @@ public class ItemDetailUI : MonoBehaviour
 
     [Header("UI 연결")]
     public GameObject panel;
-    public Image      itemIcon;       // 아이템 아이콘 (없으면 무시)
+    public Image      itemIcon;
     public Text       nameText;
     public Text       descriptionText;
+    public Text       gradeText;
+    public Text       quoteText;
 
     [SerializeField] private Button useButton;
     [SerializeField] private Button discardButton;
@@ -117,6 +119,21 @@ public class ItemDetailUI : MonoBehaviour
         SetIcon(item.CurrentIcon);
         if (nameText != null)        nameText.text        = item.DisplayName;
         if (descriptionText != null) descriptionText.text = BuildDescription(item);
+
+        if (gradeText != null)
+        {
+            gradeText.gameObject.SetActive(true);
+            gradeText.text  = GetGradeName(item.grade);
+            gradeText.color = GetGradeColor(item.grade);
+        }
+
+        if (quoteText != null)
+        {
+            bool has = !string.IsNullOrEmpty(item.quote);
+            quoteText.gameObject.SetActive(has);
+            if (has) quoteText.text = item.quote;
+        }
+
         _justShown = true;
         if (panel != null)
         {
@@ -129,6 +146,9 @@ public class ItemDetailUI : MonoBehaviour
     {
         _pendingRecipe  = recipe;
         _combinePartner = partner;
+
+        if (gradeText != null) gradeText.gameObject.SetActive(false);
+        if (quoteText != null) quoteText.gameObject.SetActive(false);
 
         var result = recipe.resultItem;
         SetIcon(result != null ? result.CurrentIcon : null);
@@ -180,10 +200,7 @@ public class ItemDetailUI : MonoBehaviour
         }
 
         // 사용 대사 표시
-        string dialogue = GetLocalizedField(
-            _selected.useDialogue_ko,
-            _selected.useDialogue_en,
-            _selected.useDialogue_jp);
+        string dialogue = _selected.LocalizedUseDialogue;
         if (!string.IsNullOrEmpty(dialogue))
             ItemNotificationUI.Instance?.ShowDialogue(dialogue);
 
@@ -230,10 +247,7 @@ public class ItemDetailUI : MonoBehaviour
         // 버릴 수 없는 아이템 체크
         if (_selected.isUndroppable)
         {
-            string msg = GetLocalizedField(
-                _selected.undiscardableDialogue_ko,
-                _selected.undiscardableDialogue_en,
-                _selected.undiscardableDialogue_jp);
+            string msg = _selected.LocalizedUndiscardableDialogue;
             ItemNotificationUI.Instance?.Show(
                 string.IsNullOrEmpty(msg)
                 ? $"'{_selected.DisplayName}'은(는) 버릴 수 없습니다."
@@ -248,17 +262,6 @@ public class ItemDetailUI : MonoBehaviour
         Hide();
     }
 
-    /// <summary>현재 언어 설정에 맞는 텍스트를 반환합니다. 해당 언어가 비어있으면 한국어로 폴백합니다.</summary>
-    string GetLocalizedField(string ko, string en, string jp)
-    {
-        if (LocalizationManager.Instance == null) return ko;
-        switch (LocalizationManager.Instance.currentLanguage)
-        {
-            case LocalizationManager.Language.EN: return string.IsNullOrEmpty(en) ? ko : en;
-            case LocalizationManager.Language.JP: return string.IsNullOrEmpty(jp) ? ko : jp;
-            default: return ko;
-        }
-    }
 
     void SetIcon(Sprite sprite)
     {
@@ -318,6 +321,28 @@ public class ItemDetailUI : MonoBehaviour
         }
 
         return string.Join(", ", parts);
+    }
+
+    static string GetGradeName(ItemGrade grade)
+    {
+        switch (grade)
+        {
+            case ItemGrade.Rare:   return "희귀";
+            case ItemGrade.Hero:   return "영웅";
+            case ItemGrade.Legend: return "전설";
+            default:               return "일반";
+        }
+    }
+
+    static Color GetGradeColor(ItemGrade grade)
+    {
+        switch (grade)
+        {
+            case ItemGrade.Rare:   return new Color(0.3f, 0.5f, 1f);
+            case ItemGrade.Hero:   return new Color(0.6f, 0.2f, 0.9f);
+            case ItemGrade.Legend: return new Color(1f, 0.8f, 0f);
+            default:               return Color.white;
+        }
     }
 
     static string GetBuffKoreanName(BuffType type)

@@ -39,15 +39,23 @@ public class CompanionFollow : MonoBehaviour
 
     void Start()
     {
-        GameObject p = GameObject.FindGameObjectWithTag("Player");
-        if (p != null)
+        if (PlayerStats.Instance != null)
         {
-            _player          = p.transform;
-            _lastRecordedPos = p.transform.position;
+            _player          = PlayerStats.Instance.transform;
+            _lastRecordedPos = _player.position;
         }
         else
         {
-            Debug.LogWarning("[CompanionFollow] 'Player' 태그를 가진 오브젝트를 찾을 수 없습니다.");
+            GameObject p = GameObject.FindGameObjectWithTag("Player");
+            if (p != null)
+            {
+                _player          = p.transform;
+                _lastRecordedPos = p.transform.position;
+            }
+            else
+            {
+                Debug.LogWarning("[CompanionFollow] 'Player' 태그를 가진 오브젝트를 찾을 수 없습니다.");
+            }
         }
     }
 

@@ -1,24 +1,34 @@
-using System;
-using UnityEngine;
+using System.Collections.Generic;
 
 [System.Serializable]
 public class SaveData
 {
-    public string sceneName;      // 맵 이름
-    public float playTime;        // 플레이 시간
-    public string saveDate;       // 날짜
-    public float corruption;      // 타락 수치
+    public int    saveVersion = 2;
+    public string sceneName;
+    public float  playTime;
+    public string saveDate;
+    public float  corruption;
 
-    // ★ [추가됨] 플레이어 위치 (X, Y, Z)
     public float playerX;
     public float playerY;
     public float playerZ;
 
-    // ★ [추가됨] 인벤토리 아이템 이름 목록 (Resources/Items/ 경로에 있는 파일 이름)
-    public System.Collections.Generic.List<string> inventoryItemNames = new System.Collections.Generic.List<string>();
+    public List<string> inventoryItemNames = new List<string>();
 
-    // ★ [추가됨] 플레이어 스탯 및 게이지 저장
+    // 플레이어 스탯
     public float health;
     public float mental;
-    public float realityGauge; // RealitySystem 게이지
+    public float puppetization;
+
+    // 스토리 플래그
+    public bool isNightSequenceWatched;
+    public bool isResolved;
+    public bool isBreakfastWatched;
+    public bool isZombieDefeated;
+
+    // 처치된 적 ID (HashSet은 JSON 직렬화 불가 → List 사용)
+    public List<string> defeatedEnemyIDs   = new List<string>();
+
+    // 한 번만 선택 가능한 대화 선택지 키
+    public List<string> chosenDialogueKeys = new List<string>();
 }

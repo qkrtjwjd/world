@@ -1,6 +1,9 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
+public enum ItemCategory { All = 0, Food = 1, Tool = 2, Weapon = 3 }
+public enum ItemGrade    { Normal = 0, Rare = 1, Hero = 2, Legend = 3 }
+
 [CreateAssetMenu(fileName = "New Item", menuName = "Item Data")]
 public class ItemData : ScriptableObject
 {
@@ -32,6 +35,12 @@ public class ItemData : ScriptableObject
     [Tooltip("현실(DarkReality) 씬에서 표시될 설명. 비워두면 위 설명(description)과 동일하게 표시됩니다.")]
     [TextArea(2, 4)]
     public string realityDescription;
+
+    [Header("■ 카테고리 / 등급 / 인용구")]
+    public ItemCategory category;
+    public ItemGrade    grade;
+    [Tooltip("아이템 하단에 표시되는 짧은 플레이버 텍스트")]
+    [TextArea(1, 2)] public string quote;
 
     [Tooltip("체크하면 고급 아이템 취급을 받습니다. 연속으로 먹이면 급체합니다.")]
     public bool isHighGrade;
@@ -92,6 +101,18 @@ public class ItemData : ScriptableObject
         }
     }
 
+    /// <summary>현재 언어에 맞는 사용 대사를 반환합니다.</summary>
+    public string LocalizedUseDialogue =>
+        LocalizationHelper.Get(useDialogue_ko, useDialogue_en, useDialogue_jp);
+
+    /// <summary>현재 언어에 맞는 버리기 대사를 반환합니다.</summary>
+    public string LocalizedUndiscardableDialogue =>
+        LocalizationHelper.Get(undiscardableDialogue_ko, undiscardableDialogue_en, undiscardableDialogue_jp);
+
+    /// <summary>현재 언어에 맞는 반복 사용 대사를 반환합니다.</summary>
+    public string LocalizedRepeatUseDialogue =>
+        LocalizationHelper.Get(repeatUseDialogue_ko, repeatUseDialogue_en, repeatUseDialogue_jp);
+
     // 번역된 이름을 가져오는 편의 속성 (프로퍼티)
     public string DisplayName
     {
@@ -126,6 +147,9 @@ public struct ItemEffect
 
     [Tooltip("플레이어 인형화 수치 변화량 (+: 상승, -: 감소)")]
     public float puppetizationChange;
+
+    [Tooltip("공감 게이지 변화량 (+: 증가)")]
+    public float empathyChange;
 
     [Tooltip("적용할 버프/디버프 목록")]
     public System.Collections.Generic.List<BuffInfo> buffs;

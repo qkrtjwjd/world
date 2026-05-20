@@ -123,6 +123,12 @@ GameObject:
   - component: {fileID: 6312043590800887161}
   - component: {fileID: 6867500073524940109}
   - component: {fileID: 1465336633723536847}
+  - component: {fileID: 3081516778644855261}
+  - component: {fileID: 8235660164290402166}
+  - component: {fileID: 3951842317271777614}
+  - component: {fileID: 6137835066175398032}
+  - component: {fileID: 4585646449317113913}
+  - component: {fileID: 2920488143991533553}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -178,6 +184,8 @@ MonoBehaviour:
   journalPanel: {fileID: 0}
   savePanel: {fileID: 0}
   loadPanel: {fileID: 0}
+  hpBar: {fileID: 0}
+  mentalBar: {fileID: 0}
 --- !u!114 &8118840366282710973
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -229,6 +237,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::InventoryManager
   inventoryPanel: {fileID: 0}
+  quantityText: {fileID: 0}
   startingItems: []
   slotGrid: {fileID: 0}
   inventoryItems: []
@@ -262,6 +271,7 @@ MonoBehaviour:
     mentalChange: -10
     pollutionAdded: 0
     puppetizationChange: 0
+    empathyChange: 0
     buffs:
     - type: 16
       value: 2
@@ -283,6 +293,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2df4960976939a40b3477e43f8a1084, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleTransitionManager
+  _fantasyBGM: {fileID: 0}
+  _realityBGM: {fileID: 0}
+  _luTransform: {fileID: 0}
+  _realitySaturation: -100
+  _realityContrast: 20
+  _realityColorFilter: {r: 1, g: 1, b: 1, a: 1}
+  _fantasySaturation: 15
+  _fantasyContrast: -15
+  _fantasyColorFilter: {r: 1, g: 0.92, b: 0.95, a: 1}
 --- !u!114 &6867500073524940109
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -310,6 +329,98 @@ MonoBehaviour:
   swapPairs:
   - fantasyObject: {fileID: 0}
     realityObject: {fileID: 0}
+--- !u!114 &3081516778644855261
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb182f904ba9b16448598937fec0a502, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CrackEventManager
+--- !u!114 &8235660164290402166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c301f5b20ec7fb45a55923f0cfe8adb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PostProcessingController
+  fantasyVolume: {fileID: 0}
+  realityVolume: {fileID: 0}
+  glitchVolume: {fileID: 0}
+  lerpSpeed: 2
+--- !u!114 &3951842317271777614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0a4a800f90ece0749b9adbb6f65472d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GaugeBoundaryMonitor
+  fantasyGlitchBoundary: 30
+  glitchRealityBoundary: 69
+  warningDistance: 5
+  glitchDuration: 0.5
+  glitchPreset:
+    intensity: 0.85
+    colorDrift: 0.065
+    scanLineJitter: 0.18
+    staticNoise: 0.35
+    blockDisplace: 0.11
+  noiseSource: {fileID: 0}
+  maxNoiseVolume: 0.4
+  noiseBlendSpeed: 4
+--- !u!114 &6137835066175398032
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c54cb5ac78979cb4a90f85ddc45bcbed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::RadioManager
+  radioDataList:
+  - {fileID: 11400000, guid: 11febe1d778b0a042a815c8f997db167, type: 2}
+--- !u!114 &4585646449317113913
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c22bc0314b8efc4b930f0771aa2f374, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DebugGaugeController
+  enableInBuild: 1
+--- !u!114 &2920488143991533553
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 898700f7d61c72d4d84f1bba3ada1531, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::GlitchZoneObjectController
 --- !u!1 &4317506963917260813
 GameObject:
   m_ObjectHideFlags: 0

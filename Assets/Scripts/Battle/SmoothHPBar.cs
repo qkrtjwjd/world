@@ -25,12 +25,12 @@ public class SmoothHPBar : MonoBehaviour
     public void Init(float maxHP, float currentHP, int level = 1)
     {
         _maxHP        = maxHP;
-        _targetValue  = currentHP / maxHP;
+        _targetValue  = currentHP;
 
         if (hpSlider != null)
         {
             hpSlider.minValue = 0f;
-            hpSlider.maxValue = 1f;
+            hpSlider.maxValue = maxHP;
             hpSlider.value    = _targetValue;
         }
 
@@ -40,8 +40,16 @@ public class SmoothHPBar : MonoBehaviour
     /// <summary>피격 시 호출. 텍스트 즉시 업데이트, 슬라이더는 부드럽게.</summary>
     public void SetHP(float currentHP, int level = 1)
     {
-        _targetValue = Mathf.Clamp01(currentHP / _maxHP);
+        _targetValue = Mathf.Clamp(currentHP, 0f, _maxHP);
         UpdateText(currentHP, level);
+
+        // GameObject가 비활성일 때는 코루틴 실행 불가 → 슬라이더 즉시 반영
+        if (!gameObject.activeInHierarchy)
+        {
+            if (hpSlider != null) hpSlider.value = _targetValue;
+            _lerpCoroutine = null;
+            return;
+        }
 
         if (_lerpCoroutine != null) StopCoroutine(_lerpCoroutine);
         _lerpCoroutine = StartCoroutine(LerpSlider());

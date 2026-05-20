@@ -20,8 +20,8 @@ public class MerchantInteraction : MonoBehaviour
     public MerchantData merchantData;
 
     [Header("인사 대사 (선택)")]
-    [Tooltip("상인과 처음 접촉 시 재생될 대사. 비워두면 바로 거래창이 열립니다.")]
-    public DialogueData greetingDialogue;
+    [Tooltip("상인과 처음 접촉 시 재생할 Yarn 노드 이름. 비워두면 바로 거래창이 열립니다.")]
+    public string yarnNode_greeting;
 
     [Tooltip("인사 대사 중 플레이어 이동 잠금 여부")]
     public bool lockPlayerDuringGreeting = false;
@@ -49,8 +49,7 @@ public class MerchantInteraction : MonoBehaviour
             return;
         }
 
-        var dm = DialogueManager.Instance;
-        if (dm != null && dm.isTalking) return;
+        if (YarnDialogue.IsRunning) return;
 
         StartCoroutine(OpenMerchant());
     }
@@ -60,8 +59,8 @@ public class MerchantInteraction : MonoBehaviour
         _isOpen = true;
 
         // 인사 대사 재생
-        if (greetingDialogue != null)
-            yield return DialogueRunner.PlayAndWait(greetingDialogue, lockPlayerDuringGreeting);
+        if (!string.IsNullOrEmpty(yarnNode_greeting))
+            yield return YarnDialogue.PlayAndWait(yarnNode_greeting, lockPlayerDuringGreeting);
 
         // 거래 UI 열기
         if (MerchantUI.Instance != null)

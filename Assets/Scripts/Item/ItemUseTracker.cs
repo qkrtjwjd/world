@@ -42,12 +42,17 @@ public class ItemUseTracker : MonoBehaviour
     void OnEnable()
     {
         SceneManager.sceneLoaded += OnSceneLoaded;
+        BattleEvents.OnItemUsed  += OnBattleItemUsed;
     }
 
     void OnDisable()
     {
         SceneManager.sceneLoaded -= OnSceneLoaded;
+        BattleEvents.OnItemUsed  -= OnBattleItemUsed;
     }
+
+    /// <summary>BattleEvents.OnItemUsed 구독 핸들러 — 기존 RecordBattleUse 직접 호출을 대체.</summary>
+    void OnBattleItemUsed(ItemData item, Unit user) => RecordBattleUse(item);
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
@@ -127,10 +132,7 @@ public class ItemUseTracker : MonoBehaviour
     private void TriggerRepeatEffect(ItemData item)
     {
         // 1. 반복 사용 대사 표시
-        string dialogue = GetLocalizedDialogue(
-            item.repeatUseDialogue_ko,
-            item.repeatUseDialogue_en,
-            item.repeatUseDialogue_jp);
+        string dialogue = item.LocalizedRepeatUseDialogue;
         if (!string.IsNullOrEmpty(dialogue))
             ItemNotificationUI.Instance?.ShowDialogue(dialogue);
 
@@ -140,7 +142,7 @@ public class ItemUseTracker : MonoBehaviour
         // 3. repeatUseEffect 시각 효과 발동
         ItemEffectHandler.Instance?.HandleEffect(item.repeatUseEffect);
 
-        Debug.Log($"[ItemUseTracker] '{item.DisplayName}' 반복 사용 효과 발동! ({_useCounts[item.itemName]}회)");
+        Dbg.Log($"[ItemUseTracker] '{item.DisplayName}' 반복 사용 효과 발동! ({_useCounts[item.itemName]}회)");
     }
 
     private void ApplyItemEffect(ItemEffect effect)
@@ -160,14 +162,4 @@ public class ItemUseTracker : MonoBehaviour
         BuffManager.Instance?.AddBuffs(effect.buffs);
     }
 
-    private string GetLocalizedDialogue(string ko, string en, string jp)
-    {
-        if (LocalizationManager.Instance == null) return ko;
-        switch (LocalizationManager.Instance.currentLanguage)
-        {
-            case LocalizationManager.Language.EN: return string.IsNullOrEmpty(en) ? ko : en;
-            case LocalizationManager.Language.JP: return string.IsNullOrEmpty(jp) ? ko : jp;
-            default: return ko;
-        }
-    }
 }

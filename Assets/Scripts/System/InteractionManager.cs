@@ -8,7 +8,7 @@ public class InteractionManager : MonoBehaviour
     {
         get
         {
-            if (_isQuitting) return null;
+            if (_isQuitting || !Application.isPlaying) return null;
             if (!_instance)
             {
                 var go = new GameObject("InteractionManager [Auto]");
@@ -23,8 +23,15 @@ public class InteractionManager : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics()
     {
-        _instance  = null;
+        _instance   = null;
         _isQuitting = false;
+    }
+
+    // 인스턴스가 없어도 종료 플래그를 세팅하기 위해 정적 이벤트 사용
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+    static void RegisterQuitHandler()
+    {
+        Application.quitting += () => _isQuitting = true;
     }
 
     private readonly List<InteractionTrigger> _triggers = new List<InteractionTrigger>();

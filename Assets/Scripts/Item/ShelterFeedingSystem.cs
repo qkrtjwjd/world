@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class ShelterFeedingSystem : MonoBehaviour
@@ -34,7 +35,7 @@ public class ShelterFeedingSystem : MonoBehaviour
             if (InteractionTextUI.Instance != null)
             {
                 InteractionTextUI.Instance.Show(failMessage);
-                Invoke("HideText", 2f);
+                StartCoroutine(HideTextDelayed(2f));
             }
             return;
         }
@@ -54,11 +55,11 @@ public class ShelterFeedingSystem : MonoBehaviour
             }
 
             // 피드백 (UI 매니저가 있다면 사용, 여기선 디버그/임시)
-            Debug.Log(successMessage);
+            Dbg.Log(successMessage);
             if (InteractionTextUI.Instance != null)
             {
                 InteractionTextUI.Instance.Show(successMessage);
-                Invoke("HideText", 2f);
+                StartCoroutine(HideTextDelayed(2f));
             }
 
             // 이펙트
@@ -69,13 +70,19 @@ public class ShelterFeedingSystem : MonoBehaviour
         }
         else
         {
-            Debug.Log(failMessage);
+            Dbg.Log(failMessage);
             if (InteractionTextUI.Instance != null)
             {
                 InteractionTextUI.Instance.Show(failMessage);
-                Invoke("HideText", 2f);
+                StartCoroutine(HideTextDelayed(2f));
             }
         }
+    }
+
+    IEnumerator HideTextDelayed(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        HideText();
     }
 
     void HideText()

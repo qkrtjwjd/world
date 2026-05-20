@@ -24,19 +24,33 @@ public class HackSlashCombatManager : MonoBehaviour
     [Tooltip("결과 텍스트가 자동으로 사라질 시간(초)")]
     public float resultDisplayTime = 2.5f;
 
+    [Header("글리치 구간 전환")]
+    [Tooltip("핵앤슬래시 중 마시멜로를 섭취하여 턴제로 전환하는 버튼")]
+    public Button marshmallowButton;
+
     [Header("플레이어 무적 시간")]
     [Tooltip("전투 시작 직후 플레이어가 피해를 받지 않는 시간(초)")]
     public float startInvincibleTime = 1.0f;
 
-    [Header("모드 전환 설정")]
-    [Tooltip("현실 게이지가 이 값 이하로 떨어지면 턴제로 전환 (DarkRealitySystem.maxTime 기준)")]
-    public float realityDropThreshold = 15f;
+    [Header("스폰 설정")]
+    [Tooltip("기존 적 오브젝트가 없을 때 플레이어 기준 적 스폰 오프셋")]
+    [SerializeField] private Vector3 _spawnOffset = new Vector3(2f, 0f, 0f);
+
+    [Header("게이지 복원 설정")]
+    [Tooltip("전투 시작 시 게이지를 현실 100%로 고정하고, 이 시간(초) 동안 아무 공격이 없으면 이전 값으로 복원합니다.")]
+    public float combatRealityIdleTimeout = 60f;
 
     // ─────────────────────────────────────────────
     //  내부 상태
     // ─────────────────────────────────────────────
     private bool _isCombatActive = false;
     private bool _isModeTransitioning = false;
+
+    /// <summary>마지막으로 공격이 발생한 Time.time. GaugeManager의 복원 타이머가 감시합니다.</summary>
+    public float LastCombatActivityTime { get; private set; } = -999f;
+
+    /// <summary>EnemyAI / RealityCombatController 에서 공격 발생 시 호출합니다.</summary>
+    public void NotifyCombatActivity() => LastCombatActivityTime = Time.time;
 
     private GameObject _activeEnemy;
     private EnemyAI    _activeEnemyAI;     // BeginCombat 시 캐시
@@ -103,6 +117,7 @@ public class HackSlashCombatManager : MonoBehaviour
         _isCombatActive = true;
         _isModeTransitioning = false;
         _enemyPrefabRef = enemyPrefab;
+        LastCombatActivityTime = -999f;
 
         // 1. 적 준비
         if (existingEnemy != null)
@@ -115,7 +130,7 @@ public class HackSlashCombatManager : MonoBehaviour
                 ? PlayerStats.Instance.gameObject
                 : GameObject.FindGameObjectWithTag("Player");
             Vector3 spawnPos = player != null
-                ? player.transform.position + new Vector3(2f, 0f, 0f)
+                ? player.transform.position + _spawnOffset
                 : Vector3.zero;
             _activeEnemy = Instantiate(enemyPrefab, spawnPos, Quaternion.identity);
         }
@@ -132,15 +147,23 @@ public class HackSlashCombatManager : MonoBehaviour
             _activeEnemyHealth = _activeEnemy.GetComponent<EnemyHealth>();
         }
 
-        // 2. 플레이어 공격 활성화
+        // 2. 플레이어 입력 잠금 강제 해제 + 공격 컨트롤러 활성화
+        PlayerInputLock.Instance?.ForceUnlock();
         if (_combatCtrl != null) _combatCtrl.enabled = true;
 
-        // 3. 무적 시간 + 폴링 루프 시작
-        StartCoroutine(CombatLoop());
+        // 3. 핵앤슬래시 전투 중 무공격 대기 시간 후 게이지 이전 값으로 복원
+        GaugeManager.Instance?.ForceCombatReality(combatRealityIdleTimeout);
 
-        // 4. 현실씬에서만 모드 전환 감시 시작
-        if (SceneNames.IsRealityScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name))
-            StartCoroutine(MonitorModeSwitch());
+        // 3. 마시멜로 버튼 활성화
+        if (marshmallowButton != null)
+        {
+            marshmallowButton.onClick.RemoveAllListeners();
+            marshmallowButton.onClick.AddListener(OnMarshmallowButton);
+            marshmallowButton.gameObject.SetActive(true);
+        }
+
+        // 4. 무적 시간 + 폴링 루프 시작
+        StartCoroutine(CombatLoop());
     }
 
     // ─────────────────────────────────────────────
@@ -178,16 +201,18 @@ public class HackSlashCombatManager : MonoBehaviour
 
         while (_isCombatActive && !_isModeTransitioning)
         {
-            bool realityDropped = DarkRealitySystem.Instance != null
-                && DarkRealitySystem.Instance.CurrentReality <= realityDropThreshold;
             bool daggerPutAway = daggerWasEquipped && !DaggerSystem.IsEquipped;
 
-            if (realityDropped || daggerPutAway)
+            if (daggerPutAway)
             {
+                var ctrl = BattleModeController.Instance;
+                if (ctrl != null && ctrl.HasSwitchedMode)
+                {
+                    Debug.LogWarning("[HackSlashCombatManager] 이미 모드 전환이 발생했습니다. 단검 수납 전환이 차단됩니다.");
+                    yield break;
+                }
                 _isModeTransitioning = true;
-                StartCoroutine(SwitchToTurnBased(realityDropped
-                    ? "현실이 흐릿해진다..."
-                    : "단검을 집어넣었다..."));
+                StartCoroutine(SwitchToTurnBased("단검을 집어넣었다..."));
                 yield break;
             }
 
@@ -198,14 +223,19 @@ public class HackSlashCombatManager : MonoBehaviour
 
     IEnumerator SwitchToTurnBased(string message)
     {
+        BattleModeController.Instance?.SetSwitched();
         TeardownCombat(registerKill: false, destroyEnemy: false);
 
         if (_activeEnemyAI != null) _activeEnemyAI.SetChase(false);
 
         ShowMessage(message);
+
+        // 시각 연출 (GaugeBoundaryMonitor에서 이미 호출된 경우 isTransitioning 가드로 무시됨)
+        BattleTransitionManager.Instance?.TransitionToFantasy();
+
         yield return _waitSwitchDelay;
 
-        GameState.returnSceneName =
+        GameState.battleReturn.returnSceneName =
             UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
         if (EncounterManager.Instance != null)
@@ -215,11 +245,17 @@ public class HackSlashCombatManager : MonoBehaviour
         _activeEnemyAI     = null;
         _activeEnemyHealth = null;
 
-        Time.timeScale = 0f;
         if (EncounterManager.Instance != null && EncounterManager.Instance.battleUIPrefab != null)
+        {
+            if (!BattleModeController.GetOrCreate().RequestTurnBasedStart(showAppearPanel: false))
+                yield break;
+            Time.timeScale = 0f;
             UnityEngine.Object.Instantiate(EncounterManager.Instance.battleUIPrefab);
+        }
         else
+        {
             Debug.LogError("[HackSlashCombatManager] battleUIPrefab이 없습니다. EncounterManager에 연결해주세요.");
+        }
     }
 
     // ─────────────────────────────────────────────
@@ -231,10 +267,16 @@ public class HackSlashCombatManager : MonoBehaviour
         {
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
             PlayerStats.Instance?.AddPuppetizationOnKill();
-            Destroy(_activeEnemy);
+            var loot = EncounterManager.Instance?.enemyDatabase
+                           ?.GetLootTable(EncounterManager.currentEnemyID);
+            if (loot != null)
+            {
+                var drops = loot.RollDrops();
+                if (drops.Count > 0) InventoryManager.Instance?.AddItems(drops);
+            }
         }
 
-        TeardownCombat(registerKill: false, destroyEnemy: false);
+        TeardownCombat(registerKill: false, destroyEnemy: playerWon);
         ShowResult(playerWon);
     }
 
@@ -242,6 +284,8 @@ public class HackSlashCombatManager : MonoBehaviour
     void TeardownCombat(bool registerKill, bool destroyEnemy)
     {
         _isCombatActive = false;
+        if (marshmallowButton != null)
+            marshmallowButton.gameObject.SetActive(false);
 
         if (_combatCtrl != null) _combatCtrl.enabled = false;
 
@@ -263,7 +307,17 @@ public class HackSlashCombatManager : MonoBehaviour
     //  결과 표시
     // ─────────────────────────────────────────────
     void ShowResult(bool playerWon)
-        => ShowMessage(playerWon ? "⚔ 전투 승리!" : "💀 전투 패배...");
+    {
+        ShowMessage(playerWon ? "⚔ 전투 승리!" : "💀 전투 패배...");
+        if (!playerWon)
+            StartCoroutine(ShowGameOverAfterDelay(resultDisplayTime));
+    }
+
+    IEnumerator ShowGameOverAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        GameOverUI.Instance?.Show();
+    }
 
     void ShowMessage(string message)
     {
@@ -299,6 +353,7 @@ public class HackSlashCombatManager : MonoBehaviour
             eh = enemy.AddComponent<EnemyHealth>();
             eh.maxHealth = 100f;
         }
+        eh.enabled = true;
     }
 
     // ─────────────────────────────────────────────
@@ -308,6 +363,43 @@ public class HackSlashCombatManager : MonoBehaviour
     {
         if (_isCombatActive && enemy == _activeEnemy)
             _activeEnemy = null; // CombatLoop가 다음 체크에서 EndCombat 호출
+    }
+
+    /// <summary>마시멜로 섭취 버튼 클릭 시 호출됩니다.</summary>
+    void OnMarshmallowButton()
+    {
+        if (!_isCombatActive || _isModeTransitioning) return;
+        var ctrl = BattleModeController.Instance;
+        if (ctrl != null && ctrl.HasSwitchedMode)
+        {
+            Debug.LogWarning("[HackSlashCombatManager] 이미 모드 전환이 발생했습니다. 마시멜로 전환이 차단됩니다.");
+            return;
+        }
+        _isModeTransitioning = true;
+        StartCoroutine(SwitchToTurnBased("마시멜로를 먹었다..."));
+    }
+
+    /// <summary>GaugeBoundaryMonitor가 Glitch→Fantasy 전환 시 호출합니다. 마시멜로 외 전환 차단.</summary>
+    public void ForceSwitchToTurnBased()
+    {
+        // 핵앤슬래시 중에는 마시멜로를 통해서만 턴제로 전환 가능
+        Debug.LogWarning("[HackSlashCombatManager] 핵앤슬래시 중 강제 턴제 전환이 차단됩니다. 마시멜로를 사용하세요.");
+    }
+
+    /// <summary>선택 UI 대기 중 적 AI를 활성/비활성화합니다.</summary>
+    public void SetEnemyActive(bool active)
+    {
+        if (_activeEnemyAI != null) _activeEnemyAI.SetChase(active);
+        if (_combatCtrl    != null) _combatCtrl.enabled = active;
+    }
+
+    /// <summary>DarkRealityController 게이지 소진 시 호출됩니다.</summary>
+    public void ForceEndCombatByGauge()
+    {
+        if (!_isCombatActive) return;
+        if (_activeEnemy != null) Destroy(_activeEnemy);
+        TeardownCombat(registerKill: false, destroyEnemy: false);
+        ShowMessage("현실이 사라진다...");
     }
 
     /// <summary>적이 도주에 성공했을 때 EnemyAI 에서 호출됩니다.</summary>

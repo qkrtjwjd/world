@@ -40,6 +40,41 @@ public class TransitionVFXController : MonoBehaviour
     [Tooltip("흰 Image 위에 올린 CanvasGroup. 비워두면 자동 생성합니다.")]
     [SerializeField] private CanvasGroup _flashOverlay;
 
+    [Header("셰이더 기반 전환 오버레이")]
+    [Tooltip("GlassCrack.mat이 적용된 풀스크린 UI Image.")]
+    [SerializeField] private Image _glassCrackImage;
+    [Tooltip("ImpactFlash.mat이 적용된 풀스크린 UI Image.")]
+    [SerializeField] private Image _impactFlashImage;
+    [Tooltip("WatercolorSpread.mat이 적용된 풀스크린 UI Image.")]
+    [SerializeField] private Image _watercolorImage;
+    [Tooltip("ImpactFlash 재생 시 함께 펄스할 ChromaticAberration 피크 (0~1).")]
+    [Range(0f, 1f)]
+    [SerializeField] private float _chromaticFlashPeak = 0.6f;
+    [Tooltip("산산조각 시 crack 이미지의 최대 스케일.")]
+    [SerializeField] private float _shatterScaleMax = 1.3f;
+
+    [Header("단검 찌르기")]
+    [Tooltip("단검 Sprite가 적용된 UI Image. Inspector에서 연결하세요.")]
+    [SerializeField] private Image _daggerImage;
+    [Tooltip("단검이 박히는 화면 위치 (UV 0~1). GlassCrack ImpactPoint와 연동됩니다.")]
+    [SerializeField] private Vector2 _daggerStabUV    = new Vector2(0.5f, 0.5f);
+    [Tooltip("단검 출발 위치 (UV). 1 초과값은 화면 밖을 의미합니다.")]
+    [SerializeField] private Vector2 _daggerStartUV   = new Vector2(1.4f, 1.3f);
+    [Tooltip("단검 스프라이트 원본 방향 보정 각도 (도).")]
+    [SerializeField] private float   _daggerAngleOffset = 0f;
+
+    [Header("마시멜로 / 후광")]
+    [Tooltip("마시멜로 Sprite Image (Assets/Images/Marshmallow.png).")]
+    [SerializeField] private Image _marshmallowImage;
+    [Tooltip("후광 흰 원형 Sprite Image. 마시멜로 뒤에 배치하세요.")]
+    [SerializeField] private Image _marshmallowGlowImage;
+    [Tooltip("후광 맥동 속도 (Hz).")]
+    [SerializeField] private float _glowPulseSpeed = 1.8f;
+    [Tooltip("후광 맥동 최소 스케일.")]
+    [SerializeField] private float _glowPulseMin   = 0.85f;
+    [Tooltip("후광 맥동 최대 스케일.")]
+    [SerializeField] private float _glowPulseMax   = 1.15f;
+
     [Header("Post-Processing")]
     [Tooltip("Color Adjustments 오버라이드가 포함된 Global Volume.")]
     [SerializeField] private Volume _volume;
@@ -52,16 +87,46 @@ public class TransitionVFXController : MonoBehaviour
     //  내부 상태
     // ─────────────────────────────────────────────
     private ColorAdjustments _colorAdjustments;
+    private ChromaticAberration _chromaticAberration;
     private Camera _cam;
 
     // 카메라 흔들림 — LateUpdate에서 CameraFollow 위치에 덧씌움
     private Vector3 _shakeOffset = Vector3.zero;
+
+    // 셰이더 머티리얼 인스턴스 (공유 애셋 변경 방지)
+    private Material _crackMat;
+    private Material _flashMat;
+    private Vector3 _crackImageOriginalScale = Vector3.one;
+    private CanvasGroup _crackCanvasGroup;
+
+    // 셰이더 프로퍼티 ID (Shader.PropertyToID)
+    private static readonly int ID_CrackAmount   = Shader.PropertyToID("_CrackAmount");
+    private static readonly int ID_ShatterAmount = Shader.PropertyToID("_ShatterAmount");
+    private static readonly int ID_ImpactPoint   = Shader.PropertyToID("_ImpactPoint");
+    private static readonly int ID_FlashAmount   = Shader.PropertyToID("_FlashAmount");
+    private static readonly int ID_FlashCenter   = Shader.PropertyToID("_Center");
 
     // 실행 중인 코루틴 핸들 (동일 효과 중복 방지)
     private Coroutine _flashCoroutine;
     private Coroutine _shakeCoroutine;
     private Coroutine _colorGradingCoroutine;
     private Coroutine _zoomCoroutine;
+    private Coroutine _screenCrackCoroutine;
+    private Coroutine _shatterCoroutine;
+    private Coroutine _impactFlashCoroutine;
+    private Coroutine _watercolorCoroutine;
+    private Coroutine _daggerCoroutine;
+    private Coroutine _marshmallowCoroutine;
+    private Coroutine _glowPulseCoroutine;
+
+    private CanvasGroup   _daggerGroup;
+    private RectTransform _daggerRect;
+    private RectTransform _glowRect;
+
+    private Material _watercolorMat;
+
+    private static readonly int ID_SpreadAmount   = Shader.PropertyToID("_SpreadAmount");
+    private static readonly WaitForSecondsRealtime _waitDaggerFade = new WaitForSecondsRealtime(0.5f);
 
     // ─────────────────────────────────────────────
     //  라이프사이클
@@ -81,11 +146,13 @@ public class TransitionVFXController : MonoBehaviour
 
         if (!_flashOverlay)
             _flashOverlay = CreateFlashOverlay();
+
+        SetupShaderOverlays();
     }
 
     void Start()
     {
-        // Volume → ColorAdjustments 참조 획득
+        // Volume → ColorAdjustments / ChromaticAberration 참조 획득
         if (_volume == null)
             _volume = FindAnyObjectByType<Volume>();
 
@@ -94,6 +161,8 @@ public class TransitionVFXController : MonoBehaviour
             if (!_volume.profile.TryGet(out _colorAdjustments))
                 Debug.LogWarning("[TransitionVFXController] Volume Profile에 ColorAdjustments 오버라이드가 없습니다. " +
                                  "Volume Profile에 Color Adjustments를 추가하세요.");
+
+            _volume.profile.TryGet(out _chromaticAberration);
         }
         else
         {
@@ -167,29 +236,61 @@ public class TransitionVFXController : MonoBehaviour
         _zoomCoroutine = StartCoroutine(ZoomRoutine(targetOrthoSize, duration));
     }
 
+    /// <summary>
+    /// GlassCrack 셰이더 기반 화면 균열 연출. duration 초 동안 _CrackAmount를 0→1로 애니메이션.
+    /// impactUV는 균열 중심 (0~1), 기본값은 화면 중앙.
+    /// </summary>
+    public void StartScreenCrack(float duration, Vector2 impactUV)
+    {
+        if (_screenCrackCoroutine != null) StopCoroutine(_screenCrackCoroutine);
+        _screenCrackCoroutine = StartCoroutine(ScreenCrackRoutine(duration, impactUV));
+    }
+
+    /// <summary>화면 중앙을 기준으로 StartScreenCrack 호출.</summary>
+    public void StartScreenCrack(float duration)
+    {
+        StartScreenCrack(duration, new Vector2(0.5f, 0.5f));
+    }
+
+    /// <summary>
+    /// GlassCrack 셰이더의 _ShatterAmount를 0→1로 애니메이션 + 이미지 확대/알파 페이드.
+    /// duration 초 후 crack 오버레이는 비활성화됩니다.
+    /// </summary>
+    public void ShatterScreen(float duration)
+    {
+        if (_shatterCoroutine != null) StopCoroutine(_shatterCoroutine);
+        _shatterCoroutine = StartCoroutine(ShatterRoutine(duration));
+    }
+
+    /// <summary>
+    /// ImpactFlash 셰이더 기반 임팩트 플래시 (중심점에서 방사형으로 퍼지는 빛 + ChromaticAberration 펄스).
+    /// 기존 FlashWhite(CanvasGroup 알파)와 공존.
+    /// </summary>
+    public void ImpactFlash(Vector2 uv, float duration)
+    {
+        if (_impactFlashCoroutine != null) StopCoroutine(_impactFlashCoroutine);
+        _impactFlashCoroutine = StartCoroutine(ImpactFlashRoutine(uv, duration));
+    }
+
     // ─────────────────────────────────────────────
-    //  공개 API — TODO 스텁 (BattleTransitionManager에서 호출)
+    //  공개 API — 수채화 번짐
     // ─────────────────────────────────────────────
 
-    /// <summary>화면 균열 셰이더/이미지 연출. duration 초 동안 실행.</summary>
-    // TODO: 화면 균열 셰이더 또는 Image 오버레이 연출 구현
-    public void StartScreenCrack(float duration) { }
+    /// <summary>duration 초 동안 수채화 물감이 화면에 번지며 채색됩니다.</summary>
+    public void StartWatercolorSpread(float duration)
+    {
+        if (_watercolorMat == null || _watercolorImage == null) return;
+        if (_watercolorCoroutine != null) StopCoroutine(_watercolorCoroutine);
+        _watercolorCoroutine = StartCoroutine(WatercolorSpreadRoutine(duration));
+    }
 
-    /// <summary>적 캐릭터 현실화 변신 VFX. duration 초 동안 실행.</summary>
-    // TODO: 적 캐릭터 현실화 변신 파티클/셰이더 VFX 구현
-    public void PlayEnemyTransformVFX(float duration) { }
-
-    /// <summary>지정 위치에 녹아내리는 파티클을 스폰합니다.</summary>
-    // TODO: position 위치에 마시멜로 녹는 파티클 시스템 스폰 구현
-    public void SpawnMeltParticles(Vector3 position) { }
-
-    /// <summary>수채화 번짐 효과. duration 초 동안 실행.</summary>
-    // TODO: URP Custom Pass 또는 셰이더 기반 수채화 번짐 연출 구현
-    public void StartWatercolorSpread(float duration) { }
-
-    /// <summary>적 캐릭터 환상화 디졸브 VFX. duration 초 동안 실행.</summary>
-    // TODO: 적 캐릭터 환상 디졸브 파티클/셰이더 VFX 구현
-    public void PlayEnemyDissolveToFantasy(float duration) { }
+    /// <summary>현재 번짐 상태에서 duration 초 동안 수채화 오버레이를 서서히 지웁니다.</summary>
+    public void FadeOutWatercolor(float duration)
+    {
+        if (_watercolorImage == null || !_watercolorImage.gameObject.activeSelf) return;
+        if (_watercolorCoroutine != null) StopCoroutine(_watercolorCoroutine);
+        _watercolorCoroutine = StartCoroutine(WatercolorFadeOutRoutine(duration));
+    }
 
     // ─────────────────────────────────────────────
     //  코루틴
@@ -311,9 +412,380 @@ public class TransitionVFXController : MonoBehaviour
         _zoomCoroutine = null;
     }
 
+    /// <summary>GlassCrack _CrackAmount 0→1 + 임팩트 포인트 설정. timeScale 0.3 대응(unscaled).</summary>
+    IEnumerator ScreenCrackRoutine(float duration, Vector2 impactUV)
+    {
+        if (_crackMat == null || _glassCrackImage == null)
+        {
+            Debug.LogWarning("[TransitionVFXController] StartScreenCrack: _glassCrackImage 또는 머티리얼이 없습니다.");
+            yield break;
+        }
+
+        _glassCrackImage.gameObject.SetActive(true);
+        _glassCrackImage.transform.localScale = _crackImageOriginalScale;
+        if (_crackCanvasGroup != null) _crackCanvasGroup.alpha = 1f;
+
+        _crackMat.SetVector(ID_ImpactPoint, new Vector4(impactUV.x, impactUV.y, 0f, 0f));
+        _crackMat.SetFloat(ID_CrackAmount, 0f);
+        _crackMat.SetFloat(ID_ShatterAmount, 0f);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            _crackMat.SetFloat(ID_CrackAmount, Mathf.SmoothStep(0f, 1f, t));
+            yield return null;
+        }
+
+        _crackMat.SetFloat(ID_CrackAmount, 1f);
+        _screenCrackCoroutine = null;
+    }
+
+    /// <summary>_ShatterAmount 0→1 + 이미지 확대 + 알파 페이드. 끝나면 비활성화.</summary>
+    IEnumerator ShatterRoutine(float duration)
+    {
+        if (_crackMat == null || _glassCrackImage == null)
+        {
+            Debug.LogWarning("[TransitionVFXController] ShatterScreen: _glassCrackImage 또는 머티리얼이 없습니다.");
+            yield break;
+        }
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = Mathf.SmoothStep(0f, 1f, t);
+
+            _crackMat.SetFloat(ID_ShatterAmount, eased);
+            _glassCrackImage.transform.localScale =
+                Vector3.Lerp(_crackImageOriginalScale, _crackImageOriginalScale * _shatterScaleMax, eased);
+
+            if (_crackCanvasGroup != null)
+                _crackCanvasGroup.alpha = 1f - eased;
+
+            yield return null;
+        }
+
+        _crackMat.SetFloat(ID_ShatterAmount, 1f);
+        _glassCrackImage.gameObject.SetActive(false);
+        _glassCrackImage.transform.localScale = _crackImageOriginalScale;
+        if (_crackCanvasGroup != null) _crackCanvasGroup.alpha = 1f;
+        _shatterCoroutine = null;
+    }
+
+    /// <summary>ImpactFlash 셰이더 + ChromaticAberration 동시 펄스 (0→피크→0).</summary>
+    IEnumerator ImpactFlashRoutine(Vector2 uv, float duration)
+    {
+        if (_flashMat == null || _impactFlashImage == null)
+        {
+            Debug.LogWarning("[TransitionVFXController] ImpactFlash: _impactFlashImage 또는 머티리얼이 없습니다.");
+            yield break;
+        }
+
+        _impactFlashImage.gameObject.SetActive(true);
+        _flashMat.SetVector(ID_FlashCenter, new Vector4(uv.x, uv.y, 0f, 0f));
+        _flashMat.SetFloat(ID_FlashAmount, 0f);
+
+        float startChroma = (_chromaticAberration != null) ? _chromaticAberration.intensity.value : 0f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            // 0 → 1 → 0 (삼각형 피크)
+            float pulse = (t < 0.5f) ? (t * 2f) : ((1f - t) * 2f);
+
+            _flashMat.SetFloat(ID_FlashAmount, pulse);
+            if (_chromaticAberration != null)
+                _chromaticAberration.intensity.Override(Mathf.Lerp(startChroma, _chromaticFlashPeak, pulse));
+
+            yield return null;
+        }
+
+        _flashMat.SetFloat(ID_FlashAmount, 0f);
+        _impactFlashImage.gameObject.SetActive(false);
+        if (_chromaticAberration != null)
+            _chromaticAberration.intensity.Override(startChroma);
+
+        _impactFlashCoroutine = null;
+    }
+
+    /// <summary>수채화 번짐: _SpreadAmount 0 → 1.05 (완전 커버 보장) 애니메이션.</summary>
+    IEnumerator WatercolorSpreadRoutine(float duration)
+    {
+        Color c = _watercolorImage.color;
+        c.a = 1f;
+        _watercolorImage.color = c;
+        _watercolorMat.SetFloat(ID_SpreadAmount, 0f);
+        _watercolorImage.gameObject.SetActive(true);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            // FBM 최대값 ~0.94이므로 1.05까지 올려 전체 화면을 완전히 덮음
+            _watercolorMat.SetFloat(ID_SpreadAmount, Mathf.Lerp(0f, 1.05f, elapsed / duration));
+            yield return null;
+        }
+        _watercolorMat.SetFloat(ID_SpreadAmount, 1.05f);
+        _watercolorCoroutine = null;
+    }
+
+    /// <summary>수채화 페이드아웃: Image.color.a 를 0 으로 낮춘 뒤 비활성화.</summary>
+    IEnumerator WatercolorFadeOutRoutine(float duration)
+    {
+        Color startColor = _watercolorImage.color;
+        float elapsed    = 0f;
+        Color c          = startColor;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            c.a = Mathf.Lerp(startColor.a, 0f, elapsed / duration);
+            _watercolorImage.color = c;
+            yield return null;
+        }
+
+        c.a = 0f;
+        _watercolorImage.color = c;
+        _watercolorImage.gameObject.SetActive(false);
+        _watercolorMat.SetFloat(ID_SpreadAmount, 0f);
+        _watercolorCoroutine = null;
+    }
+
     // ─────────────────────────────────────────────
     //  내부 헬퍼
     // ─────────────────────────────────────────────
+
+    /// <summary>_glassCrackImage / _impactFlashImage 의 머티리얼을 인스턴스화하고 초기 상태로 세팅.</summary>
+    void SetupShaderOverlays()
+    {
+        if (_glassCrackImage != null && _glassCrackImage.material != null)
+        {
+            _crackMat = new Material(_glassCrackImage.material);
+            _glassCrackImage.material = _crackMat;
+            _crackMat.SetFloat(ID_CrackAmount, 0f);
+            _crackMat.SetFloat(ID_ShatterAmount, 0f);
+            _crackImageOriginalScale = _glassCrackImage.transform.localScale;
+            _crackCanvasGroup = _glassCrackImage.GetComponent<CanvasGroup>();
+            _glassCrackImage.gameObject.SetActive(false);
+        }
+
+        if (_impactFlashImage != null && _impactFlashImage.material != null)
+        {
+            _flashMat = new Material(_impactFlashImage.material);
+            _impactFlashImage.material = _flashMat;
+            _flashMat.SetFloat(ID_FlashAmount, 0f);
+            _impactFlashImage.gameObject.SetActive(false);
+        }
+
+        if (_watercolorImage != null && _watercolorImage.material != null)
+        {
+            _watercolorMat = new Material(_watercolorImage.material);
+            _watercolorImage.material = _watercolorMat;
+            _watercolorMat.SetFloat(ID_SpreadAmount, 0f);
+            _watercolorImage.gameObject.SetActive(false);
+        }
+
+        if (_daggerImage != null)
+        {
+            _daggerGroup = _daggerImage.GetComponent<CanvasGroup>();
+            if (_daggerGroup == null) _daggerGroup = _daggerImage.gameObject.AddComponent<CanvasGroup>();
+            _daggerGroup.alpha = 0f;
+            _daggerRect = _daggerImage.GetComponent<RectTransform>();
+            _daggerImage.gameObject.SetActive(false);
+        }
+
+        if (_marshmallowImage != null)
+        {
+            Color c = _marshmallowImage.color; c.a = 0f; _marshmallowImage.color = c;
+            _marshmallowImage.gameObject.SetActive(false);
+        }
+
+        if (_marshmallowGlowImage != null)
+        {
+            Color c = _marshmallowGlowImage.color; c.a = 0f; _marshmallowGlowImage.color = c;
+            _glowRect = _marshmallowGlowImage.GetComponent<RectTransform>();
+            _marshmallowGlowImage.gameObject.SetActive(false);
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (_crackMat      != null) Destroy(_crackMat);
+        if (_flashMat      != null) Destroy(_flashMat);
+        if (_watercolorMat != null) Destroy(_watercolorMat);
+    }
+
+    // ─────────────────────────────────────────────
+    //  공개 API — 단검 찌르기
+    // ─────────────────────────────────────────────
+
+    /// <summary>단검 이미지가 Inspector에 연결되어 있으면 true.</summary>
+    public bool HasDaggerImage => _daggerRect != null;
+
+    /// <summary>단검이 박히는 화면 UV 위치. BattleGlitchTransition에서 crack 기준점으로 사용.</summary>
+    public Vector2 DaggerStabUV => _daggerStabUV;
+
+    /// <summary>
+    /// 단검이 _daggerStartUV에서 _daggerStabUV로 날아온 뒤 박힙니다.
+    /// 박히는 순간 onImpact 콜백을 실행합니다.
+    /// </summary>
+    public void PlayDaggerStab(float flyDuration, System.Action onImpact)
+    {
+        if (_daggerCoroutine != null) StopCoroutine(_daggerCoroutine);
+        _daggerCoroutine = StartCoroutine(DaggerStabRoutine(flyDuration, onImpact));
+    }
+
+    // ─────────────────────────────────────────────
+    //  공개 API — 마시멜로 / 후광
+    // ─────────────────────────────────────────────
+
+    /// <summary>마시멜로 이미지와 후광을 fadeInDuration 초 동안 페이드인한 뒤 후광 맥동을 시작합니다.</summary>
+    public void ShowMarshmallow(float fadeInDuration)
+    {
+        if (_marshmallowCoroutine != null) StopCoroutine(_marshmallowCoroutine);
+        _marshmallowCoroutine = StartCoroutine(MarshmallowFadeInRoutine(fadeInDuration));
+    }
+
+    /// <summary>후광 맥동을 멈추고 마시멜로와 후광을 fadeOutDuration 초 동안 페이드아웃합니다.</summary>
+    public void HideMarshmallow(float fadeOutDuration)
+    {
+        if (_glowPulseCoroutine != null) { StopCoroutine(_glowPulseCoroutine); _glowPulseCoroutine = null; }
+        if (_marshmallowCoroutine != null) StopCoroutine(_marshmallowCoroutine);
+        _marshmallowCoroutine = StartCoroutine(MarshmallowFadeOutRoutine(fadeOutDuration));
+    }
+
+    // ─────────────────────────────────────────────
+    //  코루틴 — 단검
+    // ─────────────────────────────────────────────
+
+    IEnumerator DaggerStabRoutine(float duration, System.Action onImpact)
+    {
+        if (_daggerRect == null) { onImpact?.Invoke(); yield break; }
+
+        // UV → 화면 로컬 좌표 (ScreenSpaceOverlay 기준)
+        float w = Screen.width;
+        float h = Screen.height;
+        Vector2 startPos = new Vector2((_daggerStartUV.x - 0.5f) * w, (_daggerStartUV.y - 0.5f) * h);
+        Vector2 stabPos  = new Vector2((_daggerStabUV.x  - 0.5f) * w, (_daggerStabUV.y  - 0.5f) * h);
+
+        // 날아오는 방향으로 단검 회전
+        Vector2 dir = stabPos - startPos;
+        float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + _daggerAngleOffset;
+        _daggerRect.localEulerAngles = new Vector3(0f, 0f, angle);
+        _daggerRect.anchoredPosition = startPos;
+
+        bool hasGroup = _daggerGroup != null;
+
+        _daggerImage.gameObject.SetActive(true);
+        if (hasGroup) _daggerGroup.alpha = 0f;
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            // 이징: 가속으로 날아오는 느낌
+            float eased = 1f - (1f - t) * (1f - t);
+            _daggerRect.anchoredPosition = Vector2.Lerp(startPos, stabPos, eased);
+            if (hasGroup) _daggerGroup.alpha = Mathf.Clamp01(t * 5f);
+            yield return null;
+        }
+
+        _daggerRect.anchoredPosition = stabPos;
+        if (hasGroup) _daggerGroup.alpha = 1f;
+
+        onImpact?.Invoke();
+
+        // 산산조각 연출 후 단검 페이드아웃
+        yield return _waitDaggerFade;
+
+        float fadeElapsed = 0f;
+        const float kFadeDur = 0.15f;
+        while (fadeElapsed < kFadeDur)
+        {
+            fadeElapsed += Time.unscaledDeltaTime;
+            if (hasGroup) _daggerGroup.alpha = Mathf.Lerp(1f, 0f, fadeElapsed / kFadeDur);
+            yield return null;
+        }
+
+        _daggerImage.gameObject.SetActive(false);
+        if (hasGroup) _daggerGroup.alpha = 0f;
+        _daggerCoroutine = null;
+    }
+
+    // ─────────────────────────────────────────────
+    //  코루틴 — 마시멜로 / 후광
+    // ─────────────────────────────────────────────
+
+    IEnumerator MarshmallowFadeInRoutine(float duration)
+    {
+        bool hasM = _marshmallowImage     != null;
+        bool hasG = _marshmallowGlowImage != null;
+        if (!hasM && !hasG) yield break;
+
+        if (hasM) _marshmallowImage.gameObject.SetActive(true);
+        if (hasG) _marshmallowGlowImage.gameObject.SetActive(true);
+
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float a = Mathf.Clamp01(elapsed / duration);
+            if (hasM) { Color c = _marshmallowImage.color;     c.a = a;        _marshmallowImage.color = c; }
+            if (hasG) { Color c = _marshmallowGlowImage.color; c.a = a * 0.55f; _marshmallowGlowImage.color = c; }
+            yield return null;
+        }
+
+        // 페이드인 완료 → 후광 맥동 시작
+        if (_glowPulseCoroutine != null) StopCoroutine(_glowPulseCoroutine);
+        _glowPulseCoroutine = StartCoroutine(GlowPulseRoutine());
+        _marshmallowCoroutine = null;
+    }
+
+    IEnumerator MarshmallowFadeOutRoutine(float duration)
+    {
+        bool hasM = _marshmallowImage     != null;
+        bool hasG = _marshmallowGlowImage != null;
+
+        if (hasG) _glowRect.localScale = Vector3.one;
+
+        float startAlphaM = hasM ? _marshmallowImage.color.a     : 0f;
+        float startAlphaG = hasG ? _marshmallowGlowImage.color.a : 0f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            if (hasM) { Color c = _marshmallowImage.color;     c.a = Mathf.Lerp(startAlphaM, 0f, t); _marshmallowImage.color = c; }
+            if (hasG) { Color c = _marshmallowGlowImage.color; c.a = Mathf.Lerp(startAlphaG, 0f, t); _marshmallowGlowImage.color = c; }
+            yield return null;
+        }
+
+        if (hasM) _marshmallowImage.gameObject.SetActive(false);
+        if (hasG) _marshmallowGlowImage.gameObject.SetActive(false);
+        _marshmallowCoroutine = null;
+    }
+
+    IEnumerator GlowPulseRoutine()
+    {
+        if (_glowRect == null) yield break;
+
+        Vector3 baseScale = _glowRect.localScale;
+
+        while (true)
+        {
+            float t = (Mathf.Sin(Time.unscaledTime * _glowPulseSpeed * Mathf.PI) + 1f) * 0.5f;
+            float s = Mathf.Lerp(_glowPulseMin, _glowPulseMax, t);
+            _glowRect.localScale = baseScale * s;
+            yield return null;
+        }
+    }
 
     /// <summary>흰 플래시용 CanvasGroup을 런타임에 자동 생성합니다.</summary>
     CanvasGroup CreateFlashOverlay()

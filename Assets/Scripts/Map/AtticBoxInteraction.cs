@@ -24,16 +24,16 @@ public class AtticBoxInteraction : MonoBehaviour
     [Header("단검 아이템 (글리치 연출 후 획득)")]
     public ItemData daggerItem;
 
-    [Header("대사")]
-    public DialogueData daggerIntroDialogue;    // 글리치 전
-    public DialogueData daggerPreLookDialogue;  // 둘러보기 전
-    public DialogueData daggerPostLookDialogue; // 둘러보기 후
+    [Header("대사 Yarn 노드 이름")]
+    public string yarnNode_daggerIntro;    // 글리치 전
+    public string yarnNode_daggerPreLook;  // 둘러보기 전
+    public string yarnNode_daggerPostLook; // 둘러보기 후
 
     [Header("캐릭터 전환 후")]
     [Tooltip("암전 중 플레이어 스프라이트를 이것으로 교체합니다. 비워두면 교체하지 않습니다.")]
     public Sprite newCharacterSprite;
-    [Tooltip("암전 후 재생할 대사. 비워두면 건너뜁니다.")]
-    public DialogueData afterChangeDialogue;
+    [Tooltip("암전 후 재생할 Yarn 노드 이름. 비워두면 건너뜁니다.")]
+    public string yarnNode_afterChange;
 
     private bool _used = false;
 
@@ -65,8 +65,8 @@ public class AtticBoxInteraction : MonoBehaviour
             ? ItemAcquisitionUI.Instance.displayDuration : 2f;
         yield return new WaitForSeconds(notifWait);
 
-        // ── 2. 글리치 전 대사 (Space / 마우스 클릭으로 진행) ───────────
-        yield return StartCoroutine(DialogueRunner.PlayAndWait(daggerIntroDialogue));
+        // ── 2. 글리치 전 대사 ───────────────────────────────────────
+        yield return YarnDialogue.PlayAndWait(yarnNode_daggerIntro);
 
         // ── 3. 글리치 → 단검 획득 ─────────────────────────────────────
         GlitchManager.Instance?.PlayGlitch(1.5f, GlitchManager.PresetStrong);
@@ -76,30 +76,37 @@ public class AtticBoxInteraction : MonoBehaviour
         {
             InventoryManager.Instance?.AddItem(daggerItem);
             DaggerSystem.Instance?.Equip();
-            Debug.Log("[AtticBoxInteraction] 단검 획득 완료");
+            Dbg.Log("[AtticBoxInteraction] 단검 획득 완료");
         }
 
         float daggerNotifWait = ItemAcquisitionUI.Instance != null
             ? ItemAcquisitionUI.Instance.displayDuration : 2f;
         yield return new WaitForSeconds(daggerNotifWait);
 
-        // ── 4. 단검 전 대사 (Space / 마우스 클릭으로 진행) ─────────────
-        yield return StartCoroutine(DialogueRunner.PlayAndWait(daggerPreLookDialogue));
+        // 아빠 코트·단검·라디오 발견 → 인형화 -3
+        CorruptionManager.Instance?.AddCorruption(-3f);
+        Dbg.Log("[AtticBoxInteraction] 아이템 발견 — 인형화 -3");
+
+        // ── 4. 단검 전 대사 ─────────────────────────────────────────
+        yield return YarnDialogue.PlayAndWait(yarnNode_daggerPreLook);
 
         // ── 5. 루 둘러보기 모션 ────────────────────────────────────────
         if (ctrl != null)
             yield return StartCoroutine(LookAroundRoutine(ctrl.transform));
 
-        // ── 6. 단검 후 대사 (Space / 마우스 클릭으로 진행) ─────────────
-        yield return StartCoroutine(DialogueRunner.PlayAndWait(daggerPostLookDialogue));
+        // ── 6. 단검 후 대사 ─────────────────────────────────────────
+        yield return YarnDialogue.PlayAndWait(yarnNode_daggerPostLook);
 
         // ── 7. 암전 → 캐릭터 전환 → 암전 해제 → 전환 후 대사 ───────────
         yield return StartCoroutine(TransitionManager.Instance.FadeToBlack());
         OnCharacterChange();
+        // 아빠 코트 착용 결심 → 인형화 -3
+        CorruptionManager.Instance?.AddCorruption(-3f);
+        Dbg.Log("[AtticBoxInteraction] 코트 착용 결심 — 인형화 -3");
         yield return StartCoroutine(TransitionManager.Instance.FadeFromBlack());
 
-        if (afterChangeDialogue != null)
-            yield return StartCoroutine(DialogueRunner.PlayAndWait(afterChangeDialogue));
+        if (!string.IsNullOrEmpty(yarnNode_afterChange))
+            yield return YarnDialogue.PlayAndWait(yarnNode_afterChange);
 
         // ── 8. 목표 갱신 ──────────────────────────────────────────────
         ObjectiveManager.Instance?.ShowObjective("현재 목표", "아빠를 찾으러 가세요.");

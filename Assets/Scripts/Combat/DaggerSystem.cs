@@ -8,18 +8,7 @@ using UnityEngine;
 /// </summary>
 public class DaggerSystem : MonoBehaviour
 {
-    public static DaggerSystem Instance
-    {
-        get
-        {
-            if (!_instance)
-            {
-                var go = new GameObject("DaggerSystem [Auto]");
-                _instance = go.AddComponent<DaggerSystem>();
-            }
-            return _instance;
-        }
-    }
+    public static DaggerSystem Instance => _instance;
     private static DaggerSystem _instance;
 
     [Header("현재 상태 (읽기 전용)")]
@@ -39,7 +28,7 @@ public class DaggerSystem : MonoBehaviour
     public void Toggle()
     {
         _isDaggerEquipped = !_isDaggerEquipped;
-        Debug.Log($"[DaggerSystem] 단검 {(_isDaggerEquipped ? "장착" : "해제")}");
+        Dbg.Log($"[DaggerSystem] 단검 {(_isDaggerEquipped ? "장착" : "해제")}");
     }
 
     public void Equip()   => _isDaggerEquipped = true;

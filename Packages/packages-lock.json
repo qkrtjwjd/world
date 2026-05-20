@@ -243,7 +243,7 @@
       "url": "https://packages.unity.com"
     },
     "com.unity.timeline": {
-      "version": "1.8.11",
+      "version": "1.8.12",
       "depth": 0,
       "source": "registry",
       "dependencies": {
@@ -262,6 +262,23 @@
         "com.unity.modules.ui": "1.0.0",
         "com.unity.modules.imgui": "1.0.0"
       }
+    },
+    "dev.yarnspinner.unity": {
+      "version": "https://github.com/YarnSpinnerTool/YarnSpinner-Unity.git",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {},
+      "hash": "3e46a90878d798bc215a174af6fdf413eca9a772"
+    },
+    "dev.yarnspinner.unity.samples": {
+      "version": "https://github.com/YarnSpinnerTool/YarnSpinner-Unity-Samples.git#current",
+      "depth": 0,
+      "source": "git",
+      "dependencies": {
+        "dev.yarnspinner.unity": "3.1.0",
+        "com.unity.shadergraph": "14.0.0"
+      },
+      "hash": "13f258df535f432de0517b2db519af9a19561a0b"
     },
     "com.unity.modules.androidjni": {
       "version": "1.0.0",

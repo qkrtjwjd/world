@@ -37,6 +37,7 @@ public class CameraFollow : MonoBehaviour
     private const float RectLerpSpeed = 5f;
     private Coroutine _zoomCoroutine;
     private Camera _bgCam;
+    private float _lastOrthoSize = -1f;
 
     public static CameraFollow Instance;
 
@@ -98,7 +99,12 @@ public class CameraFollow : MonoBehaviour
     void LateUpdate()
     {
         if (_cam == null || target == null) return;
-        CacheCamDimensions();
+
+        if (!Mathf.Approximately(_cam.orthographicSize, _lastOrthoSize))
+        {
+            CacheCamDimensions();
+            _lastOrthoSize = _cam.orthographicSize;
+        }
 
         // Inspector에서 outsideColor를 변경해도 실시간 반영
         if (_bgCam != null && _bgCam.backgroundColor != outsideColor)

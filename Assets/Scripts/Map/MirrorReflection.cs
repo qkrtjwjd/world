@@ -19,9 +19,9 @@ public class MirrorReflection : MonoBehaviour
 
     void UpdateReflection()
     {
-        if (CorruptionManager.instance == null) return;
+        if (CorruptionManager.Instance == null) return;
 
-        float val = CorruptionManager.instance.currentCorruption;
+        float val = CorruptionManager.Instance.currentCorruption;
 
         // 색상은 원래대로(흰색) 돌려놔야 스프라이트 본연의 색이 보임
         reflectionImage.color = Color.white;

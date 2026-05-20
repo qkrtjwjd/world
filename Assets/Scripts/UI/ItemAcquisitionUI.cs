@@ -26,7 +26,7 @@ public class ItemAcquisitionUI : MonoBehaviour
     public float displayDuration = 2f;
 
     private Coroutine _hideCoroutine;
-    private DialogueData _pendingDialogue;
+    private string _pendingYarnNode;
 
     void Awake()
     {
@@ -123,7 +123,7 @@ public class ItemAcquisitionUI : MonoBehaviour
 
     public bool IsShowing => notificationPanel != null && notificationPanel.activeSelf;
 
-    public void SetPendingDialogue(DialogueData data) => _pendingDialogue = data;
+    public void SetPendingYarnNode(string nodeName) => _pendingYarnNode = nodeName;
 
     IEnumerator AutoHide()
     {
@@ -132,11 +132,11 @@ public class ItemAcquisitionUI : MonoBehaviour
         HideAllSlots();
         _hideCoroutine = null;
 
-        if (_pendingDialogue != null)
+        if (!string.IsNullOrEmpty(_pendingYarnNode))
         {
-            var dlg = _pendingDialogue;
-            _pendingDialogue = null;
-            StartCoroutine(DialogueRunner.PlayAndWait(dlg));
+            var node = _pendingYarnNode;
+            _pendingYarnNode = null;
+            StartCoroutine(YarnDialogue.PlayAndWait(node));
         }
     }
 }

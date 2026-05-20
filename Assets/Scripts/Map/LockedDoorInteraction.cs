@@ -12,8 +12,8 @@ public class LockedDoorInteraction : MonoBehaviour
     [Header("잠금 해제에 필요한 아이템 이름 (ItemData.itemName 과 일치해야 함)")]
     public string requiredItemName = "AtticKey";
 
-    [Header("잠겨있을 때 대사 (DialogueData 에셋 연결)")]
-    public DialogueData lockedDialogue;
+    [Header("잠겨있을 때 Yarn 노드 이름")]
+    public string yarnNode_locked;
 
     [Header("문 열릴 때 활성화할 오브젝트 (다락방 RoomTransfer 등)")]
     public GameObject[] objectsToEnable;
@@ -39,7 +39,7 @@ public class LockedDoorInteraction : MonoBehaviour
         if (inv.HasItem(requiredItemName))
             UnlockAttic();
         else
-            StartCoroutine(DialogueRunner.PlayAndWait(lockedDialogue, lockPlayer: true));
+            StartCoroutine(YarnDialogue.PlayAndWait(yarnNode_locked, lockPlayer: true));
     }
 
     void UnlockAttic()

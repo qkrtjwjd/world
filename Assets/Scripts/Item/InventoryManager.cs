@@ -1,12 +1,18 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class InventoryManager : MonoBehaviour
+public class InventoryManager : MonoBehaviour, IInventoryService
 {
     public static InventoryManager Instance;
 
+    // ── IInventoryService 구현 ──
+    IReadOnlyList<ItemData> IInventoryService.Items => inventoryItems;
+
+    public const int MaxSlots = 48; // 6열 × 8행
+
     [Header("UI")]
     public GameObject inventoryPanel;
+    public UnityEngine.UI.Text quantityText;
 
     [Header("시작 아이템")]
     public List<ItemData> startingItems = new List<ItemData>();
@@ -18,10 +24,27 @@ public class InventoryManager : MonoBehaviour
     public List<ItemData> inventoryItems = new List<ItemData>();
 
     private List<ItemSlotUI> _slots = new List<ItemSlotUI>();
+    private ItemCategory _currentCategory = ItemCategory.All;
+    public  ItemCategory CurrentCategory => _currentCategory;
+
+    // UpdateSlotUI 재사용 컨테이너 (매 호출 new 방지)
+    private readonly List<ItemData> _uiSource   = new List<ItemData>();
+    private readonly Dictionary<ItemData, int>  _stackIndex = new Dictionary<ItemData, int>();
+    private readonly List<(ItemData item, int count)> _stacks = new List<(ItemData, int)>();
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => Instance = null;
 
     void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
+        BattleServices.Register((IInventoryService)this);
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     void Start()
@@ -50,7 +73,7 @@ public class InventoryManager : MonoBehaviour
     // ─────────────────────────────────────────────
     //  인벤토리 조작
     // ─────────────────────────────────────────────
-    public int FreeSlots => _slots.Count - inventoryItems.Count;
+    public int FreeSlots => MaxSlots - inventoryItems.Count;
 
     /// <returns>추가 성공 여부</returns>
     public bool AddItem(ItemData item)
@@ -61,9 +84,9 @@ public class InventoryManager : MonoBehaviour
         if (_slots.Count == 0 && slotGrid == null)
             _slots.AddRange(Object.FindObjectsByType<ItemSlotUI>(FindObjectsInactive.Include));
 
-        if (inventoryItems.Count >= _slots.Count)
+        if (inventoryItems.Count >= MaxSlots)
         {
-            Debug.Log("[InventoryManager] 인벤토리가 가득 찼습니다.");
+            Dbg.Log("[InventoryManager] 인벤토리가 가득 찼습니다.");
             ShowInventoryFullNotice();
             return false;
         }
@@ -86,9 +109,9 @@ public class InventoryManager : MonoBehaviour
         foreach (var item in items)
         {
             if (item == null) continue;
-            if (inventoryItems.Count >= _slots.Count)
+            if (inventoryItems.Count >= MaxSlots)
             {
-                Debug.Log("[InventoryManager] 인벤토리가 가득 찼습니다.");
+                Dbg.Log("[InventoryManager] 인벤토리가 가득 찼습니다.");
                 ShowInventoryFullNotice();
                 break;
             }
@@ -123,30 +146,45 @@ public class InventoryManager : MonoBehaviour
     // ─────────────────────────────────────────────
     public void UpdateSlotUI()
     {
-        // 아이템 종류별 갯수 집계
-        var stacks = new List<(ItemData item, int count)>();
+        // 카테고리 필터링
+        _uiSource.Clear();
         foreach (var item in inventoryItems)
         {
-            bool found = false;
-            for (int i = 0; i < stacks.Count; i++)
+            if (item == null) continue;
+            if (_currentCategory == ItemCategory.All || item.category == _currentCategory)
+                _uiSource.Add(item);
+        }
+
+        // 아이템 종류별 갯수 집계 — O(n), 삽입 순서 유지
+        _stackIndex.Clear();
+        _stacks.Clear();
+        foreach (var item in _uiSource)
+        {
+            if (_stackIndex.TryGetValue(item, out int idx))
+                _stacks[idx] = (item, _stacks[idx].count + 1);
+            else
             {
-                if (stacks[i].item == item)
-                {
-                    stacks[i] = (item, stacks[i].count + 1);
-                    found = true;
-                    break;
-                }
+                _stackIndex[item] = _stacks.Count;
+                _stacks.Add((item, 1));
             }
-            if (!found) stacks.Add((item, 1));
         }
 
         for (int i = 0; i < _slots.Count; i++)
         {
-            if (i < stacks.Count)
-                _slots[i].Setup(stacks[i].item, stacks[i].count);
+            if (i < _stacks.Count)
+                _slots[i].Setup(_stacks[i].item, _stacks[i].count);
             else
                 _slots[i].Setup(null);
         }
+
+        if (quantityText != null)
+            quantityText.text = $"{inventoryItems.Count} / {Mathf.Min(_slots.Count, MaxSlots)}";
+    }
+
+    public void FilterByCategory(ItemCategory category)
+    {
+        _currentCategory = category;
+        UpdateSlotUI();
     }
 
     void ShowInventoryFullNotice()
@@ -165,7 +203,7 @@ public class InventoryManager : MonoBehaviour
         ItemDetailUI.Instance?.Hide();
 
         // 인벤토리 닫을 때 대화 중이 아니면 플레이어 이동 복구
-        if (DialogueManager.Instance == null || !DialogueManager.Instance.isTalking)
+        if (!YarnDialogue.IsRunning)
         {
             var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
             ctrl?.Unlock();

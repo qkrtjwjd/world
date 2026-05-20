@@ -11,8 +11,8 @@ public class TeleportInteraction : MonoBehaviour
     [Header("야간 시퀀스 차단")]
     [Tooltip("체크하면 야간 시퀀스 미완료 시 이동을 차단합니다.")]
     public bool blockDuringNightSequence = false;
-    [Tooltip("차단 시 표시할 대사 (비워두면 대사 없이 막기만 함)")]
-    public DialogueData nightBlockedDialogue;
+    [Tooltip("차단 시 재생할 Yarn 노드 이름 (비워두면 대사 없이 막기만 함)")]
+    public string yarnNode_nightBlocked;
 
     void Awake()
     {
@@ -21,10 +21,10 @@ public class TeleportInteraction : MonoBehaviour
 
     public void Teleport()
     {
-        if (blockDuringNightSequence && !GameState.hasWatchedNightSequence)
+        if (blockDuringNightSequence && !GameState.isNightSequenceWatched)
         {
-            if (nightBlockedDialogue != null)
-                StartCoroutine(DialogueRunner.PlayAndWait(nightBlockedDialogue, lockPlayer: true));
+            if (!string.IsNullOrEmpty(yarnNode_nightBlocked))
+                StartCoroutine(YarnDialogue.PlayAndWait(yarnNode_nightBlocked, lockPlayer: true));
             return;
         }
 

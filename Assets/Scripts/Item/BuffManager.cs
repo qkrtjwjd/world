@@ -21,6 +21,9 @@ public class BuffManager : MonoBehaviour
 
     private const float TICK_INTERVAL = 1f; // DoT/HoT 틱 간격 (초)
 
+    public event System.Action<BuffType> OnBuffAdded;
+    public event System.Action<BuffType> OnBuffRemoved;
+
     private class ActiveBuff
     {
         public BuffType type;
@@ -35,12 +38,16 @@ public class BuffManager : MonoBehaviour
         }
     }
 
-    private readonly List<ActiveBuff> _activeBuffs = new List<ActiveBuff>();
+    private readonly Dictionary<BuffType, ActiveBuff> _activeBuffs = new Dictionary<BuffType, ActiveBuff>();
+    private readonly List<BuffType> _toRemove = new List<BuffType>();
     private float _tickTimer = 0f;
 
     // ─────────────────────────────────────────────
     //  Unity 생명주기
     // ─────────────────────────────────────────────
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() { Instance = null; }
 
     void Awake()
     {
@@ -48,16 +55,29 @@ public class BuffManager : MonoBehaviour
         Instance = this;
     }
 
+    void OnEnable()  { BattleEvents.OnItemUsed += OnBattleItemUsed; }
+    void OnDisable() { BattleEvents.OnItemUsed -= OnBattleItemUsed; }
+
+    /// <summary>BattleEvents.OnItemUsed 구독 핸들러 — 기존 AddBuffs 직접 호출을 대체.</summary>
+    void OnBattleItemUsed(ItemData item, Unit user)
+    {
+        if (item == null) return;
+        AddBuffs(item.fantasyEffect.buffs);
+    }
+
     void Update()
     {
+        if (_activeBuffs.Count == 0) return;
+
         float dt = Time.deltaTime;
         _tickTimer += dt;
         bool doTick = _tickTimer >= TICK_INTERVAL;
         if (doTick) _tickTimer -= TICK_INTERVAL;
 
-        for (int i = _activeBuffs.Count - 1; i >= 0; i--)
+        _toRemove.Clear();
+        foreach (var kv in _activeBuffs)
         {
-            ActiveBuff buff = _activeBuffs[i];
+            ActiveBuff buff = kv.Value;
             buff.remainingDuration -= dt;
 
             if (doTick)
@@ -69,7 +89,12 @@ public class BuffManager : MonoBehaviour
             }
 
             if (buff.remainingDuration <= 0f)
-                _activeBuffs.RemoveAt(i);
+                _toRemove.Add(kv.Key);
+        }
+        foreach (BuffType key in _toRemove)
+        {
+            _activeBuffs.Remove(key);
+            OnBuffRemoved?.Invoke(key);
         }
     }
 
@@ -82,16 +107,14 @@ public class BuffManager : MonoBehaviour
     {
         if (info.type == BuffType.None || info.duration <= 0f) return;
 
-        foreach (ActiveBuff existing in _activeBuffs)
+        if (_activeBuffs.TryGetValue(info.type, out ActiveBuff existing))
         {
-            if (existing.type == info.type)
-            {
-                existing.remainingDuration = Mathf.Max(existing.remainingDuration, info.duration);
-                existing.value             = Mathf.Max(existing.value, info.value);
-                return;
-            }
+            existing.remainingDuration = Mathf.Max(existing.remainingDuration, info.duration);
+            existing.value             = Mathf.Max(existing.value, info.value);
+            return;
         }
-        _activeBuffs.Add(new ActiveBuff(info));
+        _activeBuffs[info.type] = new ActiveBuff(info);
+        OnBuffAdded?.Invoke(info.type);
     }
 
     /// <summary>버프 목록을 한 번에 추가합니다.</summary>
@@ -106,28 +129,15 @@ public class BuffManager : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// <summary>해당 타입의 버프가 활성화되어 있는지 확인합니다.</summary>
-    public bool HasBuff(BuffType type)
-    {
-        foreach (ActiveBuff b in _activeBuffs)
-            if (b.type == type) return true;
-        return false;
-    }
+    public bool HasBuff(BuffType type) => _activeBuffs.ContainsKey(type);
 
     /// <summary>해당 타입의 버프 수치를 반환합니다. 없으면 0.</summary>
-    public float GetBuffValue(BuffType type)
-    {
-        foreach (ActiveBuff b in _activeBuffs)
-            if (b.type == type) return b.value;
-        return 0f;
-    }
+    public float GetBuffValue(BuffType type) =>
+        _activeBuffs.TryGetValue(type, out ActiveBuff b) ? b.value : 0f;
 
     /// <summary>해당 타입의 버프 남은 지속시간(초)을 반환합니다. 없으면 0.</summary>
-    public float GetRemainingDuration(BuffType type)
-    {
-        foreach (ActiveBuff b in _activeBuffs)
-            if (b.type == type) return b.remainingDuration;
-        return 0f;
-    }
+    public float GetRemainingDuration(BuffType type) =>
+        _activeBuffs.TryGetValue(type, out ActiveBuff b) ? b.remainingDuration : 0f;
 
     // ─────────────────────────────────────────────
     //  편의 프로퍼티 (전투/이동 시스템에서 직접 사용)
@@ -168,6 +178,8 @@ public class BuffManager : MonoBehaviour
     /// <summary>모든 활성 버프를 제거합니다.</summary>
     public void ClearAll()
     {
+        foreach (BuffType key in _activeBuffs.Keys)
+            OnBuffRemoved?.Invoke(key);
         _activeBuffs.Clear();
         _tickTimer = 0f;
     }

@@ -12,6 +12,7 @@ public static class SceneNames
     public const string Battle      = "BattleScene";
     public const string Shelter     = "Shelter";
     public const string BadEnding   = "BadEndingScene";
+    public const string Credits     = "CreditsScene";
 
     // 현실(Dark) <-> 환상(Fantasy) 짝꿍 매핑
     public static string GetFantasyScene(string realityScene)

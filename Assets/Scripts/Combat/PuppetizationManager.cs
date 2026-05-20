@@ -6,6 +6,7 @@ using UnityEngine;
 ///
 /// [사용법]
 /// PuppetizationManager.Instance.Add(2.5f);
+/// PuppetizationManager.OnValueAdded += amount => RefreshUI(amount);
 /// </summary>
 public class PuppetizationManager : MonoBehaviour
 {
@@ -13,6 +14,13 @@ public class PuppetizationManager : MonoBehaviour
     //  싱글톤
     // ─────────────────────────────────────────────
     public static PuppetizationManager Instance { get; private set; }
+
+    // ─────────────────────────────────────────────
+    //  이벤트 — UI·연출 시스템이 구독
+    // ─────────────────────────────────────────────
+
+    /// <summary>Add() 호출 시 발행됩니다. 인자는 전달된 delta 값입니다.</summary>
+    public static event System.Action<float> OnValueAdded;
 
     void Awake()
     {
@@ -32,14 +40,17 @@ public class PuppetizationManager : MonoBehaviour
     // ─────────────────────────────────────────────
 
     /// <summary>인형화 수치를 amount 만큼 증가시킵니다.</summary>
-    // TODO: 인형화 수치 처리 로직 확장 (UI 갱신, 연출 트리거 등)
     public void Add(float amount)
     {
-        if (CorruptionManager.instance == null)
+        if (CorruptionManager.Instance == null)
         {
-            Debug.LogWarning("[PuppetizationManager] CorruptionManager.instance 가 null 입니다.");
+            Debug.LogWarning("[PuppetizationManager] CorruptionManager.Instance 가 null 입니다.");
             return;
         }
-        CorruptionManager.instance.AddCorruption(amount);
+        CorruptionManager.Instance.AddCorruption(amount);
+        OnValueAdded?.Invoke(amount);
     }
+
+    /// <summary>현재 인형화 수치를 반환합니다. CorruptionManager가 없으면 0을 반환합니다.</summary>
+    public float GetValue() => CorruptionManager.Instance?.currentCorruption ?? 0f;
 }

@@ -9,11 +9,11 @@ using UnityEngine;
 /// </summary>
 public class FrontDoorInteraction : MonoBehaviour
 {
-    [Header("단검 미획득 시 차단 대사 (DialogueData 에셋 연결)")]
-    public DialogueData blockedDialogue;
+    [Header("단검 미획득 시 차단 Yarn 노드 이름")]
+    public string yarnNode_blocked;
 
-    [Header("출발 직전 대사 (단검 획득 후 나갈 때)")]
-    public DialogueData departureDialogue;
+    [Header("출발 직전 Yarn 노드 이름 (단검 획득 후 나갈 때)")]
+    public string yarnNode_departure;
 
     private bool _isBusy = false;
 
@@ -24,8 +24,8 @@ public class FrontDoorInteraction : MonoBehaviour
 
         if (!DaggerSystem.IsEquipped)
         {
-            if (blockedDialogue != null)
-                StartCoroutine(DialogueRunner.PlayAndWait(blockedDialogue));
+            if (!string.IsNullOrEmpty(yarnNode_blocked))
+                StartCoroutine(YarnDialogue.PlayAndWait(yarnNode_blocked));
             return;
         }
 
@@ -36,8 +36,8 @@ public class FrontDoorInteraction : MonoBehaviour
 
     private IEnumerator DepartRoutine()
     {
-        if (departureDialogue != null)
-            yield return StartCoroutine(DialogueRunner.PlayAndWait(departureDialogue));
+        if (!string.IsNullOrEmpty(yarnNode_departure))
+            yield return YarnDialogue.PlayAndWait(yarnNode_departure);
         TransitionManager.Instance?.DoSceneTransition(SceneNames.Map);
     }
 }

@@ -12,6 +12,14 @@ public class EnemyHealth : MonoBehaviour
     public float maxHealth = 100f;
     [HideInInspector] public float currentHealth; // Start()에서 maxHealth로 초기화됨
 
+    [Header("전투 스탯 (DamageCalculator용)")]
+    [Tooltip("적 레벨. 플레이어 레벨과의 차이로 데미지 보정.")]
+    public int level   = 1;
+    [Tooltip("방어력. 데미지 감산식의 def 항.")]
+    public int defense = 5;
+    [Tooltip("회피율 0~100. 플레이어 명중률에서 차감.")]
+    [Range(0, 100)] public int evasion = 5;
+
     [Header("사망 이펙트")]
     public GameObject deathEffect;
 
@@ -24,6 +32,8 @@ public class EnemyHealth : MonoBehaviour
     public float respawnDistance = 20f;
     [Tooltip("귀환 감시 간격 (초)")]
     public float respawnCheckInterval = 0.5f;
+    [Tooltip("플레이어를 못 찾을 때 감시 코루틴을 종료하는 타임아웃 (초). 0 이하면 무한 대기.")]
+    public float respawnPlayerSearchTimeout = 30f;
 
     // ─────────────────────────────────────────────
     //  내부 상태
@@ -67,15 +77,12 @@ public class EnemyHealth : MonoBehaviour
     {
         currentHealth = Mathf.Max(0f, currentHealth - damage);
 
-        Debug.Log($"[EnemyHealth] {gameObject.name} 피격: -{damage:F1}  남은 HP: {currentHealth:F1}");
-
         if (currentHealth <= 0f) { Die(); return; }
 
         if (!_isFleeing && currentHealth < maxHealth * fleeHealthRatio)
         {
             _isFleeing = true;
-            EnemyAI ai = GetComponent<EnemyAI>();
-            if (ai != null) ai.StartFlee();
+            if (_enemyAI != null) _enemyAI.StartFlee();
         }
     }
 
@@ -87,7 +94,10 @@ public class EnemyHealth : MonoBehaviour
         HackSlashCombatManager.Instance?.NotifyEnemyDead(gameObject);
 
         if (deathEffect != null)
-            Instantiate(deathEffect, transform.position, Quaternion.identity);
+        {
+            if (EffectPool.Instance != null) EffectPool.Instance.Play(deathEffect, transform.position);
+            else                             Instantiate(deathEffect, transform.position, Quaternion.identity);
+        }
 
         Destroy(gameObject, 0.1f);
     }
@@ -113,6 +123,7 @@ public class EnemyHealth : MonoBehaviour
     IEnumerator RespawnWatch()
     {
         var wait = new WaitForSeconds(respawnCheckInterval);
+        float searchElapsed = 0f;
 
         while (true)
         {
@@ -122,8 +133,18 @@ public class EnemyHealth : MonoBehaviour
             if (_playerTransform == null)
             {
                 GameObject p = GameObject.FindGameObjectWithTag("Player");
-                if (p == null) continue;
+                if (p == null)
+                {
+                    searchElapsed += respawnCheckInterval;
+                    if (respawnPlayerSearchTimeout > 0f && searchElapsed >= respawnPlayerSearchTimeout)
+                    {
+                        Debug.LogWarning($"[EnemyHealth] {gameObject.name} RespawnWatch: 플레이어 미발견으로 감시 종료 ({searchElapsed:F1}s)");
+                        yield break;
+                    }
+                    continue;
+                }
                 _playerTransform = p.transform;
+                searchElapsed = 0f;
             }
 
             if (Vector2.Distance(_originalPosition, _playerTransform.position) >= respawnDistance)
@@ -147,7 +168,6 @@ public class EnemyHealth : MonoBehaviour
         }
 
         SetVisible(true);
-        Debug.Log($"[EnemyHealth] {gameObject.name} 귀환 완료.");
     }
 
     // ─────────────────────────────────────────────
@@ -155,7 +175,7 @@ public class EnemyHealth : MonoBehaviour
     // ─────────────────────────────────────────────
     void SetVisible(bool visible)
     {
-        foreach (var sr in _spriteRenderers) sr.enabled = visible;
+        foreach (var sr in _spriteRenderers) if (sr != null) sr.enabled = visible;
         foreach (var col in _colliders)      col.enabled = visible;
     }
 }

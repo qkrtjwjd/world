@@ -30,21 +30,22 @@ namespace HallucinationSystem
         [SerializeField] private string playerTag = "Player";
 
         private bool hasTriggered = false;
+        private WaitForSeconds _startDelayWait;
 
         private void Start()
         {
             if (playOnStart)
             {
+                if (startDelay > 0f)
+                    _startDelayWait = new WaitForSeconds(startDelay);
                 StartCoroutine(AutoStartRoutine());
             }
         }
 
         private IEnumerator AutoStartRoutine()
         {
-            if (startDelay > 0)
-            {
-                yield return new WaitForSeconds(startDelay);
-            }
+            if (_startDelayWait != null)
+                yield return _startDelayWait;
             TriggerEffect();
         }
 

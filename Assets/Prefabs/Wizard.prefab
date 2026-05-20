@@ -96,6 +96,7 @@ MonoBehaviour:
   maxHP: 100
   currentHP: 100
   hpSlider: {fileID: 0}
+  defendDamageReduction: 0.5
   isDefending: 0
 --- !u!114 &2915186114549421262
 MonoBehaviour:
@@ -130,7 +131,7 @@ MonoBehaviour:
   currentHealth: 0
   allyMaxHP: 100
   allyCurrentHP: 100
-  maxMental: 100
+  maxMental: 50
   currentMental: 0
   maxPuppetization: 100
   currentPuppetization: 20

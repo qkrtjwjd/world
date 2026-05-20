@@ -18,12 +18,6 @@ public class RoomTransfer : MonoBehaviour
     [Tooltip("줌 전환 시간(초)")]
     public float zoomDuration = 0.4f;
 
-    [Header("현실 게이지 설정")]
-    [Tooltip("이 방에서 현실 게이지가 차오르는지 여부")]
-    public bool enableRealityGauge = false;
-    [Tooltip("체크하면 RealitySystem 의 씬 전체 설정을 따릅니다.")]
-    public bool useSceneDefault    = true;
-
     public static RoomTransfer CurrentRoom { get; private set; }
 
     // ─────────────────────────────────────────────
@@ -33,7 +27,7 @@ public class RoomTransfer : MonoBehaviour
     {
         // 야간 시퀀스 중 = 방 안에서 시작 → 커버 OFF
         // 이후 = 방 밖에서 시작 → 커버 ON
-        SetCover(GameState.hasWatchedNightSequence);
+        SetCover(GameState.isNightSequenceWatched);
 
         // 씬 시작 시 플레이어가 이미 방 안에 있으면 OnTriggerEnter2D가 발생하지 않으므로
         // Physics2D.OverlapCollider로 직접 확인 후 입장 처리
@@ -67,6 +61,7 @@ public class RoomTransfer : MonoBehaviour
 
         Bounds inner = myCol.bounds;
         inner.Expand(-entryThreshold * 2f); // 사방으로 threshold 만큼 축소
+        if (inner.size.x <= 0f || inner.size.y <= 0f) return; // 방이 threshold보다 작으면 bounds 역전 방지
         if (!inner.Contains(other.transform.position)) return;
 
         EnterRoom();
@@ -96,8 +91,6 @@ public class RoomTransfer : MonoBehaviour
         CurrentRoom = this;
         SetCover(false); // 덮개 열기
 
-        ApplyRealityGauge();
-
         if (targetOrthoSize > 0f)
             CameraFollow.Instance?.ZoomTo(targetOrthoSize, zoomDuration);
     }
@@ -115,14 +108,4 @@ public class RoomTransfer : MonoBehaviour
         if (roomCover != null) roomCover.SetActive(active);
     }
 
-    void ApplyRealityGauge()
-    {
-        if (RealitySystem.Instance == null) return;
-
-        bool finalState = useSceneDefault
-            ? RealitySystem.Instance.sceneDefaultActive
-            : enableRealityGauge;
-
-        RealitySystem.Instance.isSystemActive = finalState;
-    }
 }

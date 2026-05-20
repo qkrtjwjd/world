@@ -1,0 +1,214 @@
+<<declare $심리게이지 = 30>>
+<<declare $인형화 = 20>>
+<<declare $결심 = false>>
+
+title: House_Start
+tags: house home kitchen
+---
+
+<<showSprite "루" "normal">>
+루: ...
+
+<<if $심리게이지 >= 70>>
+    루: 아침이다. 부엌에서 냄새가 난다.
+<<elseif $심리게이지 >= 30>>
+    루: 아침인가. 몸이 무겁다.
+<<else>>
+    루: ...여기가 어디지.
+    루: 아, 집이구나. 집.
+<<endif>>
+
+<<applyTrigger "마시멜로_냄새">>
+루: 마시멜로 냄새.
+
+-> 부엌으로 간다
+    <<jump House_Kitchen>>
+-> 다락방이 신경 쓰인다
+    <<jump House_Attic>>
+-> 엄마 방 쪽을 살핀다
+    <<jump House_MomRoom>>
+===
+
+title: House_Kitchen
+tags: house kitchen sera
+---
+<<showSprite "세라" "warm">>
+세라: 루, 밥 다 떴어~ 와서 먹어.
+
+<<showSprite "루" "normal">>
+루: ...응.
+
+<<showSprite "세라" "warm">>
+세라: 우리 아가, 어제 잠은 잘 잤니? 눈 밑이 좀 찐해 보이네.
+
+<<if $심리게이지 >= 70>>
+    루: 조금 뒤척였어.
+    <<showSprite "세라" "normal">>
+    세라: 많이 힘들면 말해. 엄마가 뭐든 해줄게.
+    루: (속으로) ...뭐든.
+<<elseif $심리게이지 >= 30>>
+    루: 그냥... 잠을 좀 못 잤어.
+    <<showSprite "세라" "normal">>
+    세라: 밥 먹으면 좀 나아질 거야.
+    루: (속으로) 어젯밤 소리가 계속 귀에 걸린다.
+<<else>>
+    루: 잘 잔 것 같은데.
+    <<showSprite "세라" "warm">>
+    세라: 다행이다~
+    루: (속으로) 잘 잤다고 했지만... 사실 기억이 없다.
+    루: (속으로) 어제 일이 머릿속에서 흐릿하다.
+<<endif>>
+
+-> "어젯밤에 밖에서 소리 났지?"
+    <<jump House_Kitchen_Noise>>
+-> 그냥 밥을 먹는다
+    <<jump House_Kitchen_After>>
+===
+
+title: House_Kitchen_Noise
+tags: house kitchen
+---
+루: 어젯밤에 밖에서 소리 났지?
+
+<<showSprite "세라" "normal">>
+세라: 어머, 뭔데?
+
+루: 뭔가 쿵 하는 거. 드론 같기도 하고.
+
+<<if $심리게이지 >= 70>>
+    <<showSprite "세라" "cold">>
+    세라: ...정원에 '해충'이 들어와서 좀 치웠단다.
+    세라: 요즘 벌레들은 참 빨리져서 말이야. 밥이나 먹으렴.
+    루: (속으로) 해충.
+    루: (속으로) 그게 드론이었다면.
+<<else>>
+    <<showSprite "세라" "warm">>
+    세라: 그냥 바람 소리 아니었을까? 요즘 바람이 많이 불잖아.
+    루: 아... 그랬나.
+    루: (속으로) 분명히 들었는데.
+    <<applyTrigger "세라_목소리_들림">>
+<<endif>>
+
+<<jump House_Kitchen_After>>
+===
+
+title: House_Kitchen_After
+tags: house kitchen
+---
+<<showSprite "루" "normal">>
+
+<<if $심리게이지 >= 30>>
+    루: 밥을 다 먹었다.
+    루: 오늘 마을에 나가봐야겠다.
+<<else>>
+    루: 밥을 먹는 동안 세라가 계속 뭔가 말했던 것 같다.
+    루: (속으로) 내용은 기억이 안 난다.
+    루: 오늘 나가야 한다는 건 알고 있다.
+<<endif>>
+
+-> 다락방을 확인한다
+    <<jump House_Attic>>
+-> 바로 밖으로 나간다
+    루: 나중에 다시 집에 오겠지.
+===
+
+title: House_Attic
+tags: house attic father
+---
+<<showSprite "루" "anxious">>
+루: 다락방 문.
+
+<<if $심리게이지 >= 70>>
+    루: 잠겨 있다. 항상 잠겨 있던 곳.
+    루: 열쇠가 있으면 들어갈 수 있을 텐데.
+    루: (속으로) 아버지 물건이 여기 있다고 했다.
+<<elseif $심리게이지 >= 30>>
+    루: 문 틈으로 뭔가 보이는 것 같다.
+    루: 흰색. 형태가 있는.
+    루: (속으로) 마네킹이겠지.
+<<else>>
+    <<showSprite "루" "horror">>
+    루: 문 저쪽에서 소리가 난다.
+    루: 긁는 소리. 아주 천천히.
+    루: (속으로) 아무도 없어야 하는데.
+    루: (속으로) 아무도.
+<<endif>>
+
+-> 문을 열어본다
+    <<jump House_Attic_Inside>>
+-> 그냥 내려간다
+    <<jump House_Kitchen_After>>
+===
+
+title: House_Attic_Inside
+tags: house attic father
+---
+<<showSprite "루" "anxious">>
+루: 오래된 상자들. 먼지 냄새.
+
+<<if $심리게이지 >= 70>>
+    루: 아버지 코트가 있다.
+    <<applyTrigger "아버지_유품_접촉">>
+    <<showSprite "루" "normal">>
+    루: (속으로) 이걸 찾으면... 라디오에서 들은 목소리가.
+    루: (손을 뻗는다)
+    루: 아버지 목소리: "루야, 아빠다. 이걸 듣고 있다면... 잘 왔어."
+    루: 아버지 목소리: "네가 내 코트를 찾았으니까."
+    루: 아버지 목소리: "루야. 세상은 아직 네가 필요해. 나와라."
+    루: ...갈게, 아빠.
+    <<set $결심 = true>>
+    <<set $심리게이지 += 10>>
+<<elseif $심리게이지 >= 30>>
+    루: 상자 안에 일기장 같은 게 있다.
+    루: 마지막 날짜는... 3년 전.
+    루: (속으로) 읽어봐야 하나.
+    루: (속으로) 지금은 아닌 것 같다.
+<<else>>
+    <<showSprite "루" "horror">>
+    루: 마네킹이 있다.
+    루: 이쪽을 향해 있다.
+    루: (속으로) 저 마네킹... 방금 전까지는 다른 방향을 보고 있었어.
+    루: (속으로) 아니야. 내가 잘못 본 거야.
+    루: (속으로) 그냥 마네킹이야.
+    <<applyTrigger "무서운것_목격">>
+<<endif>>
+
+-> 코트를 챙긴다
+    루: (속으로) 가져가야겠다.
+    <<jump House_Kitchen_After>>
+-> 아무것도 건드리지 않고 나간다
+    루: (속으로) 나중에.
+    <<jump House_Kitchen_After>>
+===
+
+title: House_MomRoom
+tags: house mom_room
+---
+<<showSprite "루" "normal">>
+루: 엄마 방.
+
+루: 엄마 혼자 쓰시기엔 딱 맞지만...
+
+<<if $심리게이지 >= 30>>
+    루: (속으로) 이전에 아빠랑 같이 쓰셨던 침대는 어떻게 됐을까?
+    루: (속으로) 저 침대가 그건지, 바꾼 건지.
+    루: (속으로) 물어본 적이 없었다.
+<<else>>
+    <<showSprite "루" "hollow">>
+    루: (속으로) 침대.
+    루: (속으로) 나는 이 방에 몇 번이나 들어왔지.
+    루: (속으로) 기억이 흐릿하다.
+    루: (속으로) 기억이.
+    파란새: 치즈... 유... 루...
+    <<showSprite "루" "horror">>
+    루: ...?
+    루: (속으로) 뭐가 보인다.
+    루: (속으로) 파랗고 작은.
+    파란새: ...루.
+    루: 누구야?
+    파란새: ...
+<<endif>>
+
+-> 조용히 방을 나선다
+    <<jump House_Kitchen_After>>
+===

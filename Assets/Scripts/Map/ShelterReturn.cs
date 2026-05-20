@@ -16,8 +16,8 @@ public class ShelterReturn : MonoBehaviour
 
     public void ReturnToOriginalWorld()
     {
-        string target = !string.IsNullOrEmpty(GameState.returnSceneName)
-            ? GameState.returnSceneName
+        string target = !string.IsNullOrEmpty(GameState.battleReturn.returnSceneName)
+            ? GameState.battleReturn.returnSceneName
             : PlayerPrefs.GetString("LastScene", SceneNames.Map);
 
         if (TransitionManager.Instance != null)

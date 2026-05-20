@@ -56,22 +56,34 @@ public class AddColliders
             return;
         }
 
-        int addedCount = 0;
+        int addedColliders   = 0;
+        int addedWorldObject = 0;
 
         foreach (GameObject obj in selected)
         {
-            // 이미 Collider2D(BoxCollider2D 포함 모든 종류)가 있으면 건너뜀
-            if (obj.GetComponent<Collider2D>() != null)
+            if (obj.GetComponent<Collider2D>() == null)
             {
-                Debug.Log($"[AddColliders] 건너뜀 (이미 콜라이더 있음): {obj.name}");
-                continue;
+                Undo.AddComponent<BoxCollider2D>(obj);
+                Debug.Log($"[AddColliders] BoxCollider2D 추가됨: {obj.name}");
+                addedColliders++;
+            }
+            else
+            {
+                Debug.Log($"[AddColliders] 콜라이더 건너뜀 (이미 있음): {obj.name}");
             }
 
-            Undo.AddComponent<BoxCollider2D>(obj);
-            Debug.Log($"[AddColliders] BoxCollider2D 추가됨: {obj.name}");
-            addedCount++;
+            // SpriteRenderer / UI Image / UI RawImage 중 하나라도 있으면 WorldObject 추가
+            if ((obj.GetComponent<SpriteRenderer>()         != null ||
+                 obj.GetComponent<UnityEngine.UI.Image>()    != null ||
+                 obj.GetComponent<UnityEngine.UI.RawImage>() != null) &&
+                obj.GetComponent<WorldObject>() == null)
+            {
+                Undo.AddComponent<WorldObject>(obj);
+                Debug.Log($"[AddColliders] WorldObject 추가됨: {obj.name}");
+                addedWorldObject++;
+            }
         }
 
-        Debug.Log($"[AddColliders] 완료 — {addedCount}개 오브젝트에 BoxCollider2D 추가.");
+        Debug.Log($"[AddColliders] 완료 — BoxCollider2D {addedColliders}개 / WorldObject {addedWorldObject}개 추가.");
     }
 }

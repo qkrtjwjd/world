@@ -1,9 +1,13 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class PlayerStats : MonoBehaviour
+public class PlayerStats : MonoBehaviour, IPlayerStatsService
 {
     public static PlayerStats Instance;
+
+    // ── IPlayerStatsService 구현 (명시적 — 기존 public 필드와 명명 충돌 회피) ──
+    float IPlayerStatsService.MaxHealth     { get => maxHealth;     set => maxHealth     = value; }
+    float IPlayerStatsService.CurrentHealth { get => currentHealth; set => currentHealth = value; }
 
     [Header("기본 스탯")]
     public float maxHealth        = 100f;
@@ -22,9 +26,19 @@ public class PlayerStats : MonoBehaviour
     private bool _gameStateDirty = false;
     private PlayerStatusUI _statusUI;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => Instance = null;
+
     void Awake()
     {
-        if (Instance == null) Instance = this;
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        Instance = this;
+        BattleServices.Register((IPlayerStatsService)this);
+    }
+
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     void Start()
@@ -61,8 +75,6 @@ public class PlayerStats : MonoBehaviour
             if (GameState.mentalBreakdownTimer <= 0)
             {
                 GameState.mentalBreakdownTimer = 0;
-                GlitchManager.Instance?.SetGlitchLoop(false);
-                GlitchManager.Instance?.PlayGlitch(0.3f, 0.3f);
             }
         }
 
@@ -84,15 +96,13 @@ public class PlayerStats : MonoBehaviour
     void TriggerMentalBreakdown()
     {
         GameState.mentalBreakdownTimer = 60f;
-        GlitchManager.Instance?.PlayGlitch(1.0f, 0.8f);
-        GlitchManager.Instance?.SetGlitchLoop(true, 0.2f);
 
         string current = SceneManager.GetActiveScene().name;
         if (SceneNames.IsRealityScene(current))
         {
-            GameState.lastPosition     = transform.position;
-            GameState.hasPositionSaved = true;
-            GameState.isComingFromBattle = false;
+            GameState.lastPosition                     = transform.position;
+            GameState.hasPositionSaved                 = true;
+            GameState.battleReturn.isComingFromBattle  = false;
             SceneManager.LoadScene(SceneNames.GetFantasyScene(current));
         }
     }
@@ -117,14 +127,14 @@ public class PlayerStats : MonoBehaviour
     // ── 스탯 변경 메서드 ──
     public void TakeDamage(float amount)
     {
+        float prevRatio = currentHealth / maxHealth;
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         _gameStateDirty = true;
 
-        // HP 30% 이하 구간이면 추가 트라우마
-        if (currentHealth / maxHealth <= 0.3f)
+        // HP가 30% 임계값을 처음 넘어갈 때만 1회 트라우마 적용
+        if (prevRatio > 0.3f && currentHealth / maxHealth <= 0.3f)
             AddTrauma(5f);
 
-        _statusUI?.UpdateHP(currentHealth, maxHealth);
         StaticUIManager.Instance?.UpdateHealthBars();
     }
 
@@ -132,7 +142,6 @@ public class PlayerStats : MonoBehaviour
     {
         currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
         _gameStateDirty = true;
-        _statusUI?.UpdateHP(currentHealth, maxHealth);
     }
 
     public void AddTrauma(float amount)
@@ -140,14 +149,12 @@ public class PlayerStats : MonoBehaviour
         currentMental = Mathf.Max(0f, currentMental - amount);
         _gameStateDirty = true;
         ReducePuppetization(amount * 0.5f);
-        _statusUI?.UpdateMental(currentMental, maxMental);
     }
 
     public void RecoverMental(float amount)
     {
         currentMental = Mathf.Min(maxMental, currentMental + amount);
         _gameStateDirty = true;
-        _statusUI?.UpdateMental(currentMental, maxMental);
     }
 
     public void AddPuppetization(float amount)

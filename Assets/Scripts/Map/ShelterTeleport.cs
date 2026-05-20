@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Linq;
+using System.Collections.Generic;
 
 public class ShelterTeleport : MonoBehaviour
 {
@@ -10,6 +10,7 @@ public class ShelterTeleport : MonoBehaviour
     public string[]  allowedScenes;
 
     private Transform _playerTransform;
+    private HashSet<string> _allowedScenesSet;
 
     void Start()
     {
@@ -20,6 +21,8 @@ public class ShelterTeleport : MonoBehaviour
             var p = GameObject.FindGameObjectWithTag("Player");
             if (p != null) _playerTransform = p.transform;
         }
+
+        _allowedScenesSet = new HashSet<string>(allowedScenes ?? System.Array.Empty<string>());
     }
 
     void Update()
@@ -31,7 +34,7 @@ public class ShelterTeleport : MonoBehaviour
     void TryTeleportToShelter()
     {
         string current = SceneManager.GetActiveScene().name;
-        if (!allowedScenes.Contains(current)) return;
+        if (!_allowedScenesSet.Contains(current)) return;
 
         PlayerPrefs.SetString("LastScene", current);
 
@@ -39,7 +42,7 @@ public class ShelterTeleport : MonoBehaviour
         {
             GameState.lastPosition     = _playerTransform.position;
             GameState.hasPositionSaved = true;
-            GameState.returnSceneName  = current;
+            GameState.battleReturn.returnSceneName  = current;
         }
 
         if (TransitionManager.Instance != null)

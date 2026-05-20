@@ -5,7 +5,7 @@ using UnityEngine.SceneManagement;
 
 public class SaveManager : MonoBehaviour
 {
-    public static SaveManager instance;
+    public static SaveManager Instance;
 
     public float currentPlayTime = 0f;
 
@@ -16,11 +16,14 @@ public class SaveManager : MonoBehaviour
     // ─────────────────────────────────────────────
     //  초기화
     // ─────────────────────────────────────────────
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => Instance = null;
+
     private void Awake()
     {
-        if (instance == null)
+        if (Instance == null)
         {
-            instance = this;
+            Instance = this;
             DontDestroyOnLoad(gameObject);
             SceneManager.sceneLoaded += OnSceneLoaded;
         }
@@ -29,6 +32,8 @@ public class SaveManager : MonoBehaviour
 
     private void OnDestroy()
     {
+        if (Instance != this) return;
+        Instance = null;
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
@@ -41,18 +46,19 @@ public class SaveManager : MonoBehaviour
     // ─────────────────────────────────────────────
     //  저장
     // ─────────────────────────────────────────────
-    public void SaveGame(int slot)
+    const string PreBattleKey = "PreBattleSave";
+
+    SaveData BuildSaveData()
     {
         SaveData data = new SaveData
         {
-            sceneName = SceneManager.GetActiveScene().name,
-            playTime  = currentPlayTime,
-            saveDate  = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
-            corruption = CorruptionManager.instance != null
-                         ? CorruptionManager.instance.currentCorruption : 0f,
+            sceneName  = SceneManager.GetActiveScene().name,
+            playTime   = currentPlayTime,
+            saveDate   = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+            corruption = CorruptionManager.Instance != null
+                         ? CorruptionManager.Instance.currentCorruption : 0f,
         };
 
-        // 플레이어 위치
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
         {
@@ -61,30 +67,68 @@ public class SaveManager : MonoBehaviour
             data.playerZ = player.transform.position.z;
         }
 
-        // 인벤토리 (에셋 이름 목록으로 직렬화)
         if (GameState.inventoryItems != null)
-        {
             foreach (var item in GameState.inventoryItems)
                 if (item != null) data.inventoryItemNames.Add(item.name);
-        }
 
-        // 스탯 (GameState.player 구조체에서 한번에 읽기)
         if (GameState.player.IsInitialized)
         {
-            data.health  = GameState.player.health;
-            data.mental  = GameState.player.mental;
+            data.health        = GameState.player.health;
+            data.mental        = GameState.player.mental;
+            data.puppetization = GameState.player.puppetization;
         }
         else
         {
-            data.health = 100f;
-            data.mental = 100f;
+            data.health        = 100f;
+            data.mental        = 100f;
+            data.puppetization = 0f;
         }
 
-        data.realityGauge = GameState.battleReturn.savedGaugeValue;
+        data.isNightSequenceWatched = GameState.isNightSequenceWatched;
+        data.isResolved              = GameState.isResolved;
+        data.isBreakfastWatched     = GameState.isBreakfastWatched;
+        data.isZombieDefeated        = GameState.isZombieDefeated;
 
+        foreach (string id in GameState.defeatedEnemyIDs)
+            data.defeatedEnemyIDs.Add(id);
+        foreach (string key in GameState.chosenDialogueKeys)
+            data.chosenDialogueKeys.Add(key);
+
+        return data;
+    }
+
+    public void SaveGame(int slot)
+    {
+        SaveData data = BuildSaveData();
         PlayerPrefs.SetString(SlotKey(slot), JsonUtility.ToJson(data));
         PlayerPrefs.Save();
-        Debug.Log($"[SaveManager] 슬롯 {slot} 저장 완료");
+        Dbg.Log($"[SaveManager] 슬롯 {slot} 저장 완료");
+    }
+
+    /// <summary>전투 직전 상태를 별도 키에 저장합니다. 사망 시 이 지점으로 복귀합니다.</summary>
+    public void SavePreBattle()
+    {
+        SaveData data = BuildSaveData();
+        PlayerPrefs.SetString(PreBattleKey, JsonUtility.ToJson(data));
+        PlayerPrefs.Save();
+        Dbg.Log("[SaveManager] 전투 전 상태 저장 완료");
+    }
+
+    /// <summary>전투 직전 저장 데이터를 불러옵니다. 데이터가 없으면 경고 후 무시합니다.</summary>
+    public void LoadPreBattle()
+    {
+        if (!PlayerPrefs.HasKey(PreBattleKey))
+        {
+            Debug.LogWarning("[SaveManager] 전투 전 저장 데이터가 없습니다.");
+            return;
+        }
+        SaveData data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(PreBattleKey));
+        _pendingData = data;
+        _isLoading   = true;
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(data.sceneName);
+        else
+            SceneManager.LoadScene(data.sceneName);
     }
 
     // ─────────────────────────────────────────────
@@ -107,7 +151,10 @@ public class SaveManager : MonoBehaviour
 
         _pendingData = data;
         _isLoading   = true;
-        SceneManager.LoadScene(data.sceneName);
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(data.sceneName);
+        else
+            SceneManager.LoadScene(data.sceneName);
     }
 
     // ─────────────────────────────────────────────
@@ -136,26 +183,35 @@ public class SaveManager : MonoBehaviour
             Debug.LogWarning("[SaveManager] 플레이어를 찾지 못했습니다.");
 
         // ── 타락 수치 ──
-        if (CorruptionManager.instance != null)
-            CorruptionManager.instance.currentCorruption = data.corruption;
+        if (CorruptionManager.Instance != null)
+            CorruptionManager.Instance.LoadCorruption(data.corruption);
 
-        // ── 스탯 (GameState 구조체에 한번에 쓰기) ──
+        // ── 스탯 ──
         GameState.player = new GameState.PlayerState
         {
             health        = data.health,
             mental        = data.mental,
-            puppetization = GameState.player.puppetization, // 저장 안 한 항목은 유지
+            puppetization = data.puppetization,
         };
-        GameState.battleReturn.savedGaugeValue = data.realityGauge;
 
+        // ── 스토리 플래그 ──
+        GameState.isNightSequenceWatched = data.isNightSequenceWatched;
+        GameState.isResolved              = data.isResolved;
+        GameState.isBreakfastWatched     = data.isBreakfastWatched;
+        GameState.isZombieDefeated        = data.isZombieDefeated;
+
+        // ── 처치된 적 ID ──
+        GameState.defeatedEnemyIDs   = new System.Collections.Generic.HashSet<string>(data.defeatedEnemyIDs);
+        GameState.chosenDialogueKeys = new System.Collections.Generic.HashSet<string>(data.chosenDialogueKeys);
         // ── PlayerStats 즉시 반영 ──
         if (player != null)
         {
             PlayerStats stats = player.GetComponent<PlayerStats>();
             if (stats != null)
             {
-                stats.currentHealth = data.health;
-                stats.currentMental = data.mental;
+                stats.currentHealth      = data.health;
+                stats.currentMental      = data.mental;
+                stats.currentPuppetization = data.puppetization;
                 stats.UpdateUI(true);
             }
         }
@@ -179,7 +235,7 @@ public class SaveManager : MonoBehaviour
         Time.timeScale = 1f;
         _isLoading     = false;
         _pendingData   = null;
-        Debug.Log("[SaveManager] 불러오기 완료");
+        Dbg.Log("[SaveManager] 불러오기 완료");
     }
 
     // ─────────────────────────────────────────────

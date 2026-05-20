@@ -2,7 +2,7 @@ using System.Collections;
 using UnityEngine;
 
 /// <summary>전투 모드(환상/현실) 전환 시퀀스를 관리합니다.</summary>
-public enum BattleMode { Fantasy, Reality }
+public enum BattleMode { Fantasy, Reality, Pending }
 
 public class BattleTransitionManager : MonoBehaviour
 {
@@ -31,10 +31,6 @@ public class BattleTransitionManager : MonoBehaviour
     [SerializeField] private AudioSource _fantasyBGM;
     [Tooltip("현실 전투 BGM AudioSource.")]
     [SerializeField] private AudioSource _realityBGM;
-
-    [Header("캐릭터")]
-    [Tooltip("SpawnMeltParticles 스폰 기준 위치 (루 캐릭터 Transform).")]
-    [SerializeField] private Transform _luTransform;
 
     [Header("Color Grading — 현실 톤 (무채색)")]
     [SerializeField] private float _realitySaturation  = -100f;
@@ -145,121 +141,122 @@ public class BattleTransitionManager : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
-    //  코루틴 — 환상 → 현실
+    //  코루틴 — 환상 → 현실 (턴제 → 핵앤슬래시)
     //  TimeScale = 0.3 → WaitForSecondsRealtime 사용
     // ─────────────────────────────────────────────
     IEnumerator FantasyToRealitySequence()
     {
         isTransitioning = true;
-        Debug.Log("[BattleTransitionManager] 환상 → 현실 전환 시작");
+        Dbg.Log("[BattleTransitionManager] 환상 → 현실 전환 시작");
 
-        var inputLock  = PlayerInputLock.Instance;
-        var vfx        = TransitionVFXController.Instance;
-        var sfx        = TransitionSFXController.Instance;
-        var ui         = TransitionUIController.Instance;
-        var swap       = ObjectSwapController.Instance;
+        var inputLock = PlayerInputLock.Instance;
+        var vfx  = TransitionVFXController.Instance;
+        var sfx  = TransitionSFXController.Instance;
+        var ui   = TransitionUIController.Instance;
+        var swap = ObjectSwapController.Instance;
 
-        // ── 0.0초 ────────────────────────────────
+        if (inputLock == null || vfx == null || sfx == null || ui == null || swap == null)
+        {
+            Debug.LogError("[BattleTransitionManager] 전환 컨트롤러 누락 — 환상→현실 전환 취소");
+            isTransitioning = false;
+            Time.timeScale = 1.0f;
+            yield break;
+        }
+
+        Vector2 impactUV = new Vector2(0.5f, 0.5f);
+
+        // ── 0.0초: 충격 + 화면 균열 시작 ────────────────
         inputLock.Lock();
         Time.timeScale = 0.3f;
-        sfx.PlayGlassShatter();
-        vfx.FlashWhite(0.1f);
-        yield return _waitR01; // 0.1s 대기
+        sfx.PlayGlassBreak();
+        vfx.ImpactFlash(impactUV, 0.1f);
+        yield return _waitR01; // 0.1s
 
-        // ── 0.1초 ────────────────────────────────
-        ui.StartCrackOverlay(0.4f);
+        // ── 0.1초: UI 흔들림 ──────────────────────────────
         ui.ShakeUIElements(0.4f, 5f);
-        yield return _waitR02; // 0.2s 대기
+        yield return _waitR02; // 0.2s
 
-        // ── 0.3초 ────────────────────────────────
-        vfx.StartScreenCrack(0.5f);
-        sfx.PlayCrackingLoop();
-        yield return _waitR02; // 0.2s 대기
+        // ── 0.3초: 균열 전파 ──────────────────────────────
+        vfx.StartScreenCrack(0.2f, impactUV);
+        yield return _waitR02; // 0.2s
 
-        // ── 0.5초 ────────────────────────────────
+        // ── 0.5초: 산산조각 + 현실 전환 ──────────────────
+        vfx.ShatterScreen(0.3f);
         ui.ExplodeUI(0.3f);
         swap.SwapToReality();
-        yield return _waitR01; // 0.1s 대기
-
-        // ── 0.6초 ────────────────────────────────
-        vfx.PlayEnemyTransformVFX(0.4f);
-        sfx.PlayMetalScrape();
-        yield return _waitR02; // 0.2s 대기
-
-        // ── 0.8초 ────────────────────────────────
         vfx.CameraShake(0.3f, 0.15f);
         vfx.LerpColorGrading(_realitySaturation, _realityContrast, _realityColorFilter, 0.4f);
-        yield return _waitR02; // 0.2s 대기
+        yield return _waitR01; // 0.1s
 
-        // ── 1.0초 ────────────────────────────────
+        // ── 0.6초: BGM 전환 ───────────────────────────────
         sfx.CrossfadeBGM(_fantasyBGM, _realityBGM, 0.5f);
-        yield return _waitR02; // 0.2s 대기
+        yield return _waitR02; // 0.2s
 
-        // ── 1.2초 ────────────────────────────────
+        // ── 0.8초: 전환 완료 ──────────────────────────────
         Time.timeScale = 1.0f;
         CurrentMode = BattleMode.Reality;
         onModeChanged?.Invoke(BattleMode.Reality);
+        BattleEvents.RaiseModeChanged(BattleMode.Reality);
         inputLock.Unlock();
         isTransitioning = false;
-        Debug.Log("[BattleTransitionManager] 환상 → 현실 전환 완료");
+        Dbg.Log("[BattleTransitionManager] 환상 → 현실 전환 완료");
     }
 
     // ─────────────────────────────────────────────
-    //  코루틴 — 현실 → 환상
+    //  코루틴 — 현실 → 환상 (핵앤슬래시 → 턴제)
+    //  수채화 번짐이 화면을 덮으며 현실 위에 환상이 씌워지는 연출.
     //  TimeScale 건드리지 않음 → WaitForSeconds 사용
     // ─────────────────────────────────────────────
     IEnumerator RealityToFantasySequence()
     {
         isTransitioning = true;
-        Debug.Log("[BattleTransitionManager] 현실 → 환상 전환 시작");
+        Dbg.Log("[BattleTransitionManager] 현실 → 환상 전환 시작");
 
-        var inputLock  = PlayerInputLock.Instance;
-        var vfx        = TransitionVFXController.Instance;
-        var sfx        = TransitionSFXController.Instance;
-        var ui         = TransitionUIController.Instance;
-        var swap       = ObjectSwapController.Instance;
+        var inputLock = PlayerInputLock.Instance;
+        var vfx  = TransitionVFXController.Instance;
+        var sfx  = TransitionSFXController.Instance;
+        var ui   = TransitionUIController.Instance;
+        var swap = ObjectSwapController.Instance;
 
-        Vector3 luPos = (_luTransform != null) ? _luTransform.position : Vector3.zero;
+        if (inputLock == null || vfx == null || sfx == null || ui == null || swap == null)
+        {
+            Debug.LogError("[BattleTransitionManager] 전환 컨트롤러 누락 — 현실→환상 전환 취소");
+            isTransitioning = false;
+            yield break;
+        }
 
-        // ── 0.0초 ────────────────────────────────
+        // ── 0.0초: 수채화 번짐 + 마시멜로 등장 ─────────────────────
         inputLock.Lock();
         sfx.PlaySweetChime();
         onPlayEatMarshmallow?.Invoke();
-        vfx.CameraZoomIn(55f, 0.3f);
-        vfx.SpawnMeltParticles(luPos);
-        yield return _waitS03; // 0.3s 대기
+        vfx.StartWatercolorSpread(0.7f);      // 0.7초간 화면에 수채화가 번짐
+        vfx.ShowMarshmallow(0.4f);            // 중앙 투명 구멍에 마시멜로+후광 페이드인
+        sfx.ApplyLowPassFilter(800f, 0.4f);   // BGM을 뭉개 꿈결 같은 분위기
+        yield return _waitS03; // 0.3s
 
-        // ── 0.3초 ────────────────────────────────
-        vfx.StartWatercolorSpread(0.5f);
-        sfx.ApplyLowPassFilter(800f, 0.5f);
-        yield return _waitS02; // 0.2s 대기
-
-        // ── 0.5초 ────────────────────────────────
+        // ── 0.3초: 현실 색감 → 환상 색감 + 오브젝트 교체 ─
         vfx.LerpColorGrading(_fantasySaturation, _fantasyContrast, _fantasyColorFilter, 0.5f);
         swap.SwapToFantasy();
-        yield return _waitS03; // 0.3s 대기
+        yield return _waitS03; // 0.3s
 
-        // ── 0.8초 ────────────────────────────────
-        vfx.PlayEnemyDissolveToFantasy(0.4f);
-        ui.BloomInTurnUI(0.7f, 0.1f);
-        yield return _waitS02; // 0.2s 대기
+        // ── 0.6초: 턴제 UI 등장 ──────────────────────────
+        ui.BloomInTurnUI(0.5f, 0.08f);
+        yield return _waitS02; // 0.2s
 
-        // ── 1.0초 ────────────────────────────────
-        sfx.CrossfadeBGM(_realityBGM, _fantasyBGM, 0.5f);
-        sfx.RemoveLowPassFilter(0.3f);
-        yield return _waitS03; // 0.3s 대기
+        // ── 0.8초: BGM 전환 + 수채화·마시멜로 페이드아웃 ──────────
+        sfx.CrossfadeBGM(_realityBGM, _fantasyBGM, 0.6f);
+        sfx.RemoveLowPassFilter(0.4f);
+        vfx.FadeOutWatercolor(0.5f);          // 수채화 오버레이 서서히 걷힘
+        vfx.HideMarshmallow(0.35f);           // 마시멜로+후광 퇴장
+        yield return _waitS03; // 0.3s
 
-        // ── 1.3초 ────────────────────────────────
-        vfx.CameraZoomOut(60f, 0.2f);
-        vfx.CameraShake(0.15f, 0.05f);
-        yield return _waitS02; // 0.2s 대기
-
-        // ── 1.5초 ────────────────────────────────
-        PuppetizationManager.Instance.Add(2.5f);
+        // ── 1.1초: 전환 완료 ─────────────────────────────
+        PuppetizationManager.Instance?.Add(2.5f);
         CurrentMode = BattleMode.Fantasy;
         onModeChanged?.Invoke(BattleMode.Fantasy);
+        BattleEvents.RaiseModeChanged(BattleMode.Fantasy);
         inputLock.Unlock();
         isTransitioning = false;
-        Debug.Log("[BattleTransitionManager] 현실 → 환상 전환 완료");
+        Dbg.Log("[BattleTransitionManager] 현실 → 환상 전환 완료");
     }
 }

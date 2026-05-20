@@ -3,10 +3,10 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// 적과 부딪혔을 때 씬 상태에 따라 전투 모드를 자동 결정합니다.
-/// - 판타지(MapScene) → 턴제 자동 시작
-/// - 현실(DarkReality) → 핵앤슬래시 자동 시작
-/// - GameState.pendingSwitchToHackSlash 플래그가 있으면 씬 진입 시 핵앤슬래시 자동 시작
+/// 적과 부딪혔을 때 GaugeManager 게이지 구간에 따라 전투 모드를 자동 결정합니다.
+/// - 0~69 (환상·글리치 구간) → 턴제 자동 시작
+/// - 70~100 (현실 구간)      → 액션 모드 자동 시작
+/// 경계값은 GaugeBoundaryMonitor 인스턴스가 있으면 그 값을, 없으면 기본값(70)을 사용합니다.
 /// </summary>
 public class EncounterManager : MonoBehaviour
 {
@@ -19,14 +19,18 @@ public class EncounterManager : MonoBehaviour
     [Tooltip("Canvas + BattleSystem 이 포함된 프리팹. 턴제 전투 시 인스턴스화됩니다.")]
     public GameObject battleUIPrefab;
 
+    [Tooltip("적 ID → 전투 프리팹 매핑 테이블. Project 창에서 생성: Create → Battle → Enemy Database")]
+    public EnemyDatabase enemyDatabase;
+
     // 현재 인카운터 대상
     public  GameObject enemyPrefabToSpawn;
     private GameObject _currentEnemyObject;
+    public  GameObject CurrentEnemyObject => _currentEnemyObject;
 
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else Destroy(this);
     }
 
     void OnDestroy()
@@ -66,11 +70,17 @@ public class EncounterManager : MonoBehaviour
     /// <summary>씬 위에 있는 심볼 오브젝트와 부딪혔을 때 호출.</summary>
     public void StartEncounter(GameObject enemyObject)
     {
+        if (BattleSystem.IsActive || HackSlashCombatManager.IsActive) return;
         _currentEnemyObject = enemyObject;
         currentEnemyID      = enemyObject.name;
 
         var symbol = enemyObject.GetComponent<EnemySymbol>();
-        enemyPrefabToSpawn = symbol != null ? symbol.battleEnemyPrefab : null;
+        enemyPrefabToSpawn = (symbol != null && enemyDatabase != null)
+            ? enemyDatabase.GetPrefab(symbol.enemyID)
+            : null;
+
+        if (enemyPrefabToSpawn == null && symbol != null && !string.IsNullOrEmpty(symbol.enemyID))
+            Debug.LogWarning($"[EncounterManager] EnemyDatabase에 '{symbol.enemyID}' ID가 없습니다. enemyDatabase 연결 또는 ID를 확인하세요.");
 
         AutoStartBattle();
     }
@@ -78,6 +88,7 @@ public class EncounterManager : MonoBehaviour
     /// <summary>랜덤 인카운터 (프리팹 직접 지정).</summary>
     public void StartRandomEncounter(GameObject prefab, string enemyName)
     {
+        if (BattleSystem.IsActive || HackSlashCombatManager.IsActive) return;
         _currentEnemyObject = null;
         enemyPrefabToSpawn  = prefab;
         currentEnemyID      = enemyName;
@@ -90,10 +101,13 @@ public class EncounterManager : MonoBehaviour
 
     void AutoStartBattle()
     {
-        if (SceneNames.IsRealityScene(SceneManager.GetActiveScene().name))
-            StartHackSlash();
-        else
-            StartTurnBased();
+        SaveManager.Instance?.SavePreBattle();
+        BattleModeController.GetOrCreate().ResetBattleSession();
+        float gauge = GaugeManager.Instance != null ? GaugeManager.Instance.fantasyRealityGauge : 0f;
+
+        // 글리치 구간(fantasyBoundary < gauge < realityBoundary)은 턴제로 처리
+        if (gauge >= GaugeBoundaryMonitor.RealityBoundary) StartHackSlash();
+        else                                               StartTurnBased();
     }
 
     void StartHackSlash()
@@ -112,9 +126,12 @@ public class EncounterManager : MonoBehaviour
             return;
         }
 
-        GameState.returnSceneName = SceneManager.GetActiveScene().name;
+        GameState.battleReturn.returnSceneName         = SceneManager.GetActiveScene().name;
+        if (!BattleModeController.GetOrCreate().RequestTurnBasedStart(showAppearPanel: true))
+            return;
 
-        // 잔류 속도 제거 후 게임 정지
+        PlayerInputLock.Instance?.Lock();
+
         foreach (var rb in FindObjectsByType<Rigidbody2D>(FindObjectsInactive.Exclude))
             rb.linearVelocity = Vector2.zero;
 
@@ -122,7 +139,32 @@ public class EncounterManager : MonoBehaviour
         Instantiate(battleUIPrefab);
     }
 
-    // 하위 호환 버튼 콜백
+    // 하위 호환
     public void OnChooseHackSlash() => StartHackSlash();
     public void OnChooseTurnBased() => StartTurnBased();
+    public void OnPendingModeSelected(BattleMode mode) { } // 미사용 — 하위 호환 유지
+
+    // ─────────────────────────────────────────────
+    //  튜토리얼 전용 — 게이지 무관 강제 시작
+    // ─────────────────────────────────────────────
+
+    /// <summary>게이지 값과 무관하게 턴제 전투를 강제 시작합니다. 튜토리얼 전용.</summary>
+    public void ForceStartTurnBased(GameObject enemyPrefab, string enemyId = "tutorial_battle_1")
+    {
+        BattleModeController.GetOrCreate().ResetBattleSession();
+        _currentEnemyObject = null;
+        enemyPrefabToSpawn  = enemyPrefab;
+        currentEnemyID      = enemyId;
+        StartTurnBased();
+    }
+
+    /// <summary>게이지 값과 무관하게 핵앤슬래시 전투를 강제 시작합니다. 튜토리얼 전용.</summary>
+    public void ForceStartHackSlash(GameObject existingEnemy, GameObject enemyPrefab, string enemyId = "tutorial_battle_2")
+    {
+        BattleModeController.GetOrCreate().ResetBattleSession();
+        _currentEnemyObject = existingEnemy;
+        enemyPrefabToSpawn  = enemyPrefab;
+        currentEnemyID      = enemyId;
+        StartHackSlash();
+    }
 }

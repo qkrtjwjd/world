@@ -11,9 +11,9 @@ public class SaveSlotUI : MonoBehaviour
 
     public void UpdateSlotInfo()
     {
-        if (SaveManager.instance == null || slotInfoText == null) return;
+        if (SaveManager.Instance == null || slotInfoText == null) return;
 
-        SaveData data = SaveManager.instance.LoadSaveData(slotIndex);
+        SaveData data = SaveManager.Instance.LoadSaveData(slotIndex);
         slotInfoText.text = data != null ? FormatSlotInfo(data) : "빈 슬롯";
     }
 
@@ -29,12 +29,12 @@ public class SaveSlotUI : MonoBehaviour
 
     public void OnClickSave()
     {
-        SaveManager.instance?.SaveGame(slotIndex);
+        SaveManager.Instance?.SaveGame(slotIndex);
         UpdateSlotInfo();
     }
 
     public void OnClickLoad()
     {
-        SaveManager.instance?.LoadGame(slotIndex);
+        SaveManager.Instance?.LoadGame(slotIndex);
     }
 }

@@ -11,14 +11,24 @@ public class RealityCombatController : MonoBehaviour
     [Header("■ 전투 설정")]
     [Tooltip("공격 사거리 (레이캐스트 길이)")]
     public float attackRange = 5f;
-    [Tooltip("기본 공격력 (약점 타격 시 100% 적용)")]
+    [Tooltip("기본 공격력 (DamageCalculator의 attack 스탯)")]
     public float attackDamage = 50f;
-    [Tooltip("비약점 타격 시 데미지 배율 (기본 10%)")]
-    public float nonWeakPointMultiplier = 0.1f;
+    [Tooltip("비약점 타격 시 데미지 배율 (1.0 = 동일, 0.6 = 60%)")]
+    public float nonWeakPointMultiplier = 0.6f;
     [Tooltip("공격 쿨타임 (초)")]
     public float attackCooldown = 0.3f;
     [Tooltip("적을 감지할 레이어")]
     public LayerMask enemyLayer;
+
+    [Header("■ 플레이어 스탯 (DamageCalculator용)")]
+    [Tooltip("플레이어 레벨. 적 레벨과의 차이로 데미지 보정.")]
+    public int playerLevel    = 1;
+    [Tooltip("명중률 0~100. (acc - eva) 가 명중 확률.")]
+    [Range(0, 100)] public int playerAccuracy  = 95;
+    [Tooltip("크리티컬 확률 0~100.")]
+    [Range(0, 100)] public int playerCritRate  = 10;
+    [Tooltip("크리티컬 배율.")]
+    public float playerCritMultiplier = 1.5f;
 
     [Header("■ 리스크")]
     [Tooltip("공격 적중 시 증가할 트라우마(멘탈 감소량)")]
@@ -74,8 +84,10 @@ public class RealityCombatController : MonoBehaviour
     void PerformAttack()
     {
         _lastAttackTime = Time.time;
+        HackSlashCombatManager.Instance?.NotifyCombatActivity();
 
         if (_mainCamera == null) _mainCamera = Camera.main;
+        if (_mainCamera == null) { Debug.LogError("[RealityCombatController] Main Camera를 찾을 수 없습니다."); return; }
 
         Vector2 mouseWorld = _mainCamera.ScreenToWorldPoint(
             Mouse.current.position.ReadValue());
@@ -91,29 +103,26 @@ public class RealityCombatController : MonoBehaviour
 
     void HandleHit(RaycastHit2D hit, Vector2 attackDir)
     {
-        bool  isWeak      = false;
-        float finalDamage = attackDamage;
+        // 약점 판정
+        if (!hit.collider.TryGetComponent(out WeakPoint wp))
+            hit.collider.transform.parent?.TryGetComponent(out wp);
 
-        // 약점 체크
-        WeakPoint wp = hit.collider.GetComponent<WeakPoint>();
-        if (wp == null) wp = hit.collider.GetComponentInParent<WeakPoint>();
-
-        if (wp != null)
-        {
-            isWeak      = true;
-            finalDamage *= wp.damageMultiplier;
-        }
-        else
-        {
-            finalDamage *= nonWeakPointMultiplier;
-        }
+        bool  isWeak     = wp != null;
+        float weakPointMul = isWeak ? wp.damageMultiplier : nonWeakPointMultiplier;
 
         // ── EnemyHealth (현실 전투용) ──
-        EnemyHealth eh = hit.collider.GetComponentInParent<EnemyHealth>();
-        if (eh == null) eh = hit.collider.GetComponent<EnemyHealth>();
+        if (!hit.collider.TryGetComponent(out EnemyHealth eh))
+            hit.collider.transform.parent?.TryGetComponent(out eh);
         if (eh != null)
         {
-            eh.TakeRealityDamage(finalDamage);
+            DamageResult result = DamageCalculator.CalculateRaw(
+                playerLevel, Mathf.RoundToInt(attackDamage), playerAccuracy, playerCritRate, playerCritMultiplier,
+                eh.level,    eh.defense,                     eh.evasion,
+                weakPointMultiplier: weakPointMul);
+
+            if (!result.isMiss)
+                eh.TakeRealityDamage(result.amount);
+
             // 사망 통보
             if (eh.currentHealth <= 0)
                 HackSlashCombatManager.Instance?.NotifyEnemyDead(eh.gameObject);
@@ -124,7 +133,14 @@ public class RealityCombatController : MonoBehaviour
         {
             Unit unit = hit.collider.GetComponentInParent<Unit>();
             if (unit != null)
-                unit.TakeDamage(Mathf.RoundToInt(finalDamage));
+            {
+                DamageResult result = DamageCalculator.CalculateRaw(
+                    playerLevel, Mathf.RoundToInt(attackDamage), playerAccuracy, playerCritRate, playerCritMultiplier,
+                    unit.level,  unit.defense,                   unit.evasion,
+                    weakPointMultiplier: weakPointMul);
+
+                unit.TakeDamage(result);
+            }
         }
 
         // ── 넉백 ──
@@ -139,6 +155,10 @@ public class RealityCombatController : MonoBehaviour
 
         // ── 이펙트 ──
         GameObject fx = isWeak ? critEffect : hitEffect;
-        if (fx != null) Instantiate(fx, hit.point, Quaternion.identity);
+        if (fx != null)
+        {
+            if (EffectPool.Instance != null) EffectPool.Instance.Play(fx, hit.point);
+            else                             Instantiate(fx, hit.point, Quaternion.identity);
+        }
     }
 }

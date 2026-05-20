@@ -17,12 +17,16 @@ public class ItemPickup : MonoBehaviour
     [Min(1)] public int quantity = 1;                                    // itemData 수량
     public List<ExtraItemEntry> extraItems = new List<ExtraItemEntry>(); // 다른 종류 추가 아이템
 
-    [Header("획득 후 대사 (없으면 비워두세요)")]
-    public DialogueData dialogueAfterPickup;
+    [Header("획득 후 대사 Yarn 노드 (없으면 비워두세요)")]
+    public string yarnNode_afterPickup;
 
     [Header("순서 설정")]
     [Tooltip("체크 시: 대사를 먼저 재생한 후 아이템을 획득합니다.\n해제 시: 아이템 먼저 획득 후 대사를 재생합니다.")]
     public bool dialogueFirst = false;
+
+    [Header("단검 장착")]
+    [Tooltip("체크 시: 아이템 획득 성공 시 DaggerSystem.Equip()을 호출합니다.")]
+    public bool equipAsDagger = false;
 
     private InteractionTrigger _trigger;
 
@@ -96,23 +100,20 @@ public class ItemPickup : MonoBehaviour
             return;
         }
 
-        // 대사 먼저: DialogueManager 코루틴에서 실행 (Destroy 후에도 안전)
-        if (dialogueFirst && dialogueAfterPickup != null)
+        // 대사 먼저: 오브젝트 Destroy 후에도 안전하도록 영속 호스트에서 실행
+        if (dialogueFirst && !string.IsNullOrEmpty(yarnNode_afterPickup))
         {
-            var dm = DialogueManager.Instance;
-            if (dm != null)
-            {
-                dm.StartCoroutine(TalkFirstCoroutine(toAdd, dialogueAfterPickup, gameObject));
-                return;
-            }
+            YarnDialogue.StartCoroutine(TalkFirstCoroutine(toAdd, yarnNode_afterPickup, gameObject, equipAsDagger));
+            return;
         }
 
         // 아이템 먼저 (기존 동작)
         int added = InventoryManager.Instance.AddItems(toAdd);
         if (added > 0)
         {
-            if (dialogueAfterPickup != null)
-                ItemAcquisitionUI.Instance?.SetPendingDialogue(dialogueAfterPickup);
+            if (equipAsDagger) DaggerSystem.Instance?.Equip();
+            if (!string.IsNullOrEmpty(yarnNode_afterPickup))
+                ItemAcquisitionUI.Instance?.SetPendingYarnNode(yarnNode_afterPickup);
             InteractionTextUI.Instance?.Hide();
             Destroy(gameObject);
         }
@@ -122,17 +123,18 @@ public class ItemPickup : MonoBehaviour
         }
     }
 
-    // 대사 먼저 재생 후 아이템 획득
+    // 대사 먼저 재생 후 아이템 획득 — static으로 유지해 오브젝트 Destroy 후에도 안전하게 실행됨
     private static IEnumerator TalkFirstCoroutine(
-        List<ItemData> items, DialogueData dialogue, GameObject pickupObject)
+        List<ItemData> items, string yarnNode, GameObject pickupObject, bool equip)
     {
-        yield return DialogueRunner.PlayAndWait(dialogue);
+        yield return YarnDialogue.PlayAndWait(yarnNode);
 
         if (InventoryManager.Instance == null) yield break;
 
         int added = InventoryManager.Instance.AddItems(items);
         if (added > 0)
         {
+            if (equip) DaggerSystem.Instance?.Equip();
             InteractionTextUI.Instance?.Hide();
             if (pickupObject != null) Destroy(pickupObject);
         }

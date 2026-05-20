@@ -68,7 +68,17 @@ public class PlayerInputLock : MonoBehaviour
             }
         }
         _lockCount++;
-        Debug.Log($"[PlayerInputLock] Lock() — lockCount: {_lockCount}");
+        Dbg.Log($"[PlayerInputLock] Lock() — lockCount: {_lockCount}");
+    }
+
+    /// <summary>모든 잠금을 강제 해제합니다. 전투 시작 등 반드시 해제해야 하는 상황에서 사용.</summary>
+    public void ForceUnlock()
+    {
+        if (_lockCount <= 0) return;
+        _lockCount = 0;
+        Dbg.Log("[PlayerInputLock] ForceUnlock() — 강제 해제");
+        var ctrl = GetCtrl();
+        ctrl?.Unlock();
     }
 
     /// <summary>입력 잠금을 해제합니다. lockCount가 0이 되어야 실제로 해제됩니다.</summary>
@@ -81,7 +91,7 @@ public class PlayerInputLock : MonoBehaviour
         }
 
         _lockCount--;
-        Debug.Log($"[PlayerInputLock] Unlock() — lockCount: {_lockCount}");
+        Dbg.Log($"[PlayerInputLock] Unlock() — lockCount: {_lockCount}");
 
         if (_lockCount == 0)
         {

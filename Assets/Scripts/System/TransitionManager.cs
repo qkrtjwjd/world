@@ -31,12 +31,16 @@ public class TransitionManager : MonoBehaviour
     [Header("설정")]
     [SerializeField] private float defaultFadeDuration = 0.3f;
 
+    private UnityEngine.UI.Text _loadingText;
+
     // 씬 로드 시 검은 화면에서 시작해야 하는지 여부 (DoSceneTransition 이후)
     public static bool IsFadedIn { get; private set; } = false;
 
     private bool _isTransitioning = false;
     private ClearSky.SimplePlayerController _ctrl;
     private Rigidbody2D _playerRb;
+
+    private static readonly WaitForSecondsRealtime _wait02 = new WaitForSecondsRealtime(0.2f);
 
     // ─────────────────────────────────────────────
     //  라이프사이클
@@ -92,6 +96,23 @@ public class TransitionManager : MonoBehaviour
         rect.offsetMax = Vector2.zero;
 
         var cg = imageGo.AddComponent<CanvasGroup>();
+
+        // 로딩 진행 텍스트 (씬 전환 중 표시)
+        var loadingGo = new GameObject("LoadingText");
+        loadingGo.transform.SetParent(canvasGo.transform, false);
+        var loadingTxt = loadingGo.AddComponent<UnityEngine.UI.Text>();
+        loadingTxt.text      = "";
+        loadingTxt.fontSize  = 24;
+        loadingTxt.color     = new Color(0.8f, 0.8f, 0.8f, 1f);
+        loadingTxt.alignment = TextAnchor.LowerCenter;
+        loadingTxt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        var lr = loadingGo.GetComponent<RectTransform>();
+        lr.anchorMin = new Vector2(0f, 0f);
+        lr.anchorMax = new Vector2(1f, 0.15f);
+        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        loadingGo.SetActive(false);
+        _loadingText = loadingTxt;
+
         return cg;
     }
 
@@ -192,9 +213,40 @@ public class TransitionManager : MonoBehaviour
 
         yield return StartCoroutine(FadeRoutine(1f, fadeDuration, null));
 
+        // 로딩 텍스트 표시
+        if (_loadingText != null)
+        {
+            _loadingText.gameObject.SetActive(true);
+            _loadingText.text = "로딩 중...";
+        }
+
+        var op = SceneManager.LoadSceneAsync(sceneName);
+        if (op != null)
+        {
+            op.allowSceneActivation = false;
+            while (op.progress < 0.9f)
+            {
+                if (_loadingText != null)
+                    _loadingText.text = $"로딩 중... {(int)(op.progress / 0.9f * 100f)}%";
+                yield return null;
+            }
+            if (_loadingText != null) _loadingText.text = "로딩 중... 100%";
+            yield return _wait02;
+        }
+
+        if (_loadingText != null)
+        {
+            _loadingText.text = "";
+            _loadingText.gameObject.SetActive(false);
+        }
+
         IsFadedIn = true;
         _isTransitioning = false;
-        SceneManager.LoadScene(sceneName);
+
+        if (op != null)
+            op.allowSceneActivation = true;
+        else
+            SceneManager.LoadScene(sceneName);
     }
 
     IEnumerator FadeRoutine(float targetAlpha, float duration, Action onComplete)

@@ -34,13 +34,13 @@ public class MirrorObject : MonoBehaviour
         {
             // 창을 열 때 -> 시간을 멈춘다 (게이지 멈춤!)
             Time.timeScale = 0f;
-            Debug.Log("거울 보기: 시간 정지");
+            Dbg.Log("거울 보기: 시간 정지");
         }
         else
         {
             // 창을 닫을 때 -> 시간을 다시 흐르게 한다
             Time.timeScale = 1f;
-            Debug.Log("거울 닫기: 시간 재개");
+            Dbg.Log("거울 닫기: 시간 재개");
         }
     }
 

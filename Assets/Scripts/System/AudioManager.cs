@@ -26,6 +26,24 @@ public class AudioManager : MonoBehaviour
 
     private Dictionary<string, AudioClip> _lookup;
 
+    // BGM AudioSource 등록 풀 (볼륨 일괄 적용용)
+    private static readonly List<AudioSource> _bgmSources = new List<AudioSource>();
+
+    /// <summary>BGM AudioSource를 등록합니다. 설정 볼륨이 즉시 적용됩니다.</summary>
+    public static void RegisterBGM(AudioSource src)
+    {
+        if (src == null || _bgmSources.Contains(src)) return;
+        _bgmSources.Add(src);
+        if (SettingsManager.Instance != null)
+            src.volume = SettingsManager.Instance.bgmVolume;
+    }
+
+    /// <summary>BGM AudioSource 등록을 해제합니다.</summary>
+    public static void UnregisterBGM(AudioSource src)
+    {
+        _bgmSources.Remove(src);
+    }
+
     void Awake()
     {
         if (Instance == null)
@@ -40,6 +58,22 @@ public class AudioManager : MonoBehaviour
         {
             Destroy(gameObject);
         }
+    }
+
+    void OnEnable()
+    {
+        SettingsManager.OnBGMVolumeChanged += ApplyBGMVolume;
+    }
+
+    void OnDisable()
+    {
+        SettingsManager.OnBGMVolumeChanged -= ApplyBGMVolume;
+    }
+
+    void ApplyBGMVolume(float vol)
+    {
+        _bgmSources.RemoveAll(s => s == null);
+        foreach (var src in _bgmSources) src.volume = vol;
     }
 
     void BuildLookup()
@@ -64,6 +98,7 @@ public class AudioManager : MonoBehaviour
             Debug.LogWarning($"[AudioManager] 등록되지 않은 사운드: '{soundName}'");
             return;
         }
-        audioSource.PlayOneShot(clip);
+        float vol = SettingsManager.Instance != null ? SettingsManager.Instance.sfxVolume : 1f;
+        audioSource.PlayOneShot(clip, vol);
     }
 }

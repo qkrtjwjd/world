@@ -13,7 +13,6 @@ public class PlayerBootstrap : MonoBehaviour
         var ctrl = GetComponent<ClearSky.SimplePlayerController>();
         if (ctrl == null) return;
 
-        bool talking = DialogueManager.Instance != null && DialogueManager.Instance.isTalking;
-        if (!talking) ctrl.Unlock();
+        if (!YarnDialogue.IsRunning) ctrl.Unlock();
     }
 }

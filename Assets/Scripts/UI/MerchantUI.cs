@@ -52,6 +52,8 @@ public class MerchantUI : MonoBehaviour
     private BarterDeal     _selectedDeal;
     private readonly List<GameObject> _dealButtons  = new List<GameObject>();
     private readonly List<GameObject> _offerIcons   = new List<GameObject>();
+    private readonly Dictionary<ItemData, int> _itemCountCache = new Dictionary<ItemData, int>();
+    private ClearSky.SimplePlayerController _playerController;
 
     void Awake()
     {
@@ -84,6 +86,9 @@ public class MerchantUI : MonoBehaviour
         _currentMerchant = data;
         _selectedDeal    = null;
 
+        if (_playerController == null)
+            _playerController = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+
         if (merchantNameText != null) merchantNameText.text = data.merchantName;
         if (merchantPortrait != null)
         {
@@ -107,11 +112,8 @@ public class MerchantUI : MonoBehaviour
         if (panel != null) panel.SetActive(false);
 
         // 인벤토리 닫을 때와 동일하게 플레이어 이동 복구
-        if (DialogueManager.Instance == null || !DialogueManager.Instance.isTalking)
-        {
-            var ctrl = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
-            ctrl?.Unlock();
-        }
+        if (!YarnDialogue.IsRunning)
+            _playerController?.Unlock();
     }
 
     // ─────────────────────────────────────────────
@@ -237,14 +239,14 @@ public class MerchantUI : MonoBehaviour
         if (panel != null) panel.SetActive(false);
 
         // 제안 대사
-        if (deal.proposeDialogue != null)
-            yield return DialogueRunner.PlayAndWait(deal.proposeDialogue);
+        if (!string.IsNullOrEmpty(deal.yarnNode_propose))
+            yield return YarnDialogue.PlayAndWait(deal.yarnNode_propose);
 
         if (deal.merchantAccepts)
         {
             // 수락 대사
-            if (deal.acceptDialogue != null)
-                yield return DialogueRunner.PlayAndWait(deal.acceptDialogue);
+            if (!string.IsNullOrEmpty(deal.yarnNode_accept))
+                yield return YarnDialogue.PlayAndWait(deal.yarnNode_accept);
 
             // 아이템 교환
             ExecuteTrade(deal);
@@ -254,8 +256,8 @@ public class MerchantUI : MonoBehaviour
         else
         {
             // 거절 대사
-            if (deal.rejectDialogue != null)
-                yield return DialogueRunner.PlayAndWait(deal.rejectDialogue);
+            if (!string.IsNullOrEmpty(deal.yarnNode_reject))
+                yield return YarnDialogue.PlayAndWait(deal.yarnNode_reject);
         }
 
         // 거래창 다시 열기 (oneTimeOnly 거래 완료 시 목록 갱신)
@@ -267,19 +269,19 @@ public class MerchantUI : MonoBehaviour
         if (InventoryManager.Instance == null) return false;
         var inv = InventoryManager.Instance.inventoryItems;
 
-        // 종류별 보유 수량 계산
-        var owned = new Dictionary<ItemData, int>();
+        // 종류별 보유 수량 계산 (캐시 재활용으로 GC 방지)
+        _itemCountCache.Clear();
         foreach (var item in inv)
         {
             if (item == null) continue;
-            if (!owned.ContainsKey(item)) owned[item] = 0;
-            owned[item]++;
+            if (!_itemCountCache.ContainsKey(item)) _itemCountCache[item] = 0;
+            _itemCountCache[item]++;
         }
 
         foreach (var entry in required)
         {
             if (entry.item == null) continue;
-            int have = owned.ContainsKey(entry.item) ? owned[entry.item] : 0;
+            int have = _itemCountCache.TryGetValue(entry.item, out int count) ? count : 0;
             if (have < entry.quantity) return false;
         }
         return true;

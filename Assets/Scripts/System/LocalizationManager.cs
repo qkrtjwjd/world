@@ -48,7 +48,7 @@ public class LocalizationManager : MonoBehaviour
         if (_cache.TryGetValue(lang, out Dictionary<string, string> cached))
         {
             _table = cached;
-            Debug.Log($"[LocalizationManager] {lang} 캐시에서 복원 ({_table.Count}개 키)");
+            Dbg.Log($"[LocalizationManager] {lang} 캐시에서 복원 ({_table.Count}개 키)");
             return;
         }
 
@@ -66,7 +66,7 @@ public class LocalizationManager : MonoBehaviour
         FlattenJson(json.text, "", newTable);
         _cache[lang] = newTable;
         _table = newTable;
-        Debug.Log($"[LocalizationManager] {lang} 로드 완료 ({_table.Count}개 키)");
+        Dbg.Log($"[LocalizationManager] {lang} 로드 완료 ({_table.Count}개 키)");
     }
 
     // ─────────────────────────────────────────────

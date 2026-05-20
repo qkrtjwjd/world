@@ -4,7 +4,7 @@ using UnityEngine;
 /// <summary>
 /// S#5 거실 / 아침 컷씬 트리거.
 /// 플레이어가 트리거존에 진입하면 아침 식사 시퀀스를 재생한다.
-/// hasWatchedBreakfast 플래그로 한 번만 발동된다.
+/// isBreakfastWatched 플래그로 한 번만 발동된다.
 /// </summary>
 public class KitchenTriggerCutscene : MonoBehaviour
 {
@@ -16,10 +16,10 @@ public class KitchenTriggerCutscene : MonoBehaviour
         Instance = this;
     }
     // ── 대사 ─────────────────────────────────────
-    [Header("S#5 — 대사")]
-    public DialogueData dialogue_Part1;    // 세라↔루 (미소 굳기 전): "우리 아가..." ~ "정원에 계시던데"
-    public DialogueData dialogue_Part2;    // 세라↔루 (미소 풀린 후): "어머 봤니..." ~ 루 "...네."
-    public DialogueData lu_InnerMonologue; // 『다락방. 엄마가 유일하게 못 들어가게 하는 곳.』
+    [Header("S#5 — 대사 Yarn 노드 이름")]
+    public string yarnNode_part1;       // 세라↔루 (미소 굳기 전): "우리 아가..." ~ "정원에 계시던데"
+    public string yarnNode_part2;       // 세라↔루 (미소 풀린 후): "어머 봤니..." ~ 루 "...네."
+    public string yarnNode_monologue;   // 『다락방. 엄마가 유일하게 못 들어가게 하는 곳.』
 
     // ── 세라 Animator ─────────────────────────────
     [Header("S#5 — 세라 Animator")]
@@ -38,8 +38,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
     /// <summary>NightSequenceManager 종료 후 자동 호출.</summary>
     public void BeginCutscene()
     {
-        if (GameState.hasWatchedBreakfast) return;
-        GameState.hasWatchedBreakfast = true;
+        if (GameState.isBreakfastWatched) return;
+        GameState.isBreakfastWatched = true;
         StartCoroutine(PlayCutscene());
     }
 
@@ -54,10 +54,10 @@ public class KitchenTriggerCutscene : MonoBehaviour
     {
         TeleportToKitchen();
         ObjectiveManager.Instance?.HideHUD(); // 컷씬 동안 HUD 숨김
-        var ctrl = DialogueRunner.LockPlayer();
+        var ctrl = YarnDialogue.LockPlayer();
 
         // Part1: 세라↔루 대사 (세라 미소 굳기 전)
-        yield return DialogueRunner.PlayAndWait(dialogue_Part1);
+        yield return YarnDialogue.PlayAndWait(yarnNode_part1);
 
         // 세라 미소 굳는 연출 (0.5초)
         if (seraAnimator != null)
@@ -65,7 +65,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // Part2: 세라↔루 대사 (해충 발언 ~ 루 "...네.")
-        yield return DialogueRunner.PlayAndWait(dialogue_Part2);
+        yield return YarnDialogue.PlayAndWait(yarnNode_part2);
 
         // 세라 이마 입맞춤 + 퇴장
         if (seraAnimator != null)
@@ -77,9 +77,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
         yield return new WaitForSeconds(0.5f);
 
         // 루 내면 독백: 『다락방. 엄마가 유일하게 못 들어가게 하는 곳.』
-        yield return DialogueRunner.PlayAndWait(lu_InnerMonologue);
+        yield return YarnDialogue.PlayAndWait(yarnNode_monologue);
 
-        DialogueRunner.UnlockPlayer(ctrl);
+        YarnDialogue.UnlockPlayer(ctrl);
 
         // 컷씬 완전 종료 후 Objective 초기화, 일반 HUD 복원
         ObjectiveManager.Instance?.ResetCutscene();

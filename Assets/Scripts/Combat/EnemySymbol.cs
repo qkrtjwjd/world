@@ -3,8 +3,8 @@ using UnityEngine;
 public class EnemySymbol : MonoBehaviour
 {
     [Header("전투 설정")]
-    [Tooltip("전투 씬에서 나타날 실제 적 프리팹")]
-    public GameObject battleEnemyPrefab;
+    [Tooltip("EnemyDatabase에 등록된 적 ID. 이 값으로 전투 프리팹을 조회합니다.")]
+    public string enemyID;
 
     private void Awake()
     {
@@ -18,9 +18,6 @@ public class EnemySymbol : MonoBehaviour
         if (!collision.CompareTag("Player")) return;
 
         if (EncounterManager.Instance != null)
-        {
             EncounterManager.Instance.StartEncounter(gameObject);
-            BattleData.nextEnemyPrefab = battleEnemyPrefab;
-        }
     }
 }

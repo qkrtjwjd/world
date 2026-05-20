@@ -64,7 +64,7 @@ public class ObjectSwapController : MonoBehaviour
             pair.fantasyObject?.SetActive(false);
             pair.realityObject?.SetActive(true);
         }
-        Debug.Log("[ObjectSwapController] 현실 오브젝트로 스왑 완료");
+        Dbg.Log("[ObjectSwapController] 현실 오브젝트로 스왑 완료");
     }
 
     /// <summary>환상 오브젝트를 활성화하고 현실 오브젝트를 비활성화합니다.</summary>
@@ -75,6 +75,6 @@ public class ObjectSwapController : MonoBehaviour
             pair.fantasyObject?.SetActive(true);
             pair.realityObject?.SetActive(false);
         }
-        Debug.Log("[ObjectSwapController] 환상 오브젝트로 스왑 완료");
+        Dbg.Log("[ObjectSwapController] 환상 오브젝트로 스왑 완료");
     }
 }

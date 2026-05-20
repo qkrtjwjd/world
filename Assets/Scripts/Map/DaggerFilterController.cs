@@ -29,7 +29,6 @@ public class DaggerFilterController : MonoBehaviour
     private RealityFilterObject[] _filterObjects = new RealityFilterObject[0];
     private Coroutine _fadeCoroutine;
     private Coroutine _forcedReturnCoroutine;
-    private bool _hintGlitchActive = false;
     private WaitForSeconds _forcedReturnWait;
 
     void Awake()
@@ -63,6 +62,12 @@ public class DaggerFilterController : MonoBehaviour
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
         CacheFilterObjects();
+        if (IsReality)
+        {
+            IsReality = false;
+            if (realityOverlay != null) realityOverlay.alpha = 0f;
+            ApplyFilter(false);
+        }
     }
 
     void CacheFilterObjects()
@@ -72,7 +77,7 @@ public class DaggerFilterController : MonoBehaviour
 
     void Update()
     {
-        if (DialogueManager.Instance != null && DialogueManager.Instance.isTalking)
+        if (YarnDialogue.IsRunning)
             return;
 
         if (Input.GetKeyDown(KeyCode.F))
@@ -80,25 +85,6 @@ public class DaggerFilterController : MonoBehaviour
 
         if (Input.GetKeyUp(KeyCode.F))
             SwitchToFantasy();
-
-        UpdateHintGlitch();
-    }
-
-    void UpdateHintGlitch()
-    {
-        bool shouldHint = IsReality &&
-                          InteractionManager.Instance != null &&
-                          InteractionManager.Instance.HasActiveTarget;
-
-        if (shouldHint == _hintGlitchActive) return;
-        _hintGlitchActive = shouldHint;
-
-        if (GlitchManager.Instance == null) return;
-
-        if (shouldHint)
-            GlitchManager.Instance.SetGlitchLoop(true, GlitchManager.PresetSubtle);
-        else
-            GlitchManager.Instance.SetGlitchLoop(false);
     }
 
     /// <summary>MentalBreakStage에서 호출: 코루틴 간섭 없이 즉시 현실 전환</summary>
@@ -164,8 +150,8 @@ public class DaggerFilterController : MonoBehaviour
 
     float GetCorruptionRatio()
     {
-        if (CorruptionManager.instance == null) return 0f;
-        return CorruptionManager.instance.currentCorruption / CorruptionManager.instance.maxCorruption;
+        if (CorruptionManager.Instance == null) return 0f;
+        return CorruptionManager.Instance.currentCorruption / CorruptionManager.Instance.maxCorruption;
     }
 
     GlitchPreset GetGlitchPresetForCurrentState()

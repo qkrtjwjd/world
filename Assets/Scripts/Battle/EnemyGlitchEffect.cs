@@ -45,7 +45,7 @@ public class EnemyGlitchEffect : MonoBehaviour
         _sr = GetComponentInChildren<SpriteRenderer>();
     }
 
-    void Start()
+    void OnEnable()
     {
         _originPos = transform.localPosition;
 
@@ -56,13 +56,15 @@ public class EnemyGlitchEffect : MonoBehaviour
             chromaticSprite.gameObject.SetActive(false);
         }
 
+        // 비활성 → 활성 전환 시마다 루프 재시작 (이전 코루틴이 남아있을 경우 중단)
+        StopAllCoroutines();
         StartCoroutine(FlickerLoop());
         StartCoroutine(ShakeLoop());
     }
 
     void OnDisable()
     {
-        // 비활성화 시 원래 상태로 복원
+        // 비활성화 시 원래 상태로 복원 (코루틴은 자동 정지)
         if (_sr != null)
         {
             Color c = _sr.color;
