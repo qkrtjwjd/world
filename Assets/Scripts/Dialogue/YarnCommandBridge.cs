@@ -480,14 +480,15 @@ public class YarnCommandBridge : MonoBehaviour
         => GaugeManager.Instance?.ChangeGauge(delta);
 
     // <<force_temp_reality>>  현실 100% 강제 후 tempForceDuration 초 뒤 복원
-    // 사용처: Forest_Road_Marshmallow — 쿠루가 루의 손목을 잡는 순간
+    // ※ 사용처였던 Forest_Road_Marshmallow 는 2026-08-16 정본 교체로 삭제됐다. 현재 호출처 없음.
     [YarnCommand("force_temp_reality")]
     public static void ForceTempReality()
         => GaugeManager.Instance?.ForceTempReality();
 
     // <<open_sol_trade "stockName" ["forest"]>>  Resources/SolStock/에서 로드 후 솔 거래창 열기
     // 두 번째 인자를 "forest" 로 주면 ForestTrade, 생략하거나 그 외면 VillageBrowse.
-    // 사용처: Shelter_Exit_Sol — 솔이 "바꿔줄 수 있는 게 생겼다" 이후
+    // ※ 사용처였던 Shelter_Exit_Sol 은 2026-08-16 쉼터 데모 제외로 삭제됐다.
+    //   마을 거래는 SolTradeInteraction 이 직접 연다.
     [YarnCommand("open_sol_trade")]
     public static void OpenSolTrade(string stockName, string mode = "village")
     {

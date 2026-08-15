@@ -47,11 +47,14 @@ public class YarnNodeListData : ScriptableObject
         "Village_Sol_Talk_Purity", "Village_Sol_Talk_Since", "Village_Sol_Talk_Money",
         "Village_Sera_Spotted", "Village_Square_Children",
         "Village_Sol_Trade_Sugar", "Village_Sol_Radio",
-        // Forest_Demo
-        "Forest_Road_Marshmallow", "Forest_Path", "Forest_Path_Flowerbed", "Forest_Path_Stream",
-        "Forest_Pond", "Forest_WolfBattle_Pre", "Forest_WolfBattle_PostSpare", "Forest_WolfBattle_PostKill",
-        "Forest_SolReappear", "Forest_Bench", "Forest_GoldenThorns",
-        "Shelter_Entry", "Shelter_Mirror", "Shelter_Exit_Sol", "Forest_Camp_Night",
+        // Forest_Demo — D-3 정본 (S#16~S#17)
+        "Forest_Entrance", "Forest_Kuru_Greet", "Forest_Kuru_Radio", "Forest_Kuru_SugarCube",
+        "Forest_Wolf_Encounter", "Forest_Wolf_Tutorial", "Forest_Wolf_Guard_Praise",
+        "Forest_Wolf_React_Attack", "Forest_Wolf_React_Guard", "Forest_Wolf_React_Pet",
+        "Forest_Wolf_Pet2", "Forest_Wolf_Pet3", "Forest_Wolf_Hurt",
+        "Forest_Wolf_KillEnd", "Forest_Wolf_PurifyEnd",
+        // 구 원고 잔존분 — S#18 이후 원고가 나오면 교체 대상
+        "Forest_GoldenThorns", "Forest_Camp_Night",
         // Radio_Yu
         "Radio_Fountain", "Radio_FlowerShop", "Radio_BreadDough", "Radio_DistortedVillage",
         "Radio_Tracker", "Radio_Miru", "Radio_Amo", "Radio_ToothFlower", "Radio_Stream",

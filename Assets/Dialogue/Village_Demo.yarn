@@ -10,7 +10,10 @@
 //   아래 <<set_filter>> · <<showSprite>> · <<set $...>> 는 수동 보정 레이어로 보존한 것이다.
 //
 // 보존한 것 — 지우면 다른 곳이 깨진다:
-//   $상인_광장_만남   Forest_Demo.yarn:221 이 이 값으로 분기한다
+//   $상인_광장_만남   ⚠ 2026-08-16 현재 읽는 곳이 없다(write-only).
+//                     유일한 독자였던 Forest_SolReappear 가 숲 정본 교체 때 삭제됐다.
+//                     선언·플래그 동기화는 남아 있으므로 동작에 문제는 없다.
+//                     솔 재등장 원고가 정본에 들어오면 다시 독자가 생긴다.
 //   $빵반죽_획득      BakeryNPC 가 스토리/루프 전환에 쓴다
 //   $꽃집_탐색        FlagManager·YarnCommandBridge 가 동기화한다
 //   BakeryNPC_Loop_*  YarnNodes.cs 상수 + BakeryNPC 인스펙터가 이름으로 참조한다

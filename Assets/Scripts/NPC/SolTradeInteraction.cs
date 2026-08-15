@@ -25,7 +25,7 @@ public class SolTradeInteraction : MonoBehaviour
     public TradeMode mode = TradeMode.VillageBrowse;
 
     [Header("인사 대사 (선택)")]
-    [Tooltip("E키로 처음 접촉했을 때 재생할 Yarn 노드 이름. 비워두면 바로 거래창이 열립니다.\n예: Village_Sol_Square / Shelter_Exit_Sol")]
+    [Tooltip("E키로 처음 접촉했을 때 재생할 Yarn 노드 이름. 비워두면 바로 거래창이 열립니다.\n예: Village_Sol_Square")]
     public string yarnNode_greeting;
 
     [Tooltip("인사 대사 중 플레이어 이동 잠금 여부")]
