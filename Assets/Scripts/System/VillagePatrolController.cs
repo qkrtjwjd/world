@@ -20,9 +20,8 @@ public class VillagePatrolController : MonoBehaviour
     public static VillagePatrolController Instance { get; private set; }
 
     [Header("Yarn 노드")]
-    [Tooltip("1차 발각 — D-2 S#15 15-A 의 세라 \"…루?\". 아직 Village_Demo.yarn 에 미변환이라 " +
-             "PlayIfExists 로 호출한다. 노드가 없으면 경고만 남고 순찰은 정상 진행된다.")]
-    public string yarnNode_firstSighting = "Village_Sera_FirstSighting";
+    [Tooltip("1차 발각 — D-2 S#15 15-A 의 세라 \"…루?\". Village_Demo.yarn 에 반영돼 있다.")]
+    public string yarnNode_firstSighting = "Village_Sera_Spotted";
     [Tooltip("감금 엔딩 직전 대사. 원고 미작성이라 비워둬도 된다.")]
     public string yarnNode_captured = "Village_Sera_Captured";
 
