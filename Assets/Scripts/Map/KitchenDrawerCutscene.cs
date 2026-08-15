@@ -64,8 +64,12 @@ public class KitchenDrawerCutscene : MonoBehaviour
         AudioManager.Instance?.Play(sfxItemsRattle);
         yield return new WaitForSeconds(0.5f);
 
+        // PlayIfExists 를 쓴다. S#08 은 정본상 대사가 0줄이라(node_map 기대값 0) 이 노드의
+        // 본문이 주석만 남고, Yarn 컴파일러는 실행문이 없는 노드를 산출물에서 제외한다.
+        // PlayAndWait 로 부르면 StartDialogue 가 없는 노드를 찾아 에러를 남긴다.
+        // 열쇠 획득과 목표 갱신은 아래에서 계속 진행되어야 하므로 여기서 조용히 건너뛴다.
         if (!string.IsNullOrEmpty(yarnNode))
-            yield return YarnDialogue.PlayAndWait(yarnNode);
+            yield return YarnDialogue.PlayIfExists(yarnNode);
 
         if (atticKeyItem != null)
             InventoryManager.Instance?.AddItem(atticKeyItem);
