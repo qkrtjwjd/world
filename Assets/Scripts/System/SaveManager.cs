@@ -47,6 +47,10 @@ public class SaveManager : PersistentSingleton<SaveManager>
     //  저장
     // ─────────────────────────────────────────────
     const string PreBattleKey = "PreBattleSave";
+    // 탈출 압박 실패(배드 엔딩) 전용 되감기 지점.
+    // CheckpointKey 를 재사용하지 않는 이유 — 체크포인트는 대화 종료마다 덮어써지므로(OnDialogueEnded)
+    // 90초 도중 S#12 단검 대사가 끝나면 밀린다. '집 = S#11 직후 / 마을 = 진입 지점' 을 보존해야 한다.
+    const string RewindKey    = "RewindSave";
 
     SaveData BuildSaveData()
     {
@@ -140,6 +144,38 @@ public class SaveManager : PersistentSingleton<SaveManager>
         Dbg.Log("[SaveManager] 전투 전 상태 저장 완료");
     }
 
+    /// <summary>되감기 지점 데이터가 존재하는지 여부.</summary>
+    public bool HasRewindSave => PlayerPrefs.HasKey(RewindKey);
+
+    /// <summary>
+    /// 탈출 압박 구간에 진입하는 시점의 상태를 별도 키에 저장합니다.
+    /// 배드 엔딩 후 이 지점으로 되돌립니다(집 = S#11 직후 / 마을 = 진입 지점).
+    /// </summary>
+    public void SaveRewindPoint()
+    {
+        SaveData data = BuildSaveData();
+        PlayerPrefs.SetString(RewindKey, JsonUtility.ToJson(data));
+        PlayerPrefs.Save();
+        Dbg.Log("[SaveManager] 되감기 지점 저장 완료");
+    }
+
+    /// <summary>되감기 지점 데이터를 불러옵니다. 데이터가 없으면 경고 후 무시합니다.</summary>
+    public void LoadRewindPoint()
+    {
+        if (!PlayerPrefs.HasKey(RewindKey))
+        {
+            Debug.LogWarning("[SaveManager] 되감기 지점 저장 데이터가 없습니다.");
+            return;
+        }
+        SaveData data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(RewindKey));
+        _pendingData = data;
+        _isLoading   = true;
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(data.sceneName);
+        else
+            SceneManager.LoadScene(data.sceneName);
+    }
+
     /// <summary>전투 직전 저장 데이터를 불러옵니다. 데이터가 없으면 경고 후 무시합니다.</summary>
     public void LoadPreBattle()
     {
@@ -220,6 +256,10 @@ public class SaveManager : PersistentSingleton<SaveManager>
     public SaveData GetCheckpointData()
         => PlayerPrefs.HasKey(CheckpointKey)
            ? JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(CheckpointKey)) : null;
+
+    public SaveData GetRewindData()
+        => PlayerPrefs.HasKey(RewindKey)
+           ? JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(RewindKey)) : null;
 
     static bool IsGameplayScene(string name)
         => name == SceneNames.Home || name == SceneNames.Map
@@ -456,13 +496,15 @@ public class SaveManager : PersistentSingleton<SaveManager>
         }
     }
 
-    /// <summary>모든 슬롯(0~2) 및 전투 전·체크포인트 저장 데이터를 삭제합니다.</summary>
+    /// <summary>모든 슬롯(0~2) 및 전투 전·체크포인트·되감기 저장 데이터를 삭제합니다.</summary>
     public void DeleteAllSlots()
     {
         for (int i = 0; i < 3; i++)
             PlayerPrefs.DeleteKey(SlotKey(i));
         PlayerPrefs.DeleteKey(PreBattleKey);
         PlayerPrefs.DeleteKey(CheckpointKey);
+        // 남겨두면 새 게임에서 배드 엔딩에 걸렸을 때 이전 플레이의 되감기 지점으로 복귀한다
+        PlayerPrefs.DeleteKey(RewindKey);
         PlayerPrefs.Save();
         Dbg.Log("[SaveManager] 모든 슬롯 삭제 완료");
     }

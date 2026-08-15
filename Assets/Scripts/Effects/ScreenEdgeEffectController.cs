@@ -31,6 +31,7 @@ public class ScreenEdgeEffectController : MonoBehaviour
 
     // ── 내부 상태 ────────────────────────────────────────────────────────────
     Image   _edgeImage;
+    Image   _sustainedImage;   // 지속형 전용. 원샷 연출과 레이어를 분리한다
     Coroutine _activeCoroutine;
 
     // ── 자동 생성 ────────────────────────────────────────────────────────────
@@ -46,6 +47,7 @@ public class ScreenEdgeEffectController : MonoBehaviour
 
         _instance = root.AddComponent<ScreenEdgeEffectController>();
         _instance.BuildOverlay(root.transform);
+        _instance.BuildSustainedOverlay(root.transform);
         _instance.SubscribeEvents();
     }
 
@@ -59,6 +61,25 @@ public class ScreenEdgeEffectController : MonoBehaviour
         _edgeImage = go.AddComponent<Image>();
         _edgeImage.color = Color.clear;
         _edgeImage.raycastTarget = false;
+
+        var rt = go.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = rt.offsetMax = Vector2.zero;
+    }
+
+    /// <summary>
+    /// 지속형 효과 전용 레이어. 원샷 연출(EdgeRoutine)이 끝날 때 Color.clear 로 되돌리므로
+    /// 같은 Image 를 공유하면 90초 압박 중에 마시멜로·심박 연출 하나만 재생돼도 압박 표시가 지워진다.
+    /// </summary>
+    void BuildSustainedOverlay(Transform parent)
+    {
+        var go = new GameObject("SustainedOverlay");
+        go.transform.SetParent(parent, false);
+        go.transform.SetAsFirstSibling();   // 원샷 연출이 위에 오도록
+        _sustainedImage = go.AddComponent<Image>();
+        _sustainedImage.color = Color.clear;
+        _sustainedImage.raycastTarget = false;
 
         var rt = go.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
@@ -83,6 +104,7 @@ public class ScreenEdgeEffectController : MonoBehaviour
             // 즉시 끄기
             if (_activeCoroutine != null) { StopCoroutine(_activeCoroutine); _activeCoroutine = null; }
             if (_edgeImage != null) _edgeImage.color = Color.clear;
+            if (_sustainedImage != null) _sustainedImage.color = Color.clear;
         }
     }
 
@@ -120,6 +142,32 @@ public class ScreenEdgeEffectController : MonoBehaviour
         }
         if (_instance._edgeImage != null)
             _instance._edgeImage.color = Color.clear;
+    }
+
+    /// <summary>
+    /// 지속형 비네팅 강도를 즉시 설정합니다. 코루틴을 쓰지 않으므로 매 프레임 호출해도 깜빡이지 않습니다.
+    /// 집 90초 탈출 압박처럼 시간에 비례해 서서히 짙어지는 연출에 사용합니다.
+    /// </summary>
+    /// <param name="color">기준 색. 알파는 무시되고 <paramref name="alpha01"/> 로 대체됩니다.</param>
+    /// <param name="alpha01">0~1. 0 이면 완전히 투명합니다.</param>
+    /// <remarks>
+    /// ⚠ 접근성 설정(screenEdgeEffectEnabled)이 꺼져 있으면 아무 일도 하지 않습니다.
+    /// 이 채널에만 정보를 실으면 설정을 끈 플레이어에게 압박이 전혀 전달되지 않으므로,
+    /// 호출하는 쪽에서 소리·공간 축소 등 다른 채널에 정보를 반드시 중복시켜야 합니다.
+    /// </remarks>
+    public static void SetSustainedLevel(Color color, float alpha01)
+    {
+        if (!IsEnabled()) return;
+        var img = Instance._sustainedImage;
+        if (img == null) return;
+        img.color = new Color(color.r, color.g, color.b, Mathf.Clamp01(alpha01));
+    }
+
+    /// <summary>지속형 비네팅을 즉시 걷어냅니다. 원샷 연출에는 영향을 주지 않습니다.</summary>
+    public static void ClearSustained()
+    {
+        if (_instance == null || _instance._sustainedImage == null) return;
+        _instance._sustainedImage.color = Color.clear;
     }
 
     // ── 내부 ────────────────────────────────────────────────────────────────

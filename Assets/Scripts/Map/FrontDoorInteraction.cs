@@ -73,11 +73,30 @@ public class FrontDoorInteraction : MonoBehaviour
     private int  _attemptCount;
     private bool _isBusy;
     private bool _departed;
+    private bool _sealed;
+
+    /// <summary>탈출 압박(집 90초)에 실패해 문이 영구 폐쇄됐는지 여부.</summary>
+    public bool IsSealed => _sealed;
+
+    /// <summary>
+    /// 현관문을 영구히 봉인합니다. 열쇠를 가지고 있어도 열리지 않습니다(C-14-2 "열쇠가 통하지 않는다").
+    /// 집 90초 탈출 압박 실패 시 <see cref="HouseEscapePressureController"/> 가 호출합니다.
+    /// </summary>
+    /// <remarks>
+    /// 컴포넌트를 비활성화하는 방식은 쓰지 않습니다 — 상호작용 프롬프트가 통째로 사라져
+    /// '닫혔다'는 정보 자체가 전달되지 않습니다. 문은 남아 있고 반응만 없어야 합니다.
+    /// </remarks>
+    public void SealPermanently()
+    {
+        if (_sealed) return;
+        _sealed = true;
+        PlaySfxIfNamed(sfxRefusalLowName);
+    }
 
     /// <summary>InteractionTrigger.onInteract 에 연결.</summary>
     public void OnDoorInteract()
     {
-        if (_isBusy || _departed) return;
+        if (_isBusy || _departed || _sealed) return;
 
         var inv = InventoryManager.Instance ?? Object.FindAnyObjectByType<InventoryManager>();
         bool hasKey = inv != null && inv.HasItem(requiredItemName);

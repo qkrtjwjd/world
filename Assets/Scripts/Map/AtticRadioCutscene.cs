@@ -19,6 +19,12 @@ public class AtticRadioCutscene : MonoBehaviour
 {
     public static AtticRadioCutscene Instance { get; private set; }
 
+    /// <summary>
+    /// S#11 이 끝나 루가 "제가 아빠 데리러 갈게요" 라고 말한 직후 발행됩니다.
+    /// 집 탈출 압박(90초)의 발동 신호입니다 — S#06~S#10 에는 걸지 않습니다(C-14-2).
+    /// </summary>
+    public static event System.Action OnResolved;
+
     void Awake()
     {
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
@@ -93,6 +99,9 @@ public class AtticRadioCutscene : MonoBehaviour
         // 현관문은 이제 이 플래그가 아니라 현관문 열쇠(S#10)로 열린다.
         // 플래그는 저널·엔딩 판정 등이 참조하므로 계속 세운다.
         GameState.isResolved = true;
+
+        // 결계가 뒤늦게 조이기 시작하는 지점이다(A-13-3 의 시차). 탈출 압박은 여기서 발동한다.
+        OnResolved?.Invoke();
 
         // 목표는 시퀀스 전체가 끝난 뒤 AtticBoxInteraction 이 한 번만 띄운다.
 
