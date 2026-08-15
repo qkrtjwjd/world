@@ -30,8 +30,8 @@ public class BattleCommentaryUI : MonoBehaviour
     [SerializeField] private RectTransform panelRoot;
     [Tooltip("캐릭터 얼굴 이미지 (Mask 내부 Image).")]
     [SerializeField] private Image faceImage;
-    [Tooltip("캐릭터 이름 텍스트 (legacy Text).")]
-    [SerializeField] private Text nameText;
+    [Tooltip("캐릭터 이름 텍스트 (TMP_Text).")]
+    [SerializeField] private TMP_Text nameText;
     [Tooltip("대사 텍스트 (TextMeshProUGUI).")]
     [SerializeField] private TMP_Text dialogueTMP;
     [Tooltip("말풍선 꼬리 이미지 (없으면 무시).")]

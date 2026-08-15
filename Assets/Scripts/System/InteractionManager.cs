@@ -80,8 +80,9 @@ public class InteractionManager : MonoBehaviour
             RefreshClosest();
         }
 
-        // 입력 감지
-        if (Input.GetKeyDown(KeyCode.E))
+        // 입력 감지 (리바인딩 가능 키)
+        KeyCode interactKey = SettingsManager.Instance?.keyInteract ?? KeyCode.E;
+        if (Input.GetKeyDown(interactKey))
         {
             if (_cooldown <= 0f && _active != null)
             {
@@ -156,6 +157,8 @@ public class InteractionManager : MonoBehaviour
             _ui.Hide();
         else
         {
+            HintManager.ShowHint("interact_key",
+                $"[{SettingsManager.Instance?.keyInteract ?? KeyCode.E}] 키로 상호작용할 수 있습니다.");
             _ui.Show(_active.message);
             _active.hasShownText = true;
         }

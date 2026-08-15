@@ -10,7 +10,6 @@ public class RadioManager : MonoBehaviour
     [SerializeField] private List<RadioData> radioDataList = new List<RadioData>();
 
     private readonly Dictionary<string, RadioData> _radioMap = new Dictionary<string, RadioData>();
-    private AudioSource _audioSource;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() { Instance = null; }
@@ -22,7 +21,6 @@ public class RadioManager : MonoBehaviour
             Instance = this;
             DontDestroyOnLoad(gameObject);
             BuildMap();
-            DialogueEvents.OnDialogueEnded += StopRadio;
         }
         else
         {
@@ -33,18 +31,11 @@ public class RadioManager : MonoBehaviour
     void OnDestroy()
     {
         if (Instance == this)
-        {
-            DialogueEvents.OnDialogueEnded -= StopRadio;
             Instance = null;
-        }
     }
 
     void BuildMap()
     {
-        _audioSource = GetComponent<AudioSource>();
-        if (_audioSource == null)
-            _audioSource = gameObject.AddComponent<AudioSource>();
-
         _radioMap.Clear();
         foreach (var data in radioDataList)
         {
@@ -53,27 +44,18 @@ public class RadioManager : MonoBehaviour
         }
     }
 
-    public void StopRadio()
-    {
-        if (_audioSource.isPlaying)
-            _audioSource.Stop();
-    }
-
     public bool HasRadioData(string objectID) =>
         !string.IsNullOrEmpty(objectID) && _radioMap.ContainsKey(objectID);
 
     public void PlayRadio(string objectID)
     {
         if (!_radioMap.TryGetValue(objectID, out RadioData data)) return;
+        PlayRadioInline(data.yarnNodeName);
+    }
 
-        if (data.voiceClip != null)
-        {
-            _audioSource.Stop();
-            _audioSource.clip = data.voiceClip;
-            _audioSource.Play();
-        }
-
-        if (!string.IsNullOrEmpty(data.yarnNodeName))
-            StartCoroutine(YarnDialogue.PlayAndWait(data.yarnNodeName));
+    public void PlayRadioInline(string yarnNodeName)
+    {
+        if (!string.IsNullOrEmpty(yarnNodeName))
+            StartCoroutine(YarnDialogue.PlayAndWait(yarnNodeName));
     }
 }

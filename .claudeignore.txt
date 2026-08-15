@@ -1,16 +1,71 @@
-# 프로젝트 폴더에서
-touch .claudeignore
-```
-ets/
-textures/
-audio/
-sounds/
-videos/
-build/
-dist/
-node_modules/
-*.png
-*.jpg
-*.mp3
-*.wav
-*.mp4
+ Context
+
+     타이핑 애니메이션 종료 후에도 대사 텍스트가 일부만 보이는 현상. Yarn Spinner 대화창과 전투 대사
+     팝업(BattleCommentaryUI) 양쪽에서 발생.
+
+     ---
+     근본 원인
+
+     원인 1 (핵심): BodyText RectTransform 크기 — Dialogue.prefab
+
+     BodyText(LinePresenter의 lineText 연결 대상)의 크기:
+     - Width: 160px, Height: 30px (폰트 16pt, Word Wrap ON)
+
+     Word Wrap이 켜진 상태에서 대사가 여러 줄로 줄바꿈되어도 30px 높이에는 1줄밖에 들어가지 않음.
+
+     원인 2: LetterTypewriter.cs:71 — GetTextInfo 기반 character count
+
+     // Library\PackageCache\dev.yarnspinner.unity@...\Runtime\Views\Typewriter\LetterTypewriter.cs
+     var visibleCharacterCount = TextElement.GetTextInfo(line.Text).characterCount;
+
+     GetTextInfo()는 현재 RectTransform 크기를 기반으로 텍스트를 처리함. 160×30px처럼 매우 작은
+     박스에서는 박스 안에 들어가는 문자만 characterCount로 반환할 수 있음. 결과적으로 타이핑 루프가
+     실제 텍스트 길이보다 일찍 종료되고, 마지막에 설정되는 maxVisibleCharacters =
+     visibleCharacterCount도 부족한 값이 됨.
+
+     부가 문제: canvasGroup 미연결 — Dialogue.prefab:730
+
+     LinePresenter.canvasGroup: {fileID: 0} (null). useFadeEffect: 1이지만 canvasGroup이 없으면 fade
+     코드가 실행되지 않아 페이드인/아웃이 동작하지 않음. (직접적인 텍스트 누락 원인은 아님)
+
+     ---
+     수정 방법
+
+     수정 1: BodyText 텍스트 박스 크기 확장 (Dialogue.prefab)
+
+     Dialogue.prefab 내 BodyText GameObject의 RectTransform m_SizeDelta를 텍스트를 충분히 담을 수
+     있는 크기로 변경:
+
+     현재:
+     m_SizeDelta: {x: 160, y: 30}
+
+     권장 (DialoguePanel 배경 크기에 맞게 조정):
+     m_SizeDelta: {x: 580, y: 160}
+     (실제 레이아웃을 보면서 조정 필요)
+
+     위치도 대화 배경 박스 내부에 맞도록 재조정. Content Size Fitter를 붙여서 텍스트 길이에 자동
+     맞춤도 고려 가능.
+
+     수정 2: LetterTypewriter character count 안정화 (선택적)
+
+     Yarn Spinner 패키지 소스는 수정 불가이므로, BodyText RectTransform을 충분히 크게 만들면 이
+     문제도 자연스럽게 해결됨.
+
+     대안으로 LinePresenter의 lineText를 ContentSizeFitter + 자동 크기 조정 TMP로 구성하면
+     GetTextInfo가 올바른 전체 문자 수를 반환하게 됨.
+
+     ---
+     수정 대상 파일
+
+     - Assets/Prefabs/Dialogue.prefab — BodyText RectTransform 크기 및 위치
+     - (선택) Assets/Prefabs/Dialogue.prefab — canvasGroup 연결 (LinePresenter에 CanvasGroup
+     컴포넌트 추가)
+
+     ---
+     검증 방법
+
+     1. Unity 에디터에서 Dialogue 프리팹 열기
+     2. BodyText RectTransform 크기 확인 및 조정
+     3. 플레이 모드에서 NPC 대화 트리거 → 대화창에서 긴 대사가 전체 출력되는지 확인
+     4. 전투 대사(BattleCommentaryUI)도 동일하게 확인 (이쪽은 int.MaxValue로 끝나므로 박스 크기
+     문제일 가능성 높음)

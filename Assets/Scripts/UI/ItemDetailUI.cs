@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 인벤토리 하단 아이템 상세 정보 UI.
@@ -15,10 +16,10 @@ public class ItemDetailUI : MonoBehaviour
     [Header("UI 연결")]
     public GameObject panel;
     public Image      itemIcon;
-    public Text       nameText;
-    public Text       descriptionText;
-    public Text       gradeText;
-    public Text       quoteText;
+    public TMP_Text   nameText;
+    public TMP_Text   descriptionText;
+    public TMP_Text   gradeText;
+    public TMP_Text   quoteText;
 
     [SerializeField] private Button useButton;
     [SerializeField] private Button discardButton;
@@ -204,7 +205,10 @@ public class ItemDetailUI : MonoBehaviour
         if (!string.IsNullOrEmpty(dialogue))
             ItemNotificationUI.Instance?.ShowDialogue(dialogue);
 
-        var effect = _selected.realityEffect;
+        // 설명란(BuildAutoStats)과 동일하게 씬 종류에 따라 환상/현실 효과 선택
+        bool isRealityScene = SceneNames.IsRealityScene(
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        var effect = isRealityScene ? _selected.realityEffect : _selected.fantasyEffect;
 
         // 특수 시각/시스템 효과 (realityEffect.specialEffectCode 기준)
         ItemEffectHandler.Instance?.HandleEffect(effect.specialEffectCode);

@@ -3,6 +3,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 모든 순간이동/씬 전환에 검은색 페이드 효과를 적용합니다.
@@ -31,7 +32,7 @@ public class TransitionManager : MonoBehaviour
     [Header("설정")]
     [SerializeField] private float defaultFadeDuration = 0.3f;
 
-    private UnityEngine.UI.Text _loadingText;
+    private TMP_Text _loadingText;
 
     // 씬 로드 시 검은 화면에서 시작해야 하는지 여부 (DoSceneTransition 이후)
     public static bool IsFadedIn { get; private set; } = false;
@@ -41,6 +42,9 @@ public class TransitionManager : MonoBehaviour
     private Rigidbody2D _playerRb;
 
     private static readonly WaitForSecondsRealtime _wait02 = new WaitForSecondsRealtime(0.2f);
+
+    /// <summary>이 시간(초) 넘게 로딩이 걸릴 때만 "로딩 중..." 을 띄운다. 가벼운 씬에선 안 보인다.</summary>
+    private const float LoadingTextDelay = 0.5f;
 
     // ─────────────────────────────────────────────
     //  라이프사이클
@@ -97,19 +101,19 @@ public class TransitionManager : MonoBehaviour
 
         var cg = imageGo.AddComponent<CanvasGroup>();
 
-        // 로딩 진행 텍스트 (씬 전환 중 표시)
+        // 로딩 진행 텍스트 — 우하단에 조용히 표시 (LoadingTextDelay 이상 걸릴 때만)
         var loadingGo = new GameObject("LoadingText");
         loadingGo.transform.SetParent(canvasGo.transform, false);
-        var loadingTxt = loadingGo.AddComponent<UnityEngine.UI.Text>();
+        var loadingTxt = loadingGo.AddComponent<TextMeshProUGUI>();
         loadingTxt.text      = "";
         loadingTxt.fontSize  = 24;
         loadingTxt.color     = new Color(0.8f, 0.8f, 0.8f, 1f);
-        loadingTxt.alignment = TextAnchor.LowerCenter;
-        loadingTxt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        loadingTxt.alignment = TextAlignmentOptions.BottomRight;
         var lr = loadingGo.GetComponent<RectTransform>();
-        lr.anchorMin = new Vector2(0f, 0f);
-        lr.anchorMax = new Vector2(1f, 0.15f);
-        lr.offsetMin = lr.offsetMax = Vector2.zero;
+        lr.anchorMin = lr.anchorMax = new Vector2(1f, 0f);   // 우하단 기준
+        lr.pivot            = new Vector2(1f, 0f);
+        lr.sizeDelta        = new Vector2(420f, 40f);
+        lr.anchoredPosition = new Vector2(-48f, 36f);        // 화면 가장자리에서 안쪽으로
         loadingGo.SetActive(false);
         _loadingText = loadingTxt;
 
@@ -213,12 +217,11 @@ public class TransitionManager : MonoBehaviour
 
         yield return StartCoroutine(FadeRoutine(1f, fadeDuration, null));
 
-        // 로딩 텍스트 표시
-        if (_loadingText != null)
-        {
-            _loadingText.gameObject.SetActive(true);
-            _loadingText.text = "로딩 중...";
-        }
+        // 로딩 텍스트는 처음부터 띄우지 않는다.
+        // 가벼운 씬은 즉시 로드돼서, 예전엔 "로딩 중... 100%"가 0.2초 번쩍이고 사라져
+        // 연출만 끊어먹었다. LoadingTextDelay 를 넘겨 실제로 기다리게 될 때만 보여준다.
+        float loadStarted = Time.realtimeSinceStartup;
+        bool  textShown   = false;
 
         var op = SceneManager.LoadSceneAsync(sceneName);
         if (op != null)
@@ -226,15 +229,22 @@ public class TransitionManager : MonoBehaviour
             op.allowSceneActivation = false;
             while (op.progress < 0.9f)
             {
-                if (_loadingText != null)
+                if (!textShown && Time.realtimeSinceStartup - loadStarted >= LoadingTextDelay)
+                {
+                    textShown = true;
+                    if (_loadingText != null) _loadingText.gameObject.SetActive(true);
+                }
+                if (textShown && _loadingText != null)
                     _loadingText.text = $"로딩 중... {(int)(op.progress / 0.9f * 100f)}%";
                 yield return null;
             }
-            if (_loadingText != null) _loadingText.text = "로딩 중... 100%";
-            yield return _wait02;
+
+            // 텍스트를 한 번도 안 띄웠으면 100%도 보여주지 않는다 (그게 번쩍임의 정체였다)
+            if (textShown && _loadingText != null) _loadingText.text = "로딩 중... 100%";
+            if (textShown) yield return _wait02;
         }
 
-        if (_loadingText != null)
+        if (textShown && _loadingText != null)
         {
             _loadingText.text = "";
             _loadingText.gameObject.SetActive(false);

@@ -27,27 +27,54 @@ public class PauseSystem : MonoBehaviour
         IsActive(journalPanel)   ||
         IsActive(savePanel)      ||
         IsActive(loadPanel)      ||
-        SettingsPanelUI.IsOpen;
+        SettingsPanelUI.IsOpen   ||
+        DialogueLogUI.IsOpen     ||
+        JournalUI.IsOpen;
 
     static bool IsActive(GameObject go) => go != null && go.activeSelf;
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.I))
+        // 키 리바인딩 중(또는 직후 프레임)에는 취소용 ESC·새로 바인딩된 키를 여기서 처리하지 않음
+        if (SettingsPanelUI.IsRebinding) return;
+
+        // 솔 거래창이 열려 있으면 취소 키를 거래창이 직접 처리한다 (일시정지 메뉴가 겹쳐 열리지 않게)
+        if (SolTradeUI.IsOpen) return;
+
+        // 리바인딩 가능 키
+        KeyCode inventoryKey = SettingsManager.Instance?.keyInventory ?? KeyCode.I;
+        KeyCode pauseKey     = SettingsManager.Instance?.keyPause     ?? KeyCode.Escape;
+
+        if (Input.GetKeyDown(inventoryKey))
         {
             if (!YarnDialogue.IsRunning)
-                if (!IsActive(pauseMenuPanel))
+                if (!IsActive(pauseMenuPanel) && !DialogueLogUI.IsOpen)
                     ToggleInventory();
             return;
         }
 
-        if (!Input.GetKeyDown(KeyCode.Escape) && !Input.GetKeyDown(KeyCode.Backspace))
-            return;
+        bool pausePressed = Input.GetKeyDown(pauseKey) || Input.GetKeyDown(KeyCode.Backspace);
+        if (!pausePressed) return;
 
         // 설정 패널이 열려 있으면 먼저 닫기
         if (SettingsPanelUI.IsOpen)
         {
             SettingsPanelUI.Hide();
+            return;
+        }
+
+        // 대화 로그가 열려 있으면 먼저 닫기 (일시정지 메뉴가 같은 프레임에 열리지 않게)
+        if (DialogueLogUI.IsOpen)
+        {
+            DialogueLogUI.Hide();
+            return;
+        }
+
+        // 저널(자동 생성 UI)이 열려 있으면 먼저 닫기 — 일시정지 중이었으면 메인 메뉴로 복귀
+        if (JournalUI.IsOpen)
+        {
+            JournalUI.Hide();
+            if (_isPaused) OpenMainMenu();
             return;
         }
 
@@ -63,9 +90,10 @@ public class PauseSystem : MonoBehaviour
         {
             ResumeGame();
         }
-        else if (Input.GetKeyDown(KeyCode.Escape))
+        else if (Input.GetKeyDown(pauseKey))
         {
-            PauseGame();
+            if (!YarnDialogue.IsRunning && !PlayerInputLock.Instance.IsLocked)
+                PauseGame();
         }
     }
 
@@ -120,7 +148,12 @@ public class PauseSystem : MonoBehaviour
             OpenInventory();
     }
 
-    public void OpenJournal()    => SetOnly(journalPanel);
+    public void OpenJournal()
+    {
+        // 씬에 저널 패널이 배선돼 있으면 그 패널, 없으면 코드 생성 JournalUI 폴백
+        if (journalPanel != null) SetOnly(journalPanel);
+        else                      { SetOnly(null); JournalUI.Show(); }
+    }
     public void OpenSave()       => SetOnly(savePanel);
     public void OpenLoad()       => SetOnly(loadPanel);
     public void OpenSettings()   { SetOnly(null); SettingsPanelUI.Show(); }
@@ -151,6 +184,7 @@ public class PauseSystem : MonoBehaviour
         SetActive(savePanel,      false);
         SetActive(loadPanel,      false);
         SettingsPanelUI.Hide();
+        JournalUI.Hide();
         SetActive(hpBar,     false);
         SetActive(mentalBar, false);
         ItemDetailUI.Instance?.Hide();

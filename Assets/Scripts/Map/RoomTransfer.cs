@@ -20,6 +20,9 @@ public class RoomTransfer : MonoBehaviour
 
     public static RoomTransfer CurrentRoom { get; private set; }
 
+    public static event System.Action<BoxCollider2D> OnRoomEntered;
+    public static event System.Action OnRoomExited;
+
     // ─────────────────────────────────────────────
     //  초기화 — 커버는 반드시 ON 으로 시작
     // ─────────────────────────────────────────────
@@ -89,6 +92,8 @@ public class RoomTransfer : MonoBehaviour
             CurrentRoom.ExitRoom();
 
         CurrentRoom = this;
+        var triggerCol = GetComponent<BoxCollider2D>();
+        OnRoomEntered?.Invoke(triggerCol != null ? triggerCol : roomBound);
         SetCover(false); // 덮개 열기
 
         if (targetOrthoSize > 0f)
@@ -98,6 +103,7 @@ public class RoomTransfer : MonoBehaviour
     public void ExitRoom()
     {
         SetCover(true); // 덮개 닫기
+        OnRoomExited?.Invoke();
     }
 
     // ─────────────────────────────────────────────

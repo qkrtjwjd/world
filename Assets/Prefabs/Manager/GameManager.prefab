@@ -129,6 +129,7 @@ GameObject:
   - component: {fileID: 6137835066175398032}
   - component: {fileID: 4585646449317113913}
   - component: {fileID: 2920488143991533553}
+  - component: {fileID: 7777777777777777777}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -419,8 +420,21 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 898700f7d61c72d4d84f1bba3ada1531, type: 3}
-  m_Name: 
+  m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::GlitchZoneObjectController
+--- !u!114 &7777777777777777777
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ba4969c34abb2c14bae656b58110a69e, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::RealityGaugeDriver
+  lerpSpeed: 4
 --- !u!1 &4317506963917260813
 GameObject:
   m_ObjectHideFlags: 0

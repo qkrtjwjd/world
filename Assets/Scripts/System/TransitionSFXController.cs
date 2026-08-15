@@ -25,8 +25,16 @@ public class TransitionSFXController : MonoBehaviour
         {
             if (!_instance)
             {
-                var go = new GameObject("TransitionSFXController [Auto]");
-                _instance = go.AddComponent<TransitionSFXController>();
+                // 상주 프리팹(VFX와 동일 루트) 우선 로드 — Awake에서 _instance 등록됨
+                var prefab = Resources.Load<GameObject>("TransitionFX");
+                if (prefab != null)
+                    Instantiate(prefab).name = "TransitionFX";
+
+                if (!_instance)
+                {
+                    var go = new GameObject("TransitionSFXController [Auto]");
+                    _instance = go.AddComponent<TransitionSFXController>();
+                }
             }
             return _instance;
         }
@@ -76,12 +84,18 @@ public class TransitionSFXController : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            // 컴포넌트만 파괴 — 매니저 루트 오브젝트에 함께 붙은 다른 컴포넌트 보호
+            Destroy(this);
             return;
         }
 
         if (_sfxSource == null)
             _sfxSource = gameObject.AddComponent<AudioSource>();
+    }
+
+    void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
     }
 
     // ─────────────────────────────────────────────
@@ -171,10 +185,11 @@ public class TransitionSFXController : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = Mathf.Clamp01(elapsed / duration);
+            float t       = Mathf.Clamp01(elapsed / duration);
+            float tSmooth = Mathf.SmoothStep(0f, 1f, t);
 
-            if (from != null) from.volume = Mathf.Lerp(fromStartVol, 0f, t);
-            if (to   != null) to.volume   = Mathf.Lerp(0f, 1f, t);
+            if (from != null) from.volume = Mathf.Lerp(fromStartVol, 0f, tSmooth);
+            if (to   != null) to.volume   = Mathf.Lerp(0f, 1f, tSmooth);
 
             yield return null;
         }

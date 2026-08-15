@@ -16,8 +16,12 @@ public class PlayerStats : MonoBehaviour, IPlayerStatsService
     public float allyCurrentHP    = 100f;
     public float maxMental        = 100f;
     public float currentMental;
-    public float maxPuppetization = 100f;
-    public float currentPuppetization;
+
+    // 인형화 수치는 CorruptionManager 가 단일 소스 — 여기서는 읽기 전용 위임
+    public float maxPuppetization =>
+        CorruptionManager.Instance != null ? CorruptionManager.Instance.maxCorruption : 100f;
+    public float currentPuppetization =>
+        CorruptionManager.Instance != null ? CorruptionManager.Instance.currentCorruption : 20f;
 
     // 이전 값 캐시 (UI 갱신 최소화)
     private float _lastHealth = -1f;
@@ -43,18 +47,20 @@ public class PlayerStats : MonoBehaviour, IPlayerStatsService
 
     void Start()
     {
+        // 성장 시스템 최대 HP 적용 (인스펙터 값은 레벨 1 기준 폴백)
+        if (PlayerGrowth.Level > 1)
+            maxHealth = PlayerGrowth.CurrentMaxHP;
+
         // GameState 에 저장된 값이 있으면 불러오기, 없으면 최대치로 초기화
         if (GameState.player.IsInitialized)
         {
-            currentHealth        = GameState.player.health;
-            currentMental        = GameState.player.mental;
-            currentPuppetization = GameState.player.puppetization;
+            currentHealth = GameState.player.health;
+            currentMental = GameState.player.mental;
         }
         else
         {
-            currentHealth        = maxHealth;
-            currentMental        = maxMental;
-            currentPuppetization = 20f;
+            currentHealth = maxHealth;
+            currentMental = maxMental;
         }
 
         _statusUI = PlayerStatusUI.Instance;
@@ -127,6 +133,13 @@ public class PlayerStats : MonoBehaviour, IPlayerStatsService
     // ── 스탯 변경 메서드 ──
     public void TakeDamage(float amount)
     {
+        // 면역 / 취약 / 보호막 버프 반영 (턴제는 BattleSystem.EnemyTurn 에서 처리 — 이 경로 미경유)
+        if (BuffManager.Instance != null)
+        {
+            amount = BuffManager.Instance.ModifyIncomingDamage(amount);
+            if (amount <= 0f) return;
+        }
+
         float prevRatio = currentHealth / maxHealth;
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         _gameStateDirty = true;
@@ -159,47 +172,39 @@ public class PlayerStats : MonoBehaviour, IPlayerStatsService
 
     public void AddPuppetization(float amount)
     {
-        currentPuppetization = Mathf.Min(maxPuppetization, currentPuppetization + amount);
+        CorruptionManager.Instance?.AddCorruption(amount);
         _gameStateDirty = true;
     }
 
     public void ReducePuppetization(float amount)
     {
-        currentPuppetization = Mathf.Max(0f, currentPuppetization - amount);
+        CorruptionManager.Instance?.AddCorruption(-amount);
         _gameStateDirty = true;
     }
 
     /// <summary>
     /// 적 처치 시 현재 인형화 구간에 따라 인형화를 증가시킵니다.
     /// </summary>
-    public void AddPuppetizationOnKill()
+    /// <param name="multiplier">최종 배율 (공감 승리 등 감면 시 1 미만 전달)</param>
+    public void AddPuppetizationOnKill(float multiplier = 1f)
     {
         float pct = maxPuppetization > 0f ? currentPuppetization / maxPuppetization * 100f : 0f;
 
         float baseAmount;
-        float multiplier;
+        float stageMultiplier;
 
-        if (pct <= 30f)
+        switch (CorruptionManager.GetStage(pct))
         {
-            baseAmount = Random.Range(1f, 2f);
-            multiplier = 1.0f;
-        }
-        else if (pct <= 60f)
-        {
-            baseAmount = Random.Range(1.5f, 2.5f);
-            multiplier = 1.2f;
-        }
-        else if (pct <= 80f)
-        {
-            baseAmount = Random.Range(2f, 3f);
-            multiplier = 1.5f;
-        }
-        else
-        {
-            baseAmount = Random.Range(2.5f, 4f);
-            multiplier = 2.0f;
+            case CorruptionStage.Autonomy:
+                baseAmount = Random.Range(1f, 2f);     stageMultiplier = 1.0f; break;
+            case CorruptionStage.Crack:
+                baseAmount = Random.Range(1.5f, 2.5f); stageMultiplier = 1.2f; break;
+            case CorruptionStage.Backfire:
+                baseAmount = Random.Range(2f, 3f);     stageMultiplier = 1.5f; break;
+            default: // Loss, Doll
+                baseAmount = Random.Range(2.5f, 4f);   stageMultiplier = 2.0f; break;
         }
 
-        AddPuppetization(baseAmount * multiplier);
+        AddPuppetization(baseAmount * stageMultiplier * multiplier);
     }
 }

@@ -27,6 +27,7 @@ public class HPBarController : MonoBehaviour
     {
         BattleEvents.OnUnitDamaged += OnDamaged;
         BattleEvents.OnUnitDied    += OnDied;
+        BattleEvents.OnUnitHealed  += OnHealed;
         // 인스펙터로 미리 target이 할당된 경우 초기 동기화
         if (target != null) Apply(target.currentHP, target.maxHP, target.unitLevel);
     }
@@ -35,6 +36,7 @@ public class HPBarController : MonoBehaviour
     {
         BattleEvents.OnUnitDamaged -= OnDamaged;
         BattleEvents.OnUnitDied    -= OnDied;
+        BattleEvents.OnUnitHealed  -= OnHealed;
     }
 
     /// <summary>새 유닛에 바인딩하고 초기 HP를 표시합니다.</summary>
@@ -55,6 +57,12 @@ public class HPBarController : MonoBehaviour
     }
 
     void OnDamaged(Unit u, DamageResult result)
+    {
+        if (u != target || target == null) return;
+        Apply(target.currentHP, target.maxHP, target.unitLevel);
+    }
+
+    void OnHealed(Unit u, int amount)
     {
         if (u != target || target == null) return;
         Apply(target.currentHP, target.maxHP, target.unitLevel);

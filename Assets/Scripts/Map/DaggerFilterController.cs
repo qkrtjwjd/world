@@ -7,7 +7,7 @@ using UnityEngine.SceneManagement;
 /// - 누르는 동안: 현실 모드 (realityObjects 활성)
 /// - 떼면: 환상 모드 복귀
 /// - 인형화 80% 이상: 현실 전환 후 0.5초만 유지 후 강제 환상 복귀
-/// - 대화 중(DialogueManager.isTalking): 입력 무시
+/// - 대화·이벤트(입력 잠금)·일시정지·타이틀 씬: 입력 무시
 /// </summary>
 public class DaggerFilterController : MonoBehaviour
 {
@@ -73,17 +73,53 @@ public class DaggerFilterController : MonoBehaviour
     void CacheFilterObjects()
     {
         _filterObjects = FindObjectsByType<RealityFilterObject>(FindObjectsInactive.Exclude);
+
+        // 필터 대상이 있는 씬에 처음 진입했을 때 단검 파지 조작 힌트 (통산 1회)
+        // ⚠ 토글이 열리기 전(S#12 이전)에는 띄우지 않는다. 쓸 수 없는 키를 안내하게 된다.
+        if (_filterObjects.Length > 0 && GameState.isDaggerToggleUnlocked)
+            HintManager.ShowHint("dagger_filter",
+                $"[{SettingsManager.Instance?.keyDagger ?? KeyCode.F}] 키를 누르고 있으면 은빛 단검으로 현실을 볼 수 있습니다.", 5f);
     }
 
     void Update()
     {
-        if (YarnDialogue.IsRunning)
-            return;
+        KeyCode daggerKey = SettingsManager.Instance?.keyDagger ?? KeyCode.F;
 
-        if (Input.GetKeyDown(KeyCode.F))
+        // S#12(다락방 · 단검)에서 토글 조작권이 열리기 전에는 F키 자체가 없는 것으로 취급한다.
+        // 정본: "단검 획득 → 현실/환상 필터 토글 조작권 개방"
+        // 여기서 return 하면 아래 고착 방지 로직도 타지 않지만, 개방 전에는 IsReality 가 될 수 없으므로 무해하다.
+        if (!GameState.isDaggerToggleUnlocked) return;
+
+        // 이벤트/컷신(입력 잠금) · 일시정지 · 타이틀 씬에서는 필터 전환 차단
+        if (PlayerInputLock.Instance.IsLocked
+            || Time.timeScale == 0f
+            || SceneManager.GetActiveScene().name == SceneNames.Title)
+        {
+            // 홀드 중 해당 상태로 진입한 뒤 키를 뗀 경우 현실 필터 고착 방지
+            if (IsReality && _forcedReturnCoroutine == null && !Input.GetKey(daggerKey))
+                SwitchToFantasy();
+            return;
+        }
+
+        if (YarnDialogue.IsRunning)
+        {
+            // 대화 중 키를 뗀 경우 현실 필터가 켜진 채 고착되지 않도록 복귀 처리
+            if (IsReality && _forcedReturnCoroutine == null && !Input.GetKey(daggerKey))
+                SwitchToFantasy();
+            return;
+        }
+        if (DaggerKeyRegistry.HasNearby)
+        {
+            // 근접 상호작용 오브젝트(거울·작업대 등)가 키를 소비 — 필터는 양보.
+            // 홀드 중 범위에 진입한 뒤 키를 뗀 경우 현실 필터 고착 방지
+            if (IsReality && _forcedReturnCoroutine == null && !Input.GetKey(daggerKey))
+                SwitchToFantasy();
+            return;
+        }
+        if (Input.GetKeyDown(daggerKey))
             SwitchToReality();
 
-        if (Input.GetKeyUp(KeyCode.F))
+        if (Input.GetKeyUp(daggerKey))
             SwitchToFantasy();
     }
 

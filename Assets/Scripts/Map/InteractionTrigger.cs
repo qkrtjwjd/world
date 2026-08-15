@@ -21,9 +21,9 @@ public class InteractionTrigger : MonoBehaviour
     [Tooltip("E키를 눌렀을 때 실행할 기능을 여기에 연결하세요.")]
     public UnityEvent onInteract;
 
-    [Header("라디오 연동 (objectID를 RadioManager에 등록한 경우만 버튼 표시)")]
-    public string objectID;
+    [Header("라디오 연동 (Yarn 노드 이름을 지정하면 버튼이 자동으로 표시됩니다)")]
     public Button radioButton;
+    public string radioYarnNode;
 
     [Header("거리 감지 (Solid 콜라이더가 트리거 진입을 막는 경우 사용)")]
     [SerializeField] private bool  useDistanceDetection = false;
@@ -34,8 +34,6 @@ public class InteractionTrigger : MonoBehaviour
     public string yarnNode;
     [Tooltip("playOnce=true 일 때 두 번째 이후 상호작용에서 재생할 Yarn 노드 이름.")]
     public string yarnNodeRepeat;
-    [Tooltip("대사 중 플레이어 이동을 잠글지 여부.")]
-    public bool lockPlayerDuringDialogue = false;
     [Tooltip("체크 시: 첫 번째 대사 한 번만 재생. 이후엔 repeatDialogue 사용.")]
     public bool playOnce = false;
     [Tooltip("대사가 완전히 끝났을 때 호출됩니다.")]
@@ -81,7 +79,7 @@ public class InteractionTrigger : MonoBehaviour
 
     private void OnRadioButtonClicked()
     {
-        RadioManager.Instance?.PlayRadio(objectID);
+        RadioManager.Instance?.PlayRadioInline(radioYarnNode);
     }
 
     private void OnDestroy()
@@ -168,22 +166,20 @@ public class InteractionTrigger : MonoBehaviour
 
     private IEnumerator PlayAndNotify(string nodeName)
     {
-        yield return YarnDialogue.PlayAndWait(nodeName, lockPlayerDuringDialogue);
+        yield return YarnDialogue.PlayAndWait(nodeName);
         onDialogueComplete?.Invoke();
         TrySpawnItem();
     }
 
     private IEnumerator WaitForAcquisitionThenPlay(string nodeName)
     {
-        // ItemPickup이 gameObject를 Destroy할 수 있으므로 yield 전에 값 캡처
-        bool lockPlayer = lockPlayerDuringDialogue;
         yield return null;
         yield return new WaitUntil(() =>
         {
             var ui = ItemAcquisitionUI.Instance;
             return (ui == null || !ui.IsShowing) && !YarnDialogue.IsRunning;
         });
-        yield return YarnDialogue.PlayAndWait(nodeName, lockPlayer);
+        yield return YarnDialogue.PlayAndWait(nodeName);
         // 오브젝트가 Destroy됐을 수 있으므로 생존 확인 후 접근
         if (this != null)
         {
@@ -257,9 +253,7 @@ public class InteractionTrigger : MonoBehaviour
     void RefreshRadioButton(bool inRange)
     {
         if (radioButton == null) return;
-        bool show = inRange
-                 && RadioManager.Instance != null
-                 && RadioManager.Instance.HasRadioData(objectID);
+        bool show = inRange && !string.IsNullOrEmpty(radioYarnNode);
         radioButton.gameObject.SetActive(show);
     }
 }

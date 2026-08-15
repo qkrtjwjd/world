@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using UnityEngine.EventSystems;
 using System.Text;
+using TMPro;
 
 public enum BattleState { START, PLAYERTURN, ENEMYTURN, WON, LOST }
 
@@ -29,6 +30,22 @@ public class BattleSystem : MonoBehaviour
     public string playerUnitName   = "플레이어";
     [Tooltip("플레이어 기본 공격력 (PlayerStats에 공격력 스탯이 없으므로 직접 설정)")]
     public int    playerBaseDamage = 10;
+    [Tooltip("플레이어 최대 MP. 스킬 사용에 소모됩니다.")]
+    public int    playerMaxMP      = 30;
+    [Tooltip("플레이어가 전투에서 사용할 스킬 목록. SkillQuickSlotUI에 표시됩니다.")]
+    public List<SkillData> playerDefaultSkills = new List<SkillData>();
+
+    [System.Serializable]
+    public class LevelUnlockSkill
+    {
+        [Tooltip("해금할 스킬.")]
+        public SkillData skill;
+        [Tooltip("PlayerGrowth 레벨이 이 값 이상이면 전투 시 장착됩니다.")]
+        public int unlockLevel = 2;
+    }
+
+    [Tooltip("레벨업으로 해금되는 스킬 목록 (성장 보상).")]
+    public List<LevelUnlockSkill> levelUnlockSkills = new List<LevelUnlockSkill>();
 
     [Header("HP 슬라이더 (배틀씬 전용 — 직접 연결하세요)")]
     public Slider playerHPSlider;
@@ -39,21 +56,19 @@ public class BattleSystem : MonoBehaviour
     [Tooltip("전투 시작 시 표시할 연출 패널")]
     public GameObject enemyAppearPanel;
     [Tooltip("패널 안 텍스트 (예: 야생의 슬라임이(가) 나타났다!)")]
-    public Text       enemyAppearText;
+    public TMP_Text   enemyAppearText;
+    [Tooltip("적 등장 Animator 트리거 이름. 비어있으면 생략.")]
+    public string     enemyAppearTrigger = "Appear";
 
     [Header("적 HUD (HP바 + 이름)")]
     [Tooltip("적 HP 슬라이더와 이름 텍스트를 묶는 부모 오브젝트 — 연출 후 표시")]
     public GameObject enemyHudGroup;
     [Tooltip("적 HP 슬라이더 옆에 표시할 이름 텍스트")]
-    public Text       enemyNameLabel;
+    public TMP_Text   enemyNameLabel;
 
     [Header("게이지 설정")]
     public float empathyGauge          = 0f;
     public float maxGauge              = 100f;
-    // 레거시 — DamageCalculator 도입 후 미사용. 직렬화된 프리팹 호환을 위해 유지.
-    [HideInInspector] public float playerDamageMultiplier = 0.1f;
-    [HideInInspector] public float enemyDamageMultiplier  = 1.0f;
-
     /// <summary>SetupBattle 에서 적 등장 패널을 표시할지 여부. EncounterManager가 설정합니다.</summary>
     public static bool showEnemyAppearPanel = false;
 
@@ -61,12 +76,8 @@ public class BattleSystem : MonoBehaviour
     /// Start()에서 SetupBattle() 자동 실행을 제어합니다.</summary>
     public static bool readyToStart = false;
 
-    // 구버전 prefab 직렬화 호환
-    [HideInInspector] public float funGauge     = 0f;
-    [HideInInspector] public float fatigueGauge = 0f;
-
     [Header("UI")]
-    public Text dialogueText;
+    public TMP_Text dialogueText;
 
     [Header("메뉴 패널")]
     public GameObject mainMenuPanel;
@@ -79,15 +90,15 @@ public class BattleSystem : MonoBehaviour
     [Tooltip("버튼들이 생성될 부모 Transform (ScrollView > Content 등)")]
     public Transform  itemButtonContainer;
     [Tooltip("아이템 없을 때 보여줄 Text")]
-    public Text       noItemText;
+    public TMP_Text   noItemText;
 
     [Header("아이템 설명 패널 (배틀 전용)")]
     [Tooltip("아이템 선택 시 표시될 설명 패널")]
     public GameObject battleItemDescPanel;
     [Tooltip("설명 패널 아이템 이름 텍스트")]
-    public Text       battleItemDescName;
+    public TMP_Text   battleItemDescName;
     [Tooltip("설명 패널 아이템 설명 텍스트")]
-    public Text       battleItemDescText;
+    public TMP_Text   battleItemDescText;
     [Tooltip("아이템 사용 버튼 (onClick 에 OnBattleItemUseButton 연결)")]
     public Button     battleItemUseButton;
 
@@ -100,8 +111,7 @@ public class BattleSystem : MonoBehaviour
     {
         public GameObject                  go;
         public Button                      button;
-        public TMPro.TextMeshProUGUI       tmp;
-        public Text                        legacyText;
+        public TMP_Text                    tmp;
         public Image                       iconImage;
     }
 
@@ -131,6 +141,8 @@ public class BattleSystem : MonoBehaviour
     public EnemyGlitchEffect enemyGlitch;
     [Tooltip("퀵슬롯 UI (ItemQuickSlotUI)")]
     public ItemQuickSlotUI   quickSlotUI;
+    [Tooltip("스킬 퀵슬롯 UI (SkillQuickSlotUI). 미연결 시 자식에서 자동 탐색.")]
+    public SkillQuickSlotUI  skillQuickSlotUI;
     [Tooltip("공감 게이지 슬라이더 (미연결 시 무시)")]
     public Slider empathySlider;
 
@@ -145,6 +157,9 @@ public class BattleSystem : MonoBehaviour
     // 공감 게이지 달성으로 이긴 경우 true
     private bool _wonByEmpathy = false;
 
+    // 도망으로 전투를 벗어난 경우 true — 승리 보상(처치 등록·전리품·인형화)을 지급하지 않음
+    private bool _escaped = false;
+
     // EndBattle 중복 실행 방지
     private bool _isBattleEnding = false;
 
@@ -153,9 +168,6 @@ public class BattleSystem : MonoBehaviour
 
     // 플레이어 행동 중 입력 잠금 (연타로 인한 코루틴 중복 방지)
     private bool _isPlayerActionInProgress = false;
-
-    // 구버전 prefab 직렬화 호환 — 현재 코드에서 미사용
-    [HideInInspector] public float danmakuDuration = 5f;
 
     // ════════════════════════════════════════
     //  초기화
@@ -225,8 +237,9 @@ public class BattleSystem : MonoBehaviour
 
     void Update()
     {
-        // 아이템 메뉴가 열려 있을 때 ESC → 메인 메뉴로 복귀
-        if (Input.GetKeyDown(KeyCode.Escape)
+        // 아이템 메뉴가 열려 있을 때 일시정지 키 → 메인 메뉴로 복귀
+        KeyCode pauseKey = SettingsManager.Instance?.keyPause ?? KeyCode.Escape;
+        if (Input.GetKeyDown(pauseKey)
             && State == BattleState.PLAYERTURN
             && itemMenuPanel != null && itemMenuPanel.activeSelf)
         {
@@ -262,10 +275,22 @@ public class BattleSystem : MonoBehaviour
         _currentUnitIndex = 0;
         _isBattleEnding   = false;
         _wonByEmpathy     = false;
+        _escaped          = false;
 
         // 플레이어 — 1인칭: 스프라이트 없이 PlayerStats 데이터로 가상 유닛 생성
         Unit playerUnit = CreateVirtualPlayerUnit();
         _playerParty.Add(playerUnit);
+
+        // 스킬 퀵슬롯 배선 — 미연결 시 자식에서 자동 탐색 후 캐스터 주입
+        if (skillQuickSlotUI == null)
+            skillQuickSlotUI = GetComponentInChildren<SkillQuickSlotUI>(true);
+        if (skillQuickSlotUI != null)
+        {
+            if (skillQuickSlotUI.battleSystem == null)
+                skillQuickSlotUI.battleSystem = this;
+            skillQuickSlotUI.SetCaster(playerUnit);
+        }
+        BattleEvents.RaiseUnitMPChanged(playerUnit);
 
         // 동료는 초상화(BattleCompanionUI) 역할만 — 전투 파티에 참여하지 않음
 
@@ -406,7 +431,6 @@ public class BattleSystem : MonoBehaviour
             Debug.LogWarning($"[BattleSystem] {go.name}에 Unit 컴포넌트가 없어 자동 추가합니다. 프리팹에 Unit을 붙여주세요.");
             unit           = go.AddComponent<Unit>();
             unit.unitName  = go.name;
-            unit.damage    = 10;
             unit.maxHP     = 50;
             unit.currentHP = 50;
             unit.unitLevel = 1;
@@ -425,9 +449,22 @@ public class BattleSystem : MonoBehaviour
 
         var unit       = go.AddComponent<Unit>();
         unit.unitName  = playerUnitName;
-        unit.unitLevel = 1;
-        unit.level     = 1;
-        unit.damage    = playerBaseDamage;
+        unit.unitLevel = PlayerGrowth.Level;
+        unit.level     = PlayerGrowth.Level;
+        // 성장 시스템 스탯 적용 (인스펙터 값은 레벨 1 기준 폴백)
+        unit.attack    = PlayerGrowth.Level > 1 ? PlayerGrowth.CurrentAttack : playerBaseDamage;
+        unit.maxMP     = PlayerGrowth.Level > 1 ? PlayerGrowth.CurrentMaxMP  : playerMaxMP;
+        unit.currentMP = unit.maxMP;
+
+        foreach (SkillData skill in playerDefaultSkills)
+            if (skill != null) unit.equippedSkills.Add(skill);
+
+        // 레벨 해금 스킬
+        foreach (LevelUnlockSkill unlock in levelUnlockSkills)
+            if (unlock != null && unlock.skill != null
+                && PlayerGrowth.Level >= unlock.unlockLevel
+                && !unit.equippedSkills.Contains(unlock.skill))
+                unit.equippedSkills.Add(unlock.skill);
 
         if (PlayerStats.Instance != null)
         {
@@ -450,7 +487,7 @@ public class BattleSystem : MonoBehaviour
     // ════════════════════════════════════════
     void ProcessPartyTurn()
     {
-        if (_currentUnitIndex < _playerParty.Count)
+        while (_currentUnitIndex < _playerParty.Count)
         {
             Unit cur = _playerParty[_currentUnitIndex];
             if (cur.currentHP > 0)
@@ -458,22 +495,32 @@ public class BattleSystem : MonoBehaviour
                 cur.ResetState();
                 cur.TickCooldowns();
                 BattleEvents.RaiseTurnStarted(cur);
+
+                // 기절 상태 — 이번 턴 행동 불가
+                if (BuffManager.Instance != null && BuffManager.Instance.IsStunned)
+                {
+                    StartCoroutine(SkipStunnedTurn(cur));
+                    return;
+                }
+
                 ShowDialogue("battle.player_turn_prompt",
                              $"{cur.unitName}의 턴: 무엇을 할까?", cur.unitName);
                 ShowMainMenu();
+                return;
             }
-            else
-            {
-                _currentUnitIndex++;
-                ProcessPartyTurn();
-            }
+            _currentUnitIndex++;
         }
-        else
-        {
-            State = BattleState.ENEMYTURN;
-            BattleEvents.RaiseTurnStarted(_enemyUnit);
-            StartCoroutine(EnemyTurn());
-        }
+        State = BattleState.ENEMYTURN;
+        BattleEvents.RaiseTurnStarted(_enemyUnit);
+        StartCoroutine(EnemyTurn());
+    }
+
+    IEnumerator SkipStunnedTurn(Unit cur)
+    {
+        SetPanelsActive(false, false, false);
+        ShowDialogue("", $"{cur.unitName}은(는) 기절해서 움직일 수 없다!");
+        yield return _wait1_5s;
+        NextPartyMember();
     }
 
     void NextPartyMember()
@@ -589,16 +636,15 @@ public class BattleSystem : MonoBehaviour
         go.GetComponent<RectTransform>().sizeDelta = new Vector2(200, 40);
 
         var textGo = new GameObject("Text", typeof(RectTransform),
-                                    typeof(CanvasRenderer), typeof(Text));
+                                    typeof(CanvasRenderer), typeof(TextMeshProUGUI));
         textGo.transform.SetParent(go.transform, false);
         var rt = textGo.GetComponent<RectTransform>();
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.sizeDelta = Vector2.zero;
 
-        var t = textGo.GetComponent<Text>();
-        t.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-        t.alignment = TextAnchor.MiddleCenter;
+        var t = textGo.GetComponent<TextMeshProUGUI>();
+        t.alignment = TextAlignmentOptions.Center;
         t.color     = Color.black;
         return go;
     }
@@ -607,8 +653,7 @@ public class BattleSystem : MonoBehaviour
     {
         var cache = new ItemButtonCache { go = btnObj };
         cache.button     = btnObj.GetComponent<Button>();
-        cache.tmp        = btnObj.GetComponentInChildren<TMPro.TextMeshProUGUI>();
-        cache.legacyText = cache.tmp == null ? btnObj.GetComponentInChildren<Text>() : null;
+        cache.tmp        = btnObj.GetComponentInChildren<TMP_Text>();
 
         var images = btnObj.GetComponentsInChildren<Image>(true);
         foreach (var img in images)
@@ -620,8 +665,7 @@ public class BattleSystem : MonoBehaviour
 
     void SetButtonLabel(ItemButtonCache cache, string label)
     {
-        if (cache.tmp        != null) cache.tmp.text        = label;
-        else if (cache.legacyText != null) cache.legacyText.text = label;
+        if (cache.tmp != null) cache.tmp.text = label;
     }
 
     /// <summary>버튼 자식 중 루트 배경이 아닌 첫 번째 Image에 아이템 아이콘을 설정합니다.</summary>
@@ -762,8 +806,24 @@ public class BattleSystem : MonoBehaviour
     {
         try
         {
+            // 혼란 상태 — 25% 확률로 행동 실패 (MP 소모 없음)
+            if (RollConfusionFail())
+            {
+                ShowDialogue("", $"{caster.unitName}은(는) 혼란스러워 허공을 휘저었다!");
+                yield return _wait2s;
+                NextPartyMember();
+                yield break;
+            }
+
             DamageResult result = SkillExecutor.ExecuteSingle(caster, target, skill);
             caster.StartCooldown(skill);
+
+            // 공감형 스킬 — 공감 게이지 가산 (기본 교감(PlayerSpecialAction)과 동일 경로)
+            if (skill.empathyGain > 0)
+            {
+                empathyGauge = Mathf.Min(maxGauge, empathyGauge + skill.empathyGain);
+                if (empathySlider != null) empathySlider.value = empathyGauge;
+            }
 
             BattleEvents.RaiseSkillUsed(caster, skill, result);
             BattleEvents.RaiseUnitMPChanged(caster);
@@ -772,12 +832,25 @@ public class BattleSystem : MonoBehaviour
                 ShowDialogue("", $"{caster.unitName}의 {skill.displayName}! 빗나갔다...");
             else if (skill.healAmount > 0)
                 ShowDialogue("", $"{caster.unitName}의 {skill.displayName}! HP {result.amount} 회복.");
+            else if (skill.empathyGain > 0)
+                ShowDialogue("", $"{caster.unitName}의 {skill.displayName}! 공감 게이지 +{skill.empathyGain}");
+            else if (skill.damageMultiplier <= 0f)
+                ShowDialogue("", $"{caster.unitName}의 {skill.displayName}!");
             else if (result.isCrit)
                 ShowDialogue("", $"{caster.unitName}의 {skill.displayName}! 크리티컬 {target?.LastDamageResult.amount ?? result.amount}!");
             else
                 ShowDialogue("", $"{caster.unitName}의 {skill.displayName}! {target?.LastDamageResult.amount ?? result.amount}의 데미지.");
 
             yield return _wait2s;
+
+            // 공감 달성 승리 체크
+            if (empathyGauge >= maxGauge)
+            {
+                _wonByEmpathy = true;
+                State = BattleState.WON;
+                EndBattle();
+                yield break;
+            }
 
             if (_enemyUnit == null || _enemyUnit.currentHP <= 0)
             {
@@ -793,6 +866,10 @@ public class BattleSystem : MonoBehaviour
             _isPlayerActionInProgress = false;
         }
     }
+
+    /// <summary>혼란 디버프 활성 시 25% 확률로 행동 실패.</summary>
+    static bool RollConfusionFail() =>
+        BuffManager.Instance != null && BuffManager.Instance.IsConfused && Random.Range(0, 100) < 25;
 
     public void OnSpecialButton()
     {
@@ -828,6 +905,7 @@ public class BattleSystem : MonoBehaviour
             {
                 ShowDialogue("battle.escape_success", "도망에 성공했다!");
                 yield return _wait1s;
+                _escaped = true;
                 State = BattleState.WON;
                 EndBattle();
             }
@@ -853,7 +931,19 @@ public class BattleSystem : MonoBehaviour
             Unit cur = GetCurrentPartyMember();
             if (cur == null) { NextPartyMember(); yield break; }
 
-            DamageResult result = DamageCalculator.Calculate(cur, _enemyUnit);
+            // 혼란 상태 — 25% 확률로 행동 실패
+            if (RollConfusionFail())
+            {
+                ShowDialogue("", $"{cur.unitName}은(는) 혼란스러워 허공을 휘저었다!");
+                yield return _wait2s;
+                NextPartyMember();
+                yield break;
+            }
+
+            float atkMul    = BuffManager.Instance != null ? BuffManager.Instance.AttackMultiplier : 1f;
+            int   critBonus = BuffManager.Instance != null ? Mathf.RoundToInt(BuffManager.Instance.CritBonus) : 0;
+            DamageResult result = DamageCalculator.Calculate(
+                cur, _enemyUnit, attackMultiplier: atkMul, critBonus: critBonus);
             bool dead = _enemyUnit.TakeDamage(result);
             enemyGlitch?.TriggerGlitch();
 
@@ -1008,10 +1098,22 @@ public class BattleSystem : MonoBehaviour
         ShowDialogue("", $"{_enemyUnit.unitName}의 턴!");
         yield return _wait1s;
 
+        // 라운드 틱 — 턴제 전투 중 Time.timeScale=0 이라 BuffManager.Update()가 정지하므로
+        // 적 턴마다(=1라운드) 지속시간 차감 + DoT/HoT를 여기서 적용
+        BuffManager.Instance?.TickTurn();
+
         Unit target = GetRandomAlivePartyMember();
         if (target != null)
         {
-            DamageResult result = DamageCalculator.Calculate(_enemyUnit, target);
+            float defMul = BuffManager.Instance != null ? BuffManager.Instance.DefenseMultiplier : 1f;
+            DamageResult result = DamageCalculator.Calculate(_enemyUnit, target, defenseMultiplier: defMul);
+
+            // 면역 / 취약 / 보호막 (플레이어 버프) 반영
+            if (!result.isMiss && BuffManager.Instance != null)
+                result = DamageResult.Hit(
+                    Mathf.RoundToInt(BuffManager.Instance.ModifyIncomingDamage(result.amount)),
+                    result.isCrit);
+
             bool dead = target.TakeDamage(result);
 
             // HP 바 부드럽게 감소 + PlayerStats 실시간 동기화 (PlayerStatusUI 반영)
@@ -1060,15 +1162,44 @@ public class BattleSystem : MonoBehaviour
         StartCoroutine(EndBattleCoroutine());
     }
 
+    /// <summary>레벨업 시 PlayerStats 최대 HP를 성장 곡선에 맞추고 증가분만큼 회복합니다.</summary>
+    public static void ApplyLevelUpToPlayerStats(int levelUps)
+    {
+        if (levelUps <= 0 || PlayerStats.Instance == null) return;
+        float prevMax = PlayerStats.Instance.maxHealth;
+        PlayerStats.Instance.maxHealth = PlayerGrowth.CurrentMaxHP;
+        PlayerStats.Instance.RecoverHealth(Mathf.Max(0f, PlayerGrowth.CurrentMaxHP - prevMax));
+        PlayerStats.Instance.UpdateUI(true);
+    }
+
     IEnumerator EndBattleCoroutine()
     {
-        if (State == BattleState.WON)
+        if (State == BattleState.WON && _escaped)
         {
-            ShowDialogue("", _wonByEmpathy ? "적이 스스로 물러났다!" : "적을 쓰러뜨렸다!");
+            // 도망: 적을 처치한 것이 아니므로 처치 등록·전리품·인형화 없음
+            ShowDialogue("battle.escape_success", "도망에 성공했다!");
+        }
+        else if (State == BattleState.WON)
+        {
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
-            BattleServices.PlayerStats?.AddPuppetizationOnKill();
+            // 공감 승리는 살해가 아니므로 인형화 페널티 절반만 적용
+            BattleServices.PlayerStats?.AddPuppetizationOnKill(_wonByEmpathy ? 0.5f : 1f);
+
+            // 경험치 — 공감 승리는 평화 루트 장려로 +20% 보너스
+            int xp = EncounterManager.Instance?.enemyDatabase
+                         ?.GetXpReward(EncounterManager.currentEnemyTypeID) ?? 0;
+            if (_wonByEmpathy) xp = Mathf.RoundToInt(xp * 1.2f);
+            int levelUps = PlayerGrowth.AddExp(xp);
+            ApplyLevelUpToPlayerStats(levelUps);
+
+            string winMsg = _wonByEmpathy ? "적이 스스로 물러났다!" : "적을 쓰러뜨렸다!";
+            if (xp > 0)       winMsg += $" 경험치 +{xp}";
+            if (levelUps > 0) winMsg += $"\n레벨이 올랐다! (Lv.{PlayerGrowth.Level})";
+            ShowDialogue("", winMsg);
+
+            // 전리품 — 씬 오브젝트 이름이 아닌 EnemyDatabase 의 타입 ID 로 조회
             var loot = EncounterManager.Instance?.enemyDatabase
-                           ?.GetLootTable(EncounterManager.currentEnemyID);
+                           ?.GetLootTable(EncounterManager.currentEnemyTypeID);
             if (loot != null)
             {
                 var drops = loot.RollDrops();
@@ -1209,9 +1340,11 @@ public class BattleSystem : MonoBehaviour
 
         _enemyUnit.gameObject.SetActive(true);
 
-        // ── 등장 애니메이션 (추후 여기에 추가) ──────────────────
-        // Animator anim = _enemyUnit.GetComponent<Animator>();
-        // if (anim != null) anim.SetTrigger("Appear");
+        if (!string.IsNullOrEmpty(enemyAppearTrigger))
+        {
+            Animator anim = _enemyUnit.GetComponent<Animator>();
+            if (anim != null) anim.SetTrigger(enemyAppearTrigger);
+        }
     }
 
     // ════════════════════════════════════════

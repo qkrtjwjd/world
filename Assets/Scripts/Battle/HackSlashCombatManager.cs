@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 핵앤슬래시 전투 세션을 총괄합니다.
@@ -20,7 +21,7 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     [Header("전투 결과 UI")]
     [Tooltip("'승리!' / '패배...' 를 띄울 텍스트 (없으면 생략)")]
-    public Text resultText;
+    public TMP_Text resultText;
     [Tooltip("결과 텍스트가 자동으로 사라질 시간(초)")]
     public float resultDisplayTime = 2.5f;
 
@@ -45,6 +46,7 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     private bool _isCombatActive = false;
     private bool _isModeTransitioning = false;
+    private bool _enemyKilled = false; // NotifyEnemyDead에서 _activeEnemy가 null이 된 뒤에도 처치 사실을 기억
 
     /// <summary>마지막으로 공격이 발생한 Time.time. GaugeManager의 복원 타이머가 감시합니다.</summary>
     public float LastCombatActivityTime { get; private set; } = -999f;
@@ -63,8 +65,6 @@ public class HackSlashCombatManager : MonoBehaviour
     // WaitForSeconds 캐시 (GC 절약)
     private WaitForSeconds _waitPoll;
     private WaitForSeconds _waitInvincible;
-    private WaitForSeconds _waitMonitorDelay;
-    private WaitForSeconds _waitMonitorInterval;
     private WaitForSecondsRealtime _waitSwitchDelay;
     private WaitForSeconds _waitResultDisplay;
 
@@ -87,8 +87,6 @@ public class HackSlashCombatManager : MonoBehaviour
         // WaitForSeconds 캐시
         _waitPoll            = new WaitForSeconds(0.2f);
         _waitInvincible      = new WaitForSeconds(startInvincibleTime);
-        _waitMonitorDelay    = new WaitForSeconds(startInvincibleTime + 0.5f);
-        _waitMonitorInterval = new WaitForSeconds(0.3f);
         _waitSwitchDelay     = new WaitForSecondsRealtime(1.5f);
         _waitResultDisplay   = new WaitForSeconds(resultDisplayTime);
 
@@ -116,6 +114,7 @@ public class HackSlashCombatManager : MonoBehaviour
         if (_isCombatActive) return;
         _isCombatActive = true;
         _isModeTransitioning = false;
+        _enemyKilled = false;
         _enemyPrefabRef = enemyPrefab;
         LastCombatActivityTime = -999f;
 
@@ -193,34 +192,6 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     //  모드 전환 (현실 핵앤슬래시 → 턴제)
     // ─────────────────────────────────────────────
-    IEnumerator MonitorModeSwitch()
-    {
-        yield return _waitMonitorDelay;
-
-        bool daggerWasEquipped = DaggerSystem.IsEquipped;
-
-        while (_isCombatActive && !_isModeTransitioning)
-        {
-            bool daggerPutAway = daggerWasEquipped && !DaggerSystem.IsEquipped;
-
-            if (daggerPutAway)
-            {
-                var ctrl = BattleModeController.Instance;
-                if (ctrl != null && ctrl.HasSwitchedMode)
-                {
-                    Debug.LogWarning("[HackSlashCombatManager] 이미 모드 전환이 발생했습니다. 단검 수납 전환이 차단됩니다.");
-                    yield break;
-                }
-                _isModeTransitioning = true;
-                StartCoroutine(SwitchToTurnBased("단검을 집어넣었다..."));
-                yield break;
-            }
-
-            daggerWasEquipped = DaggerSystem.IsEquipped;
-            yield return _waitMonitorInterval;
-        }
-    }
-
     IEnumerator SwitchToTurnBased(string message)
     {
         BattleModeController.Instance?.SetSwitched();
@@ -263,12 +234,21 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void EndCombat(bool playerWon)
     {
-        if (playerWon && _activeEnemy != null)
+        // 사망 통보 시점에 _activeEnemy가 이미 null이 되므로 _enemyKilled 플래그로도 판정
+        int gainedXp = 0;
+        if (playerWon && (_enemyKilled || _activeEnemy != null))
         {
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
             PlayerStats.Instance?.AddPuppetizationOnKill();
+
+            // 경험치 — 전리품과 동일하게 DB 타입 ID 로 조회
+            gainedXp = EncounterManager.Instance?.enemyDatabase
+                           ?.GetXpReward(EncounterManager.currentEnemyTypeID) ?? 0;
+            int levelUps = PlayerGrowth.AddExp(gainedXp);
+            BattleSystem.ApplyLevelUpToPlayerStats(levelUps);
+
             var loot = EncounterManager.Instance?.enemyDatabase
-                           ?.GetLootTable(EncounterManager.currentEnemyID);
+                           ?.GetLootTable(EncounterManager.currentEnemyTypeID);
             if (loot != null)
             {
                 var drops = loot.RollDrops();
@@ -277,7 +257,7 @@ public class HackSlashCombatManager : MonoBehaviour
         }
 
         TeardownCombat(registerKill: false, destroyEnemy: playerWon);
-        ShowResult(playerWon);
+        ShowResult(playerWon, gainedXp);
     }
 
     /// <summary>공통 전투 종료 처리: 플래그 초기화, 컨트롤러·AI 비활성화, 쿨타임 설정.</summary>
@@ -306,9 +286,11 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     //  결과 표시
     // ─────────────────────────────────────────────
-    void ShowResult(bool playerWon)
+    void ShowResult(bool playerWon, int gainedXp = 0)
     {
-        ShowMessage(playerWon ? "⚔ 전투 승리!" : "💀 전투 패배...");
+        string msg = playerWon ? "⚔ 전투 승리!" : "💀 전투 패배...";
+        if (playerWon && gainedXp > 0) msg += $" 경험치 +{gainedXp}";
+        ShowMessage(msg);
         if (!playerWon)
             StartCoroutine(ShowGameOverAfterDelay(resultDisplayTime));
     }
@@ -362,7 +344,10 @@ public class HackSlashCombatManager : MonoBehaviour
     public void NotifyEnemyDead(GameObject enemy)
     {
         if (_isCombatActive && enemy == _activeEnemy)
+        {
+            _enemyKilled = true;
             _activeEnemy = null; // CombatLoop가 다음 체크에서 EndCombat 호출
+        }
     }
 
     /// <summary>마시멜로 섭취 버튼 클릭 시 호출됩니다.</summary>

@@ -72,6 +72,19 @@ public class AddColliders
                 Debug.Log($"[AddColliders] 콜라이더 건너뜀 (이미 있음): {obj.name}");
             }
 
+            // isTrigger=true 콜라이더 없으면 트리거용 BoxCollider2D 추가
+            bool hasTrigger = false;
+            foreach (var col in obj.GetComponents<Collider2D>())
+                if (col.isTrigger) { hasTrigger = true; break; }
+
+            if (!hasTrigger)
+            {
+                var triggerCol = Undo.AddComponent<BoxCollider2D>(obj);
+                triggerCol.isTrigger = true;
+                Debug.Log($"[AddColliders] BoxCollider2D(trigger) 추가됨: {obj.name}");
+                addedColliders++;
+            }
+
             // SpriteRenderer / UI Image / UI RawImage 중 하나라도 있으면 WorldObject 추가
             if ((obj.GetComponent<SpriteRenderer>()         != null ||
                  obj.GetComponent<UnityEngine.UI.Image>()    != null ||

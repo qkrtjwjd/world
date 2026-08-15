@@ -10,7 +10,7 @@ using UnityEngine;
 ///   F2 → 게이지 25
 ///   F3 → 게이지 50
 ///   F4 → 게이지 75
-///   F5 → 게이지 100 (완전 현실)
+///   F6 → 게이지 100 (완전 현실) — F5는 빠른 저장 기본 키라 제외
 ///   ← / → → ±5 조정
 ///   Shift + ← / → → ±1 조정
 /// </summary>
@@ -28,7 +28,7 @@ public class DebugGaugeController : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.F2))         { gm.SetGaugeValue(25f);  Log(gm, "F2"); }
         else if (Input.GetKeyDown(KeyCode.F3))         { gm.SetGaugeValue(50f);  Log(gm, "F3"); }
         else if (Input.GetKeyDown(KeyCode.F4))         { gm.SetGaugeValue(75f);  Log(gm, "F4"); }
-        else if (Input.GetKeyDown(KeyCode.F5))         { gm.SetGaugeValue(100f); Log(gm, "F5"); }
+        else if (Input.GetKeyDown(KeyCode.F6))         { gm.SetGaugeValue(100f); Log(gm, "F6"); }
         else if (Input.GetKeyDown(KeyCode.LeftArrow))  { gm.ChangeGauge(-step);  Log(gm, $"←{step}"); }
         else if (Input.GetKeyDown(KeyCode.RightArrow)) { gm.ChangeGauge( step);  Log(gm, $"→{step}"); }
     }

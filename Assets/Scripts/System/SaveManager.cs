@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class SaveManager : MonoBehaviour
+public class SaveManager : PersistentSingleton<SaveManager>
 {
-    public static SaveManager Instance;
-
     public float currentPlayTime = 0f;
 
     // 로딩 중 임시 보관
@@ -19,23 +17,25 @@ public class SaveManager : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Instance = null;
 
-    private void Awake()
+    protected override void OnAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            SceneManager.sceneLoaded += OnSceneLoaded;
-        }
-        else Destroy(gameObject);
+        SceneManager.sceneLoaded       += OnSceneLoaded;
+        DialogueEvents.OnDialogueEnded += OnDialogueEnded;
     }
 
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
-        if (Instance != this) return;
-        Instance = null;
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (Instance == this)
+        {
+            SceneManager.sceneLoaded       -= OnSceneLoaded;
+            DialogueEvents.OnDialogueEnded -= OnDialogueEnded;
+        }
+        base.OnDestroy();
     }
+
+    // 대화 중 설정된 목표(yarn <<showObjective>> 등)는 IsRunning 가드에 막혀 체크포인트가 스킵됨.
+    // 대화 경계에서 한 번 보정 저장해 컷씬 진행 구간의 체크포인트 공백을 메운다.
+    void OnDialogueEnded() => SaveCheckpoint("대화 종료");
 
     private void Update()
     {
@@ -55,9 +55,15 @@ public class SaveManager : MonoBehaviour
             sceneName  = SceneManager.GetActiveScene().name,
             playTime   = currentPlayTime,
             saveDate   = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
+            saveTicks  = System.DateTime.Now.Ticks,
             corruption = CorruptionManager.Instance != null
                          ? CorruptionManager.Instance.currentCorruption : 0f,
         };
+
+        data.playerLevel    = PlayerGrowth.Level;
+        data.playerExp      = PlayerGrowth.Exp;
+        data.journalEntries = JournalManager.BuildSaveList();
+        data.playerName     = PlayerIdentity.Name;
 
         GameObject player = GameObject.FindGameObjectWithTag("Player");
         if (player != null)
@@ -73,26 +79,43 @@ public class SaveManager : MonoBehaviour
 
         if (GameState.player.IsInitialized)
         {
-            data.health        = GameState.player.health;
-            data.mental        = GameState.player.mental;
-            data.puppetization = GameState.player.puppetization;
+            data.health = GameState.player.health;
+            data.mental = GameState.player.mental;
         }
         else
         {
-            data.health        = 100f;
-            data.mental        = 100f;
-            data.puppetization = 0f;
+            data.health = 100f;
+            data.mental = 100f;
         }
+        // 인형화는 CorruptionManager 가 단일 소스 — corruption 과 동일 값 기록 (구버전 빌드 호환용 필드 유지)
+        data.puppetization = data.corruption;
 
         data.isNightSequenceWatched = GameState.isNightSequenceWatched;
         data.isResolved              = GameState.isResolved;
         data.isBreakfastWatched     = GameState.isBreakfastWatched;
         data.isZombieDefeated        = GameState.isZombieDefeated;
+        data.tutorialBattleStep      = GameState.tutorialBattleStep;
+        data.isBreadDoughAcquired    = GameState.isBreadDoughAcquired;
+        data.hasMerchantMetAtSquare  = GameState.hasMerchantMetAtSquare;
+        data.isAtticKeyFound         = GameState.isAtticKeyFound;
+        data.isDaggerAcquired        = GameState.isDaggerAcquired;
+        data.isAtticBoxOpened        = GameState.isAtticBoxOpened;
+        data.isAtticRadioPlayed      = GameState.isAtticRadioPlayed;
+        data.isWorkbenchLocked       = GameState.isWorkbenchLocked;
+        data.isYardSugarSeen         = GameState.isYardSugarSeen;
+        data.isSeraOut               = GameState.isSeraOut;
+        data.isDoorknobRefused       = GameState.isDoorknobRefused;
+        data.isFrontDoorKeyFound     = GameState.isFrontDoorKeyFound;
+        data.isDaggerToggleUnlocked  = GameState.isDaggerToggleUnlocked;
 
         foreach (string id in GameState.defeatedEnemyIDs)
             data.defeatedEnemyIDs.Add(id);
         foreach (string key in GameState.chosenDialogueKeys)
             data.chosenDialogueKeys.Add(key);
+
+        if (GameStateManager.Instance != null)
+            foreach (var kvp in GameStateManager.Instance.flags)
+                data.dynamicFlags.Add(new FlagEntry { key = kvp.Key, value = kvp.Value });
 
         return data;
     }
@@ -104,6 +127,9 @@ public class SaveManager : MonoBehaviour
         PlayerPrefs.Save();
         Dbg.Log($"[SaveManager] 슬롯 {slot} 저장 완료");
     }
+
+    /// <summary>전투 직전 저장 데이터가 존재하는지 여부. GameOverUI가 불러오기 가능 여부 판단에 사용.</summary>
+    public bool HasPreBattleSave => PlayerPrefs.HasKey(PreBattleKey);
 
     /// <summary>전투 직전 상태를 별도 키에 저장합니다. 사망 시 이 지점으로 복귀합니다.</summary>
     public void SavePreBattle()
@@ -130,6 +156,74 @@ public class SaveManager : MonoBehaviour
         else
             SceneManager.LoadScene(data.sceneName);
     }
+
+    // ─────────────────────────────────────────────
+    //  체크포인트 자동 저장
+    // ─────────────────────────────────────────────
+    // PreBattleKey 와 별도 키 — 전투 전 저장은 '전투 직전' 의미를 보존해야 하므로 덮어쓰지 않음
+    const string CheckpointKey      = "CheckpointSave";
+    const float  CheckpointDebounce = 5f;
+    float _lastCheckpointRealtime = -999f;
+
+    /// <summary>체크포인트 저장 데이터가 존재하는지 여부.</summary>
+    public bool HasCheckpointSave => PlayerPrefs.HasKey(CheckpointKey);
+
+    public enum CheckpointResult { Saved, Busy, NotGameplay, Debounced }
+
+    /// <summary>
+    /// 씬 이동·목표 갱신·대화 종료·빠른 저장 시점의 자동 저장.
+    /// </summary>
+    /// <param name="bypassDebounce">수동 빠른 저장처럼 명시적 요청이면 true — 5초 디바운스를 건너뜁니다.</param>
+    /// <returns>저장 결과. 빠른 저장 토스트 문구 분기에 사용.</returns>
+    public CheckpointResult SaveCheckpoint(string reason, bool bypassDebounce = false)
+    {
+        if (_isLoading || BattleSystem.IsActive || HackSlashCombatManager.IsActive || YarnDialogue.IsRunning)
+            return CheckpointResult.Busy;
+        if (!IsGameplayScene(SceneManager.GetActiveScene().name))
+            return CheckpointResult.NotGameplay;
+        // 플레이어가 아직 씬에 없으면(스폰 지연) 위치가 (0,0,0)으로 저장되는 것을 방지
+        if (GameObject.FindGameObjectWithTag("Player") == null)
+            return CheckpointResult.Busy;
+        if (!bypassDebounce && Time.realtimeSinceStartup - _lastCheckpointRealtime < CheckpointDebounce)
+            return CheckpointResult.Debounced;
+
+        _lastCheckpointRealtime = Time.realtimeSinceStartup;
+        SaveData data = BuildSaveData();
+        PlayerPrefs.SetString(CheckpointKey, JsonUtility.ToJson(data));
+        PlayerPrefs.Save();
+        Dbg.Log($"[SaveManager] 체크포인트 저장 완료 ({reason})");
+        return CheckpointResult.Saved;
+    }
+
+    /// <summary>체크포인트 저장 데이터를 불러옵니다. 데이터가 없으면 경고 후 무시합니다.</summary>
+    public void LoadCheckpoint()
+    {
+        if (!PlayerPrefs.HasKey(CheckpointKey))
+        {
+            Debug.LogWarning("[SaveManager] 체크포인트 저장 데이터가 없습니다.");
+            return;
+        }
+        SaveData data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(CheckpointKey));
+        _pendingData = data;
+        _isLoading   = true;
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(data.sceneName);
+        else
+            SceneManager.LoadScene(data.sceneName);
+    }
+
+    /// <summary>복구 지점 비교용 데이터 조회 (적용하지 않음). GameOverUI가 saveTicks 최신 판정에 사용.</summary>
+    public SaveData GetPreBattleData()
+        => PlayerPrefs.HasKey(PreBattleKey)
+           ? JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(PreBattleKey)) : null;
+
+    public SaveData GetCheckpointData()
+        => PlayerPrefs.HasKey(CheckpointKey)
+           ? JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(CheckpointKey)) : null;
+
+    static bool IsGameplayScene(string name)
+        => name == SceneNames.Home || name == SceneNames.Map
+        || name == SceneNames.DarkReality || name == SceneNames.Shelter;
 
     // ─────────────────────────────────────────────
     //  데이터 조회 (UI 표시용)
@@ -162,8 +256,27 @@ public class SaveManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (!_isLoading || _pendingData == null) return;
-        StartCoroutine(RestoreRoutine(_pendingData));
+        if (_isLoading && _pendingData != null)
+        {
+            StartCoroutine(RestoreRoutine(_pendingData));
+            return;
+        }
+
+        // 일반 씬 이동(로딩 아님) 완료 시 체크포인트 자동 저장.
+        // RoomTransfer(같은 씬 내 방 이동)는 sceneLoaded 를 발생시키지 않아 자연 제외.
+        if (IsGameplayScene(scene.name))
+            StartCoroutine(CheckpointAfterSceneLoad());
+    }
+
+    IEnumerator CheckpointAfterSceneLoad()
+    {
+        // 플레이어 스폰까지 대기 — 위치가 (0,0,0)으로 저장되는 것 방지 (RestoreRoutine 과 같은 정책)
+        for (int i = 0; i < 15; i++)
+        {
+            if (GameObject.FindGameObjectWithTag("Player") != null) break;
+            yield return null;
+        }
+        SaveCheckpoint("씬 이동");
     }
 
     IEnumerator RestoreRoutine(SaveData data)
@@ -178,7 +291,10 @@ public class SaveManager : MonoBehaviour
 
         // ── 위치 ──
         if (player != null)
+        {
             player.transform.position = new Vector3(data.playerX, data.playerY, data.playerZ);
+            CameraFollow.Instance?.SnapCameraToFollow();
+        }
         else
             Debug.LogWarning("[SaveManager] 플레이어를 찾지 못했습니다.");
 
@@ -186,32 +302,116 @@ public class SaveManager : MonoBehaviour
         if (CorruptionManager.Instance != null)
             CorruptionManager.Instance.LoadCorruption(data.corruption);
 
-        // ── 스탯 ──
+        // ── 스탯 ── (인형화는 corruption 필드가 진실 — 구버전 세이브에서 두 값이 다르면 corruption 채택)
         GameState.player = new GameState.PlayerState
         {
             health        = data.health,
             mental        = data.mental,
-            puppetization = data.puppetization,
+            puppetization = data.corruption,
         };
+
+        // ── 마이그레이션: 구버전 세이브 누락 필드 기본값 채우기 ──
+        if (data.saveVersion < 4)
+        {
+            data.isAtticKeyFound    = false;
+            data.isDaggerAcquired   = false;
+            data.isAtticRadioPlayed = false;
+            data.isWorkbenchLocked  = true;
+        }
+        if (data.saveVersion < 5)
+        {
+            data.isAtticBoxOpened = false;
+        }
+        if (data.saveVersion < 6)
+        {
+            data.playerLevel    = 1;
+            data.playerExp      = 0;
+            data.journalEntries = new List<JournalEntrySave>();
+            data.saveTicks      = 0;
+        }
+        if (data.saveVersion < 7)
+        {
+            // 이름 입력 기능 이전의 세이브 — 주인공은 항상 "루" 였다
+            data.playerName = PlayerIdentity.DefaultName;
+        }
+        if (data.saveVersion < 8)
+        {
+            // D 정본(2026-08-07) 이전의 세이브. S#04F~S#13 구조가 통째로 바뀌었으므로
+            // 진행 상태를 추정하지 않고 전부 false 로 둔다.
+            // 단검을 이미 얻은 세이브라면 필터 토글은 열려 있어야 하므로 그것만 승계한다.
+            data.isYardSugarSeen         = false;
+            data.isSeraOut               = false;
+            data.isDoorknobRefused       = false;
+            data.isFrontDoorKeyFound     = false;
+            data.isDaggerToggleUnlocked  = data.isDaggerAcquired;
+        }
+
+        // ── 성장 복원 ──
+        PlayerGrowth.Load(data.playerLevel, data.playerExp);
+
+        // ── 주인공 이름 복원 ──
+        PlayerIdentity.Load(data.playerName);
+
+        // ── 저널 복원 ──
+        JournalManager.Load(data.journalEntries);
 
         // ── 스토리 플래그 ──
         GameState.isNightSequenceWatched = data.isNightSequenceWatched;
         GameState.isResolved              = data.isResolved;
         GameState.isBreakfastWatched     = data.isBreakfastWatched;
         GameState.isZombieDefeated        = data.isZombieDefeated;
+        GameState.tutorialBattleStep      = data.tutorialBattleStep;
+        GameState.isBreadDoughAcquired    = data.isBreadDoughAcquired;
+        GameState.hasMerchantMetAtSquare  = data.hasMerchantMetAtSquare;
+        GameState.isAtticKeyFound         = data.isAtticKeyFound;
+        GameState.isDaggerAcquired        = data.isDaggerAcquired;
+        GameState.isAtticBoxOpened        = data.isAtticBoxOpened;
+        GameState.isAtticRadioPlayed      = data.isAtticRadioPlayed;
+        GameState.isWorkbenchLocked       = data.isWorkbenchLocked;
+        GameState.isYardSugarSeen         = data.isYardSugarSeen;
+        GameState.isSeraOut               = data.isSeraOut;
+        GameState.isDoorknobRefused       = data.isDoorknobRefused;
+        GameState.isFrontDoorKeyFound     = data.isFrontDoorKeyFound;
+        GameState.isDaggerToggleUnlocked  = data.isDaggerToggleUnlocked;
+
+        // ── 단검 장착 상태 복원 (DontDestroyOnLoad 라 세션 상태가 세이브와 어긋날 수 있음) ──
+        if (DaggerSystem.Instance != null)
+        {
+            if (GameState.isDaggerAcquired) DaggerSystem.Instance.Equip();
+            else                            DaggerSystem.Instance.Unequip();
+        }
 
         // ── 처치된 적 ID ──
         GameState.defeatedEnemyIDs   = new System.Collections.Generic.HashSet<string>(data.defeatedEnemyIDs);
         GameState.chosenDialogueKeys = new System.Collections.Generic.HashSet<string>(data.chosenDialogueKeys);
+
+        // ── 동적 플래그 ──
+        if (GameStateManager.Instance != null)
+        {
+            if (data.dynamicFlags != null && data.dynamicFlags.Count > 0)
+            {
+                var dict = new Dictionary<string, bool>();
+                foreach (var entry in data.dynamicFlags)
+                    dict[entry.key] = entry.value;
+                GameStateManager.Instance.LoadFlags(dict);
+            }
+            else
+            {
+                // 구버전 세이브(dynamicFlags 없음): 현재 세션 플래그가 남지 않게 초기값으로 리셋
+                if (FlagManager.Instance != null)
+                    FlagManager.Instance.ResetToDefaults();
+                else
+                    GameStateManager.Instance.flags.Clear();
+            }
+        }
         // ── PlayerStats 즉시 반영 ──
         if (player != null)
         {
             PlayerStats stats = player.GetComponent<PlayerStats>();
             if (stats != null)
             {
-                stats.currentHealth      = data.health;
-                stats.currentMental      = data.mental;
-                stats.currentPuppetization = data.puppetization;
+                stats.currentHealth = data.health;
+                stats.currentMental = data.mental;
                 stats.UpdateUI(true);
             }
         }
@@ -231,11 +431,40 @@ public class SaveManager : MonoBehaviour
             InventoryManager.Instance.UpdateSlotUI();
         }
 
+        // ── 플레이타임 복원 (재저장 시 누적 시간이 세션 시간으로 덮이는 것 방지) ──
+        currentPlayTime = data.playTime;
+
         // ── 완료 ──
         Time.timeScale = 1f;
         _isLoading     = false;
         _pendingData   = null;
         Dbg.Log("[SaveManager] 불러오기 완료");
+    }
+
+    // ─────────────────────────────────────────────
+    //  삭제
+    // ─────────────────────────────────────────────
+    /// <summary>지정 슬롯의 저장 데이터를 삭제합니다.</summary>
+    public void DeleteSlot(int slot)
+    {
+        string key = SlotKey(slot);
+        if (PlayerPrefs.HasKey(key))
+        {
+            PlayerPrefs.DeleteKey(key);
+            PlayerPrefs.Save();
+            Dbg.Log($"[SaveManager] 슬롯 {slot} 삭제 완료");
+        }
+    }
+
+    /// <summary>모든 슬롯(0~2) 및 전투 전·체크포인트 저장 데이터를 삭제합니다.</summary>
+    public void DeleteAllSlots()
+    {
+        for (int i = 0; i < 3; i++)
+            PlayerPrefs.DeleteKey(SlotKey(i));
+        PlayerPrefs.DeleteKey(PreBattleKey);
+        PlayerPrefs.DeleteKey(CheckpointKey);
+        PlayerPrefs.Save();
+        Dbg.Log("[SaveManager] 모든 슬롯 삭제 완료");
     }
 
     // ─────────────────────────────────────────────

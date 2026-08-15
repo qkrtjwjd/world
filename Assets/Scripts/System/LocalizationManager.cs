@@ -6,10 +6,8 @@ using UnityEngine;
 /// JSON 키를 평탄화(flatten)해서 딕셔너리로 저장합니다.
 /// 아이템이 늘어나도 이 스크립트를 건드릴 필요가 없습니다.
 /// </summary>
-public class LocalizationManager : MonoBehaviour
+public class LocalizationManager : PersistentSingleton<LocalizationManager>
 {
-    public static LocalizationManager Instance;
-
     public enum Language { KO, EN, JP }
     public Language currentLanguage = Language.KO;
 
@@ -19,18 +17,9 @@ public class LocalizationManager : MonoBehaviour
     private Dictionary<Language, Dictionary<string, string>> _cache
         = new Dictionary<Language, Dictionary<string, string>>();
 
-    void Awake()
+    protected override void OnAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            LoadLanguage(currentLanguage);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        LoadLanguage(currentLanguage);
     }
 
     public void ChangeLanguage(Language lang)

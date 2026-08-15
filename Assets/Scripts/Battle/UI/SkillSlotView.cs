@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 스킬 퀵슬롯의 개별 슬롯. 아이콘, 쿨다운 라디얼 오버레이, 회색(사용불가) 표시, 클릭 처리.
@@ -12,11 +13,14 @@ public class SkillSlotView : MonoBehaviour
     [Tooltip("스킬 아이콘 표시. SkillData에 icon 필드가 없는 현 시점에는 비워두어도 됨.")]
     public Image iconImage;
 
+    [Tooltip("스킬 이름 표시. SkillData.displayName이 들어갑니다.")]
+    public TMP_Text nameText;
+
     [Tooltip("쿨다운 라디얼 오버레이. Image.fillAmount 0~1로 표시됨. (Filled type, Radial)")]
     public Image cooldownOverlay;
 
     [Tooltip("쿨다운 잔여 턴 수 텍스트 (선택).")]
-    public Text cooldownText;
+    public TMP_Text cooldownText;
 
     [Tooltip("MP 부족 / 쿨다운 중일 때 적용할 회색 틴트.")]
     public Color disabledTint = new Color(0.5f, 0.5f, 0.5f, 1f);
@@ -45,6 +49,9 @@ public class SkillSlotView : MonoBehaviour
         // 아이콘 (SkillData에 icon이 없으면 비활성)
         if (iconImage != null) iconImage.enabled = false;
 
+        // 이름 — 아이콘이 없는 현 시점에는 슬롯을 구분하는 유일한 단서
+        if (nameText != null) nameText.text = skill != null ? skill.displayName : "";
+
         UpdateState();
     }
 
@@ -67,6 +74,10 @@ public class SkillSlotView : MonoBehaviour
 
         if (iconImage != null)
             iconImage.color = canUse ? enabledTint : disabledTint;
+
+        // 아이콘이 꺼져 있는 동안에는 이름 색이 사용 가능 여부를 보여주는 유일한 표시
+        if (nameText != null)
+            nameText.color = canUse ? enabledTint : disabledTint;
 
         if (cooldownOverlay != null)
         {

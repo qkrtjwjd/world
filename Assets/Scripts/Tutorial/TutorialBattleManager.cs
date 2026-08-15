@@ -88,6 +88,7 @@ public class TutorialBattleManager : MonoBehaviour
         }
 
         // 턴제 강제 시작 (내부에서 PlayerInputLock.Lock, timeScale=0 처리)
+        HintManager.ShowHint("battle_turnbased", "턴제 전투: 스킬을 선택해 공격하세요.", 5f);
         EncounterManager.Instance.ForceStartTurnBased(battle1EnemyPrefab, "tutorial_battle_1");
 
         // 전투 종료를 이벤트로 감지
@@ -139,6 +140,7 @@ public class TutorialBattleManager : MonoBehaviour
         }
 
         // 핵앤슬래시 강제 시작
+        HintManager.ShowHint("battle_hns", "핵앤슬래시 전투: 이동하며 직접 공격하세요.", 5f);
         EncounterManager.Instance.ForceStartHackSlash(
             enemyObject, battle2EnemyPrefab, "tutorial_battle_2");
 

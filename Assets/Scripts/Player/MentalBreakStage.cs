@@ -28,6 +28,7 @@ public class MentalBreakStage : MonoBehaviour
     private static readonly WaitForSeconds WaitFlashReality   = new WaitForSeconds(0.3f);
     private static readonly WaitForSeconds WaitWhisper        = new WaitForSeconds(2f);
     private static readonly WaitForSeconds WaitInvertControls = new WaitForSeconds(1.5f);
+    private static readonly WaitForSeconds WaitStrongGlitch   = new WaitForSeconds(2f);
 
     private readonly string[] _whispers =
         { "뒤를 봐", "도망쳐", "눈을 감아", "여기야", "도망가", "멈춰", "조심해" };
@@ -84,6 +85,9 @@ public class MentalBreakStage : MonoBehaviour
             case MentalStage.Panic:
             case MentalStage.Collapse:
                 RestartHallucinationLoop();
+                // 불안/공황 구간 진입 시 붉은 심박 테두리 펄스
+                // (screenEdgeEffectEnabled=false면 내부에서 자동 무시됨)
+                ScreenEdgeEffectController.ShowHeartbeat();
                 break;
         }
     }
@@ -148,12 +152,13 @@ public class MentalBreakStage : MonoBehaviour
 
     IEnumerator RunRandomHallucination()
     {
-        int pick = Random.Range(0, 3);
+        int pick = Random.Range(0, 4);
         switch (pick)
         {
             case 0: yield return StartCoroutine(FlashReality());   break;
             case 1: yield return StartCoroutine(ShowWhisper());    break;
             case 2: yield return StartCoroutine(InvertControls()); break;
+            case 3: yield return StartCoroutine(StrongGlitch());   break;
         }
     }
 
@@ -183,10 +188,29 @@ public class MentalBreakStage : MonoBehaviour
         _controlsInverted = true;
         _playerController.walkSpeed *= -1f;
 
+        // 조작 반전 알림 (설정으로 끌 수 있음)
+        bool showAlert = SettingsManager.Instance?.showInputReverseAlert ?? true;
+        if (showAlert && InteractionTextUI.Instance != null)
+            InteractionTextUI.Instance.Show("조작이 뒤틀린다...");
+
         yield return WaitInvertControls;
 
-        if (_playerController != null)
-            _playerController.walkSpeed *= -1f;
-        _controlsInverted = false;
+        // StopHallucinationLoop이 먼저 복원한 경우(_controlsInverted=false) 이중 반전 방지
+        if (_controlsInverted)
+        {
+            if (_playerController != null)
+                _playerController.walkSpeed *= -1f;
+            _controlsInverted = false;
+        }
+
+        if (showAlert && InteractionTextUI.Instance != null)
+            InteractionTextUI.Instance.Hide();
+    }
+
+    IEnumerator StrongGlitch()
+    {
+        if (GlitchManager.Instance == null) yield break;
+        GlitchManager.Instance.PlayGlitch(2f, GlitchManager.PresetStrong);
+        yield return WaitStrongGlitch;
     }
 }

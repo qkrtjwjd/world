@@ -173,7 +173,14 @@ public class GlitchManager : MonoBehaviour
 
     void ApplyPreset(GlitchPreset p, float noise, float envelope)
     {
-        float scale = noise * envelope;
+        // 접근성: 글리치 완전 비활성화 시 즉시 끄기
+        if (SettingsManager.Instance != null && SettingsManager.Instance.glitchEffectDisabled)
+        {
+            _feature?.SetActive(false);
+            return;
+        }
+        float intensityMul = SettingsManager.Instance?.glitchEffectIntensity ?? 1f;
+        float scale = noise * envelope * intensityMul;
         _glitchMat.SetFloat(PropIntensity,      p.intensity      * scale);
         _glitchMat.SetFloat(PropColorDrift,     p.colorDrift     * scale);
         _glitchMat.SetFloat(PropScanLineJitter, p.scanLineJitter * scale);

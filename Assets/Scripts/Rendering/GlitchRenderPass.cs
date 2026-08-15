@@ -59,5 +59,9 @@ public class GlitchRenderPass : ScriptableRenderPass
     }
 
     /// <summary>GlitchRenderFeature.Dispose 에서 호출.</summary>
-    public void Cleanup() { }
+    public void Cleanup()
+    {
+        // _GlitchTemp TextureHandle은 RenderGraph가 수명을 관리하므로 별도 해제 불필요.
+        // Material은 GlitchRenderFeature 소유이므로 여기서 해제하지 않음.
+    }
 }

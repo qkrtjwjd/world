@@ -3,8 +3,7 @@ using UnityEngine;
 /// <summary>
 /// 단검 장착/해제 상태를 관리합니다.
 /// - 외부에서 Equip/Unequip 직접 호출
-/// - 판타지 전투 중 장착 → 핵앤슬래시 강제 전환 트리거
-/// - 현실 전투 중 해제 → 턴제 강제 전환 트리거
+/// - FrontDoorInteraction·BakeryNPC 등이 IsEquipped 로 진행 분기
 /// </summary>
 public class DaggerSystem : MonoBehaviour
 {
@@ -23,12 +22,6 @@ public class DaggerSystem : MonoBehaviour
     {
         if (_instance == null) { _instance = this; DontDestroyOnLoad(gameObject); }
         else if (_instance != this) { Destroy(gameObject); return; }
-    }
-
-    public void Toggle()
-    {
-        _isDaggerEquipped = !_isDaggerEquipped;
-        Dbg.Log($"[DaggerSystem] 단검 {(_isDaggerEquipped ? "장착" : "해제")}");
     }
 
     public void Equip()   => _isDaggerEquipped = true;

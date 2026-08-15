@@ -117,6 +117,12 @@ public class GaugeSliderUI : MonoBehaviour
 
         if (CorruptionManager.Instance != null)
             CorruptionManager.Instance.OnCorruptionChanged += OnDollificationChanged;
+
+        // 인형화 게이지 가시성 설정 구독
+        SettingsManager.OnShowDollificationGaugeChanged += OnDollificationGaugeVisibilityChanged;
+        // 시작 시 즉시 반영
+        if (SettingsManager.Instance != null && !SettingsManager.Instance.showDollificationGauge)
+            SetCorruptionVisible(false);
     }
 
     void OnDestroy()
@@ -132,6 +138,8 @@ public class GaugeSliderUI : MonoBehaviour
 
         if (CorruptionManager.Instance != null)
             CorruptionManager.Instance.OnCorruptionChanged -= OnDollificationChanged;
+
+        SettingsManager.OnShowDollificationGaugeChanged -= OnDollificationGaugeVisibilityChanged;
     }
 
     // ─────────────────────────────────────────────
@@ -206,6 +214,10 @@ public class GaugeSliderUI : MonoBehaviour
     {
         if (GaugeManager.Instance == null) return;
 
+        // 인형화 게이지 표시 설정이 꺼져 있으면 셰이더 업데이트 건너뜀
+        bool dollVisible = SettingsManager.Instance?.showDollificationGauge ?? true;
+        if (!dollVisible) return;
+
         float corruption = GaugeManager.Instance.dollificationGauge;
 
         if (GaugeManager.Instance.isGaugeVisible)
@@ -214,6 +226,24 @@ public class GaugeSliderUI : MonoBehaviour
         if (_eclipseMat != null)
             _eclipseMat.SetFloat(PropCorruptionLevel, corruption);
         _glowMat?.SetFloat(PropCorruptionLevel, corruption);
+    }
+
+    /// <summary>설정 메뉴에서 인형화 게이지 표시 토글 시 호출됩니다.</summary>
+    void OnDollificationGaugeVisibilityChanged(bool visible)
+    {
+        SetCorruptionVisible(visible);
+    }
+
+    /// <summary>인형화 수치 시각화(셰이더 CorruptionLevel)를 켜거나 끕니다.</summary>
+    void SetCorruptionVisible(bool visible)
+    {
+        float level = visible && GaugeManager.Instance != null
+            ? GaugeManager.Instance.dollificationGauge
+            : 0f;
+
+        if (_eclipseMat != null)
+            _eclipseMat.SetFloat(PropCorruptionLevel, level);
+        _glowMat?.SetFloat(PropCorruptionLevel, level);
     }
 
 }

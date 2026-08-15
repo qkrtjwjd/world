@@ -55,29 +55,55 @@ public class LockedDoorInteraction : MonoBehaviour
         var trigger = GetComponent<InteractionTrigger>();
         if (trigger != null) trigger.enabled = false;
 
-        if (targetLocation == null) return;
-        Transform player = GetPlayerTransform();
-        if (player == null) return;
-
-        Transform playerRef = player;
-        Transform dest = targetLocation;
-        RoomTransfer room = targetLocation.GetComponentInParent<RoomTransfer>();
-
-        TransitionManager.Instance?.DoTransition(() =>
-        {
-            playerRef.position = dest.position;
-            if (room != null)
-            {
-                room.EnterRoom();
-                CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
-            }
-            else
-            {
-                CameraFollow.Instance?.SetBound(null, snap: true);
-            }
-        });
-
         InteractionManager.Instance?.SetCooldown(1.5f);
+
+        if (AtticDoorCutscene.Instance != null)
+        {
+            Transform playerRef = GetPlayerTransform();
+            Transform dest      = targetLocation;
+            RoomTransfer room   = targetLocation != null
+                                  ? targetLocation.GetComponentInParent<RoomTransfer>()
+                                  : null;
+
+            StartCoroutine(AtticDoorCutscene.Instance.PlayCutscene(() =>
+            {
+                if (playerRef != null && dest != null)
+                    playerRef.position = dest.position;
+
+                if (room != null)
+                {
+                    room.EnterRoom();
+                    CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
+                }
+                else
+                {
+                    CameraFollow.Instance?.SetBound(null, snap: true);
+                }
+            }));
+        }
+        else
+        {
+            if (targetLocation == null) return;
+            Transform playerRef = GetPlayerTransform();
+            if (playerRef == null) return;
+
+            Transform dest = targetLocation;
+            RoomTransfer room = targetLocation.GetComponentInParent<RoomTransfer>();
+
+            TransitionManager.Instance?.DoTransition(() =>
+            {
+                playerRef.position = dest.position;
+                if (room != null)
+                {
+                    room.EnterRoom();
+                    CameraFollow.Instance?.SetBound(room.roomBound, snap: true);
+                }
+                else
+                {
+                    CameraFollow.Instance?.SetBound(null, snap: true);
+                }
+            });
+        }
     }
 
     static Transform GetPlayerTransform()

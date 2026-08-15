@@ -145,4 +145,14 @@ MonoBehaviour:
   sounds:
   - name: doorClose
     clip: {fileID: 8300000, guid: 6a71b96b74987224eb39a6fbd634c834, type: 3}
+    loop: 0
+    category: 0
+  - name: ceramic_tap
+    clip: {fileID: 0}
+    loop: 0
+    category: 0
+  - name: 콰직
+    clip: {fileID: 8300000, guid: b877836319a2b7b429c32023254e3bf6, type: 3}
+    loop: 0
+    category: 0
   audioSource: {fileID: 0}

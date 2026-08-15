@@ -23,6 +23,10 @@ public class SkillData : ScriptableObject
     public float damageMultiplier = 1.0f;
     [Tooltip("회복형 스킬일 경우 회복량 (양수). 0이면 회복 효과 없음.")]
     public int   healAmount = 0;
+    [Tooltip("시전 시 플레이어에게 적용할 버프/디버프 목록 (BuffManager). duration은 초 단위 — 턴제에서는 1턴 ≈ 2초.")]
+    public System.Collections.Generic.List<BuffInfo> buffs = new System.Collections.Generic.List<BuffInfo>();
+    [Tooltip("공감 게이지 증가량 (평화 루트 스킬). 0이면 효과 없음. 기본 교감(특수 행동)은 +20.")]
+    public int   empathyGain = 0;
 
     [Header("타깃")]
     public SkillTargetType targetType = SkillTargetType.SingleEnemy;

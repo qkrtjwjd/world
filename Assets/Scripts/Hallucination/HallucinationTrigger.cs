@@ -77,9 +77,6 @@ namespace HallucinationSystem
                         Collider col = GetComponent<Collider>();
                         if (col != null) col.enabled = false;
                     }
-                    
-                    // 게임 오브젝트를 파괴하고 싶다면 아래 주석 해제
-                    // Destroy(gameObject);
                 }
             }
             else

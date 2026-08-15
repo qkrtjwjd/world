@@ -1,0 +1,50 @@
+title: House_lu_marshmallow
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: 책상위에 마시멜로가 놓여있다
+{$이름}: 엄마가 놓고 갔나
+===
+title: House_lu_star
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: 야광별 스티커다
+{$이름}: 벽을 볼수 없는 날이면 아빠랑 같이 붙였었는데, 별자리도 알려주셨었지
+<<showSprite "루" "eyes_closed" "right">>
+{$이름}: <i>지금은 다 까먹었지만</i>
+===
+title: House_lu_star1
+---
+<<showSprite "루" "neutral" "right">>
+<<if $심리게이지 >= 70>>
+    {$이름}: 다시 별을 볼수 있을려나..
+<<elseif $심리게이지 >= 30>>
+    {$이름}: 불을 끄면 빛났었지. 아직도 빛날려나
+<<else>>
+    {$이름}: 불을 끄면 빛났었지. 아직도 빛날려나
+<<endif>>
+===
+title: House_lu_star_r
+---
+유(라디오): <i><color=\#d4c97a>야광별이 아직도 있어? 비오는 날이면 별보고 싶다고 펑펑 울었었지~</color></i>
+<<showSprite "루" "flustered" "right">>
+{$이름}: 안.. 울었었거든요!
+===
+title: House_lu_toybox
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: 장난감 상자다
+{$이름}: 예전에는 많이 가지고 놀았었는데, 지금은 가지고 놀지 않았지
+<<showSprite "루" "puzzled" "right">>
+{$이름}: ...치우기 귀찮아서 그냥 뒀었나
+===
+title: House_lu_sofa
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: 커다란 쇼파다
+{$이름}: 엄마가 책 읽어줄때 여기 같이 앉아 엄마한테 기대면 딱 좋았었지
+===
+title: House_lu_toybox1
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: <i>여전히 혼자 앉긴 크다</i>
+===

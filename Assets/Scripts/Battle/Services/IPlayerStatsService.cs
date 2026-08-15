@@ -15,5 +15,5 @@ public interface IPlayerStatsService
 
     void AddPuppetization(float amount);
     void ReducePuppetization(float amount);
-    void AddPuppetizationOnKill();
+    void AddPuppetizationOnKill(float multiplier = 1f);
 }

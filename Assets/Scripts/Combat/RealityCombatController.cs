@@ -61,6 +61,13 @@ public class RealityCombatController : MonoBehaviour
     {
         _mainCamera = Camera.main;
 
+        // 성장 시스템 스탯 적용 (인스펙터 값은 레벨 1 기준 폴백)
+        if (PlayerGrowth.Level > 1)
+        {
+            playerLevel  = PlayerGrowth.Level;
+            attackDamage = PlayerGrowth.CurrentActionAttack;
+        }
+
         // enemyLayer 가 0(Nothing)이면 Enemy 레이어 자동 설정
         if (enemyLayer.value == 0)
             enemyLayer = LayerMask.GetMask("Enemy");
@@ -71,8 +78,13 @@ public class RealityCombatController : MonoBehaviour
 
     void Update()
     {
-        if (Time.time < _lastAttackTime + attackCooldown) return;
+        // 쿨타임 버프 (CooldownReduction/Increase) 반영
+        float cooldownMul = BuffManager.Instance != null ? BuffManager.Instance.CooldownMultiplier : 1f;
+        if (Time.time < _lastAttackTime + attackCooldown * Mathf.Max(0f, cooldownMul)) return;
         if (Mouse.current == null) return;
+
+        // 기절 상태 — 공격 불가
+        if (BuffManager.Instance != null && BuffManager.Instance.IsStunned) return;
 
         if (Mouse.current.leftButton.wasPressedThisFrame)
             PerformAttack();
@@ -94,6 +106,13 @@ public class RealityCombatController : MonoBehaviour
         Vector2 origin     = transform.position;
         Vector2 direction  = (mouseWorld - origin).normalized;
 
+        // 혼란 상태 — 조준 방향 ±25° 랜덤 편향 (손 떨림)
+        if (BuffManager.Instance != null && BuffManager.Instance.IsConfused)
+        {
+            float deviation = Random.Range(-25f, 25f);
+            direction = Quaternion.Euler(0f, 0f, deviation) * direction;
+        }
+
         Debug.DrawRay(origin, direction * attackRange, Color.red, 0.3f);
 
         RaycastHit2D hit = Physics2D.Raycast(origin, direction, attackRange, enemyLayer);
@@ -113,19 +132,29 @@ public class RealityCombatController : MonoBehaviour
         // ── EnemyHealth (현실 전투용) ──
         if (!hit.collider.TryGetComponent(out EnemyHealth eh))
             hit.collider.transform.parent?.TryGetComponent(out eh);
+        // 공격/크리티컬 버프 (AttackUp/Down, CritChanceUp/Down) 반영
+        float atkMul    = BuffManager.Instance != null ? BuffManager.Instance.AttackMultiplier : 1f;
+        int   critBonus = BuffManager.Instance != null ? Mathf.RoundToInt(BuffManager.Instance.CritBonus) : 0;
+
         if (eh != null)
         {
             DamageResult result = DamageCalculator.CalculateRaw(
                 playerLevel, Mathf.RoundToInt(attackDamage), playerAccuracy, playerCritRate, playerCritMultiplier,
                 eh.level,    eh.defense,                     eh.evasion,
-                weakPointMultiplier: weakPointMul);
+                weakPointMultiplier: weakPointMul,
+                attackMultiplier: atkMul, critBonus: critBonus);
 
+            bool wasAlive = eh.currentHealth > 0f;
             if (!result.isMiss)
                 eh.TakeRealityDamage(result.amount);
 
-            // 사망 통보
+            // 사망 통보 + 처치 트라우마 (이 타격으로 죽었을 때 1회만)
             if (eh.currentHealth <= 0)
+            {
+                if (wasAlive)
+                    PlayerStats.Instance?.AddTrauma(traumaOnKill);
                 HackSlashCombatManager.Instance?.NotifyEnemyDead(eh.gameObject);
+            }
         }
 
         // ── Unit (턴제 배틀 유닛이 씬에 있는 경우 폴백) ──
@@ -137,7 +166,8 @@ public class RealityCombatController : MonoBehaviour
                 DamageResult result = DamageCalculator.CalculateRaw(
                     playerLevel, Mathf.RoundToInt(attackDamage), playerAccuracy, playerCritRate, playerCritMultiplier,
                     unit.level,  unit.defense,                   unit.evasion,
-                    weakPointMultiplier: weakPointMul);
+                    weakPointMultiplier: weakPointMul,
+                    attackMultiplier: atkMul, critBonus: critBonus);
 
                 unit.TakeDamage(result);
             }

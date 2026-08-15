@@ -6,22 +6,23 @@ using UnityEngine;
 /// 게임 오브젝트에 붙이거나 씬에 배치하면 됩니다.
 ///
 /// 키 바인딩 (기본값):
-///   F5 — 턴제 → 핵앤슬래시 강제 전환
-///   F6 — 핵앤슬래시 → 턴제 강제 전환
-///   F7 — 모드 전환 잠금 해제 (다시 전환 가능하게)
+///   F8  — 턴제 → 핵앤슬래시 강제 전환
+///   F9  — 핵앤슬래시 → 턴제 강제 전환
+///   F10 — 모드 전환 잠금 해제 (다시 전환 가능하게)
+/// (F5는 빠른 저장 기본 키라 디버그 키에서 제외)
 ///
 /// 에디터 또는 Development Build에서만 화면 표시됩니다.
 /// </summary>
 public class BattleModeSwitchDebug : MonoBehaviour
 {
     [Header("키 바인딩")]
-    public KeyCode switchToHackSlashKey = KeyCode.F5;
-    public KeyCode switchToTurnBasedKey = KeyCode.F6;
-    public KeyCode unlockSwitchKey      = KeyCode.F7;
+    public KeyCode switchToHackSlashKey = KeyCode.F8;
+    public KeyCode switchToTurnBasedKey = KeyCode.F9;
+    public KeyCode unlockSwitchKey      = KeyCode.F10;
 
     [Header("디버그 테스트 적")]
     [Tooltip("EncounterManager에 적 정보가 없을 때 사용할 폴백 프리팹.\n" +
-             "할당하면 실제 인카운터 없이도 F5로 핵앤슬래시를 바로 시작할 수 있습니다.")]
+             "할당하면 실제 인카운터 없이도 F8로 핵앤슬래시를 바로 시작할 수 있습니다.")]
     public GameObject debugEnemyPrefab;
 
     void Update()

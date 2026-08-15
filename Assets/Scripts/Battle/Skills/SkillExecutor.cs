@@ -26,6 +26,10 @@ public static class SkillExecutor
         // MP 소모
         caster.currentMP = Mathf.Max(0, caster.currentMP - skill.mpCost);
 
+        // 버프 부여 (BuffManager는 플레이어 단일 대상 — 스킬 시전자는 항상 플레이어)
+        if (skill.buffs != null && skill.buffs.Count > 0)
+            BuffManager.Instance?.AddBuffs(skill.buffs);
+
         // 회복 스킬
         if (skill.healAmount > 0)
         {
@@ -34,9 +38,14 @@ public static class SkillExecutor
             return DamageResult.Hit(skill.healAmount);
         }
 
-        // 데미지 스킬
-        if (target == null) return DamageResult.Hit(0);
-        DamageResult result = DamageCalculator.Calculate(caster, target, skill.damageMultiplier);
+        // 데미지 스킬 (버프/공감 전용 스킬은 damageMultiplier 0으로 데미지 생략)
+        if (target == null || skill.damageMultiplier <= 0f) return DamageResult.Hit(0);
+
+        float atkMul    = BuffManager.Instance != null ? BuffManager.Instance.AttackMultiplier : 1f;
+        int   critBonus = BuffManager.Instance != null ? Mathf.RoundToInt(BuffManager.Instance.CritBonus) : 0;
+        DamageResult result = DamageCalculator.Calculate(
+            caster, target, skill.damageMultiplier,
+            attackMultiplier: atkMul, critBonus: critBonus);
         target.TakeDamage(result);
         return result;
     }

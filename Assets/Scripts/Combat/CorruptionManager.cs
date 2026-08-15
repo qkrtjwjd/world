@@ -1,9 +1,25 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class CorruptionManager : MonoBehaviour
+public enum CorruptionStage { Autonomy, Crack, Backfire, Loss, Doll }
+
+public class CorruptionManager : PersistentSingleton<CorruptionManager>
 {
-    public static CorruptionManager Instance;
+    // ── 구간 경계 — 이 파일 외부에 숫자로 적지 말 것 ────────────────────────
+    private const float StageCrack    = 31f;
+    private const float StageBackfire = 61f;
+    private const float StageLoss     = 81f;
+    private const float StageDoll     = 100f;
+
+    public static CorruptionStage GetStage(float value)
+    {
+        if (value >= StageDoll)     return CorruptionStage.Doll;
+        if (value >= StageLoss)     return CorruptionStage.Loss;
+        if (value >= StageBackfire) return CorruptionStage.Backfire;
+        if (value >= StageCrack)    return CorruptionStage.Crack;
+        return CorruptionStage.Autonomy;
+    }
+
 
     [Header("인형화 수치 설정")]
     [SerializeField] private float _currentCorruption = 20f;
@@ -23,23 +39,11 @@ public class CorruptionManager : MonoBehaviour
 
     private bool _isEnding = false;
 
-    private void Awake()
-    {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
-
-    private void OnDestroy()
+    protected override void OnDestroy()
     {
         OnCorruptionChanged    = null;
         OnCorruptionMaxReached = null;
+        base.OnDestroy();
     }
 
     public void AddCorruption(float amount)
@@ -63,10 +67,11 @@ public class CorruptionManager : MonoBehaviour
 
     private void CheckEnding()
     {
-        if (currentCorruption >= maxCorruption && !_isEnding)
+        if (GetStage(currentCorruption) == CorruptionStage.Doll && !_isEnding)
         {
             _isEnding = true;
             OnCorruptionMaxReached?.Invoke();
+            Time.timeScale = 1f; // 턴제 전투(timeScale 0) 중 도달해도 배드엔딩이 정지되지 않도록
             SceneManager.LoadScene(SceneNames.BadEnding);
         }
     }

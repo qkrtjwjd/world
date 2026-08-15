@@ -111,7 +111,11 @@ public class ItemPickup : MonoBehaviour
         int added = InventoryManager.Instance.AddItems(toAdd);
         if (added > 0)
         {
-            if (equipAsDagger) DaggerSystem.Instance?.Equip();
+            if (equipAsDagger)
+            {
+                DaggerSystem.Instance?.Equip();
+                GaugeManager.Instance?.ForceMapDaggerPickup();
+            }
             if (!string.IsNullOrEmpty(yarnNode_afterPickup))
                 ItemAcquisitionUI.Instance?.SetPendingYarnNode(yarnNode_afterPickup);
             InteractionTextUI.Instance?.Hide();
@@ -134,7 +138,11 @@ public class ItemPickup : MonoBehaviour
         int added = InventoryManager.Instance.AddItems(items);
         if (added > 0)
         {
-            if (equip) DaggerSystem.Instance?.Equip();
+            if (equip)
+            {
+                DaggerSystem.Instance?.Equip();
+                GaugeManager.Instance?.ForceMapDaggerPickup();
+            }
             InteractionTextUI.Instance?.Hide();
             if (pickupObject != null) Destroy(pickupObject);
         }

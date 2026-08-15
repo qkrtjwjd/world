@@ -25,8 +25,16 @@ public class TransitionVFXController : MonoBehaviour
         {
             if (!_instance)
             {
-                var go = new GameObject("TransitionVFXController [Auto]");
-                _instance = go.AddComponent<TransitionVFXController>();
+                // 연출 이미지가 배선된 상주 프리팹 우선 로드 — Awake에서 _instance 등록됨
+                var prefab = Resources.Load<GameObject>("TransitionFX");
+                if (prefab != null)
+                    Instantiate(prefab).name = "TransitionFX";
+
+                if (!_instance)
+                {
+                    var go = new GameObject("TransitionVFXController [Auto]");
+                    _instance = go.AddComponent<TransitionVFXController>();
+                }
             }
             return _instance;
         }
@@ -82,6 +90,8 @@ public class TransitionVFXController : MonoBehaviour
     [Header("카메라")]
     [Tooltip("CameraFollow가 붙은 오브젝트. 비워두면 자동 탐색합니다.")]
     [SerializeField] private CameraFollow _cameraFollow;
+    [Tooltip("카메라 흔들림 Perlin 노이즈 주파수. 높을수록 빠른 진동.")]
+    [SerializeField] private float _shakeFrequency = 25f;
 
     // ─────────────────────────────────────────────
     //  내부 상태
@@ -91,7 +101,9 @@ public class TransitionVFXController : MonoBehaviour
     private Camera _cam;
 
     // 카메라 흔들림 — LateUpdate에서 CameraFollow 위치에 덧씌움
-    private Vector3 _shakeOffset = Vector3.zero;
+    private Vector3 _shakeOffset  = Vector3.zero;
+    private float   _noiseOffsetX;
+    private float   _noiseOffsetY;
 
     // 셰이더 머티리얼 인스턴스 (공유 애셋 변경 방지)
     private Material _crackMat;
@@ -129,6 +141,14 @@ public class TransitionVFXController : MonoBehaviour
     private static readonly WaitForSecondsRealtime _waitDaggerFade = new WaitForSecondsRealtime(0.5f);
 
     // ─────────────────────────────────────────────
+    //  상수
+    // ─────────────────────────────────────────────
+    private const float GlowAlphaRatio      = 0.55f; // 후광 알파 = 마시멜로 알파 × 이 값
+    private const float ShakeDecayExponent  = -5f;   // 흔들림 지수 감쇠 계수
+    private const float DaggerFadeInCurve   = 5f;    // 단검 출현 알파 가속 계수
+    private const float WatercolorSpreadMax = 1.05f; // FBM 최대값 ~0.94를 초과해 화면 전체를 덮는 값
+
+    // ─────────────────────────────────────────────
     //  라이프사이클
     // ─────────────────────────────────────────────
     void Awake()
@@ -140,7 +160,8 @@ public class TransitionVFXController : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            // 컴포넌트만 파괴 — 함께 붙은 다른 컴포넌트·자식 이미지 보호
+            Destroy(this);
             return;
         }
 
@@ -195,6 +216,7 @@ public class TransitionVFXController : MonoBehaviour
     /// <summary>화면을 흰색으로 duration 초 동안 점멸시킵니다 (fade-in → fade-out).</summary>
     public void FlashWhite(float duration)
     {
+        if (SettingsManager.Instance != null && SettingsManager.Instance.flashEffectDisabled) return;
         if (_flashCoroutine != null) StopCoroutine(_flashCoroutine);
         _flashCoroutine = StartCoroutine(FlashRoutine(duration));
     }
@@ -217,20 +239,10 @@ public class TransitionVFXController : MonoBehaviour
     }
 
     /// <summary>
-    /// 카메라 orthographicSize를 targetOrthoSize까지 duration 초 동안 확대합니다.
+    /// 카메라 orthographicSize를 targetOrthoSize까지 duration 초 동안 변경합니다.
     /// ※ 이 프로젝트는 2D Orthographic 카메라를 사용하므로 FOV 대신 orthographicSize로 줌을 제어합니다.
     /// </summary>
-    public void CameraZoomIn(float targetOrthoSize, float duration)
-    {
-        if (_zoomCoroutine != null) StopCoroutine(_zoomCoroutine);
-        _zoomCoroutine = StartCoroutine(ZoomRoutine(targetOrthoSize, duration));
-    }
-
-    /// <summary>
-    /// 카메라 orthographicSize를 targetOrthoSize까지 duration 초 동안 축소합니다.
-    /// ※ 이 프로젝트는 2D Orthographic 카메라를 사용하므로 FOV 대신 orthographicSize로 줌을 제어합니다.
-    /// </summary>
-    public void CameraZoomOut(float targetOrthoSize, float duration)
+    public void CameraZoom(float targetOrthoSize, float duration)
     {
         if (_zoomCoroutine != null) StopCoroutine(_zoomCoroutine);
         _zoomCoroutine = StartCoroutine(ZoomRoutine(targetOrthoSize, duration));
@@ -262,12 +274,26 @@ public class TransitionVFXController : MonoBehaviour
         _shatterCoroutine = StartCoroutine(ShatterRoutine(duration));
     }
 
+    /// <summary>GlitchManager를 통해 duration 초 동안 글리치 플래시를 재생합니다.</summary>
+    public void GlitchFlash(float duration)
+    {
+        if (SettingsManager.Instance != null && SettingsManager.Instance.flashEffectDisabled) return;
+        var gm = GlitchManager.Instance;
+        if (gm == null)
+        {
+            Debug.LogWarning("[TransitionVFXController] GlitchFlash: GlitchManager.Instance가 없습니다.");
+            return;
+        }
+        gm.PlayGlitch(duration, GlitchManager.PresetMild);
+    }
+
     /// <summary>
     /// ImpactFlash 셰이더 기반 임팩트 플래시 (중심점에서 방사형으로 퍼지는 빛 + ChromaticAberration 펄스).
     /// 기존 FlashWhite(CanvasGroup 알파)와 공존.
     /// </summary>
     public void ImpactFlash(Vector2 uv, float duration)
     {
+        if (SettingsManager.Instance != null && SettingsManager.Instance.flashEffectDisabled) return;
         if (_impactFlashCoroutine != null) StopCoroutine(_impactFlashCoroutine);
         _impactFlashCoroutine = StartCoroutine(ImpactFlashRoutine(uv, duration));
     }
@@ -301,16 +327,16 @@ public class TransitionVFXController : MonoBehaviour
     {
         if (_flashOverlay == null) yield break;
 
-        float half    = duration * 0.5f;
+        float halfDuration = duration * 0.5f;
         float elapsed = 0f;
 
         _flashOverlay.gameObject.SetActive(true);
 
         // fade-in
-        while (elapsed < half)
+        while (elapsed < halfDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            _flashOverlay.alpha = Mathf.Lerp(0f, 1f, elapsed / half);
+            _flashOverlay.alpha = Mathf.Lerp(0f, 1f, elapsed / halfDuration);
             yield return null;
         }
         _flashOverlay.alpha = 1f;
@@ -318,10 +344,10 @@ public class TransitionVFXController : MonoBehaviour
         elapsed = 0f;
 
         // fade-out
-        while (elapsed < half)
+        while (elapsed < halfDuration)
         {
             elapsed += Time.unscaledDeltaTime;
-            _flashOverlay.alpha = Mathf.Lerp(1f, 0f, elapsed / half);
+            _flashOverlay.alpha = Mathf.Lerp(1f, 0f, elapsed / halfDuration);
             yield return null;
         }
 
@@ -330,7 +356,7 @@ public class TransitionVFXController : MonoBehaviour
         _flashCoroutine = null;
     }
 
-    /// <summary>카메라 흔들림 — 시간이 지날수록 envelope로 감쇠.</summary>
+    /// <summary>카메라 흔들림 — Perlin 노이즈 + 지수 감쇠.</summary>
     IEnumerator ShakeRoutine(float duration, float magnitude)
     {
         if (_cam == null)
@@ -339,12 +365,17 @@ public class TransitionVFXController : MonoBehaviour
             yield break;
         }
 
+        _noiseOffsetX = Random.Range(0f, 100f);
+        _noiseOffsetY = Random.Range(0f, 100f);
+
         float elapsed = 0f;
         while (elapsed < duration)
         {
-            float envelope = 1f - (elapsed / duration); // 선형 감쇠
-            float x = Random.Range(-1f, 1f) * magnitude * envelope;
-            float y = Random.Range(-1f, 1f) * magnitude * envelope;
+            float envelope = Mathf.Exp(ShakeDecayExponent * elapsed / duration); // 지수 감쇠
+            float x = (Mathf.PerlinNoise(_noiseOffsetX + elapsed * _shakeFrequency, 0f) * 2f - 1f)
+                      * magnitude * envelope;
+            float y = (Mathf.PerlinNoise(0f, _noiseOffsetY + elapsed * _shakeFrequency) * 2f - 1f)
+                      * magnitude * envelope;
             _shakeOffset = new Vector3(x, y, 0f);
 
             elapsed += Time.unscaledDeltaTime;
@@ -355,7 +386,7 @@ public class TransitionVFXController : MonoBehaviour
         _shakeCoroutine = null;
     }
 
-    /// <summary>Color Adjustments Lerp — 현재 값 → 목표 값.</summary>
+    /// <summary>Color Adjustments Lerp — 현재 값 → 목표 값 (SmoothStep 이징).</summary>
     IEnumerator ColorGradingRoutine(float targetSaturation, float targetContrast,
                                     Color targetColorFilter, float duration)
     {
@@ -373,7 +404,7 @@ public class TransitionVFXController : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
-            float t = elapsed / duration;
+            float t = Mathf.SmoothStep(0f, 1f, elapsed / duration);
 
             _colorAdjustments.saturation.Override(Mathf.Lerp(startSaturation, targetSaturation, t));
             _colorAdjustments.contrast.Override(Mathf.Lerp(startContrast, targetContrast, t));
@@ -513,12 +544,10 @@ public class TransitionVFXController : MonoBehaviour
         _impactFlashCoroutine = null;
     }
 
-    /// <summary>수채화 번짐: _SpreadAmount 0 → 1.05 (완전 커버 보장) 애니메이션.</summary>
+    /// <summary>수채화 번짐: _SpreadAmount 0 → WatercolorSpreadMax (완전 커버 보장) 애니메이션.</summary>
     IEnumerator WatercolorSpreadRoutine(float duration)
     {
-        Color c = _watercolorImage.color;
-        c.a = 1f;
-        _watercolorImage.color = c;
+        SetImageAlpha(_watercolorImage, 1f);
         _watercolorMat.SetFloat(ID_SpreadAmount, 0f);
         _watercolorImage.gameObject.SetActive(true);
 
@@ -526,11 +555,11 @@ public class TransitionVFXController : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
-            // FBM 최대값 ~0.94이므로 1.05까지 올려 전체 화면을 완전히 덮음
-            _watercolorMat.SetFloat(ID_SpreadAmount, Mathf.Lerp(0f, 1.05f, elapsed / duration));
+            // FBM 최대값 ~0.94이므로 WatercolorSpreadMax까지 올려 전체 화면을 완전히 덮음
+            _watercolorMat.SetFloat(ID_SpreadAmount, Mathf.Lerp(0f, WatercolorSpreadMax, elapsed / duration));
             yield return null;
         }
-        _watercolorMat.SetFloat(ID_SpreadAmount, 1.05f);
+        _watercolorMat.SetFloat(ID_SpreadAmount, WatercolorSpreadMax);
         _watercolorCoroutine = null;
     }
 
@@ -544,8 +573,10 @@ public class TransitionVFXController : MonoBehaviour
         while (elapsed < duration)
         {
             elapsed += Time.unscaledDeltaTime;
-            c.a = Mathf.Lerp(startColor.a, 0f, elapsed / duration);
+            float t = elapsed / duration;
+            c.a = Mathf.Lerp(startColor.a, 0f, t);
             _watercolorImage.color = c;
+            _watercolorMat.SetFloat(ID_SpreadAmount, Mathf.Lerp(WatercolorSpreadMax, 0f, t));
             yield return null;
         }
 
@@ -601,20 +632,27 @@ public class TransitionVFXController : MonoBehaviour
 
         if (_marshmallowImage != null)
         {
-            Color c = _marshmallowImage.color; c.a = 0f; _marshmallowImage.color = c;
+            SetImageAlpha(_marshmallowImage, 0f);
             _marshmallowImage.gameObject.SetActive(false);
         }
 
         if (_marshmallowGlowImage != null)
         {
-            Color c = _marshmallowGlowImage.color; c.a = 0f; _marshmallowGlowImage.color = c;
+            SetImageAlpha(_marshmallowGlowImage, 0f);
             _glowRect = _marshmallowGlowImage.GetComponent<RectTransform>();
             _marshmallowGlowImage.gameObject.SetActive(false);
         }
     }
 
+    static void SetImageAlpha(Image img, float alpha)
+    {
+        if (img == null) return;
+        Color c = img.color; c.a = alpha; img.color = c;
+    }
+
     void OnDestroy()
     {
+        if (_instance == this) _instance = null;
         if (_crackMat      != null) Destroy(_crackMat);
         if (_flashMat      != null) Destroy(_flashMat);
         if (_watercolorMat != null) Destroy(_watercolorMat);
@@ -663,21 +701,25 @@ public class TransitionVFXController : MonoBehaviour
     //  코루틴 — 단검
     // ─────────────────────────────────────────────
 
-    IEnumerator DaggerStabRoutine(float duration, System.Action onImpact)
+    static Vector2 UVToScreenLocal(Vector2 uv)
+        => new Vector2((uv.x - 0.5f) * Screen.width, (uv.y - 0.5f) * Screen.height);
+
+    void SetupDaggerTransform(Vector2 startPos, Vector2 stabPos)
     {
-        if (_daggerRect == null) { onImpact?.Invoke(); yield break; }
-
-        // UV → 화면 로컬 좌표 (ScreenSpaceOverlay 기준)
-        float w = Screen.width;
-        float h = Screen.height;
-        Vector2 startPos = new Vector2((_daggerStartUV.x - 0.5f) * w, (_daggerStartUV.y - 0.5f) * h);
-        Vector2 stabPos  = new Vector2((_daggerStabUV.x  - 0.5f) * w, (_daggerStabUV.y  - 0.5f) * h);
-
-        // 날아오는 방향으로 단검 회전
         Vector2 dir = stabPos - startPos;
         float angle = Mathf.Atan2(dir.y, dir.x) * Mathf.Rad2Deg + _daggerAngleOffset;
         _daggerRect.localEulerAngles = new Vector3(0f, 0f, angle);
         _daggerRect.anchoredPosition = startPos;
+    }
+
+    IEnumerator DaggerStabRoutine(float duration, System.Action onImpact)
+    {
+        if (_daggerRect == null) { onImpact?.Invoke(); yield break; }
+
+        Vector2 startPos = UVToScreenLocal(_daggerStartUV);
+        Vector2 stabPos  = UVToScreenLocal(_daggerStabUV);
+
+        SetupDaggerTransform(startPos, stabPos);
 
         bool hasGroup = _daggerGroup != null;
 
@@ -692,7 +734,7 @@ public class TransitionVFXController : MonoBehaviour
             // 이징: 가속으로 날아오는 느낌
             float eased = 1f - (1f - t) * (1f - t);
             _daggerRect.anchoredPosition = Vector2.Lerp(startPos, stabPos, eased);
-            if (hasGroup) _daggerGroup.alpha = Mathf.Clamp01(t * 5f);
+            if (hasGroup) _daggerGroup.alpha = Mathf.Clamp01(t * DaggerFadeInCurve);
             yield return null;
         }
 
@@ -705,11 +747,11 @@ public class TransitionVFXController : MonoBehaviour
         yield return _waitDaggerFade;
 
         float fadeElapsed = 0f;
-        const float kFadeDur = 0.15f;
-        while (fadeElapsed < kFadeDur)
+        const float daggerFadeDuration = 0.15f;
+        while (fadeElapsed < daggerFadeDuration)
         {
             fadeElapsed += Time.unscaledDeltaTime;
-            if (hasGroup) _daggerGroup.alpha = Mathf.Lerp(1f, 0f, fadeElapsed / kFadeDur);
+            if (hasGroup) _daggerGroup.alpha = Mathf.Lerp(1f, 0f, fadeElapsed / daggerFadeDuration);
             yield return null;
         }
 
@@ -736,8 +778,8 @@ public class TransitionVFXController : MonoBehaviour
         {
             elapsed += Time.unscaledDeltaTime;
             float a = Mathf.Clamp01(elapsed / duration);
-            if (hasM) { Color c = _marshmallowImage.color;     c.a = a;        _marshmallowImage.color = c; }
-            if (hasG) { Color c = _marshmallowGlowImage.color; c.a = a * 0.55f; _marshmallowGlowImage.color = c; }
+            if (hasM) SetImageAlpha(_marshmallowImage,     a);
+            if (hasG) SetImageAlpha(_marshmallowGlowImage, a * GlowAlphaRatio);
             yield return null;
         }
 
@@ -762,8 +804,8 @@ public class TransitionVFXController : MonoBehaviour
         {
             elapsed += Time.unscaledDeltaTime;
             float t = Mathf.Clamp01(elapsed / duration);
-            if (hasM) { Color c = _marshmallowImage.color;     c.a = Mathf.Lerp(startAlphaM, 0f, t); _marshmallowImage.color = c; }
-            if (hasG) { Color c = _marshmallowGlowImage.color; c.a = Mathf.Lerp(startAlphaG, 0f, t); _marshmallowGlowImage.color = c; }
+            if (hasM) SetImageAlpha(_marshmallowImage,     Mathf.Lerp(startAlphaM, 0f, t));
+            if (hasG) SetImageAlpha(_marshmallowGlowImage, Mathf.Lerp(startAlphaG, 0f, t));
             yield return null;
         }
 

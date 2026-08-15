@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
+using TMPro;
 
 /// <summary>
 /// 화면 하단 아이템 퀵슬롯 바.
@@ -19,7 +20,7 @@ public class ItemQuickSlotUI : MonoBehaviour
     [Header("호버 팝업")]
     public GameObject    popupPanel;       // 흰 배경 팝업 패널
     public Image         popupItemImage;   // 팝업 아이템 일러스트
-    public Text          popupItemName;    // 팝업 아이템 이름
+    public TMP_Text      popupItemName;    // 팝업 아이템 이름
     public ScrollRect    popupScrollRect;  // 팝업 내 스크롤
     public float         showDelay = 0.1f; // 팝업 표시 지연
 
@@ -33,6 +34,12 @@ public class ItemQuickSlotUI : MonoBehaviour
         if (popupPanel != null) popupPanel.SetActive(false);
         Refresh();
     }
+
+    void OnEnable()  { BattleEvents.OnItemUsed += OnBattleItemUsed; }
+    void OnDisable() { BattleEvents.OnItemUsed -= OnBattleItemUsed; }
+
+    /// <summary>전투 중 아이템 소모 시 슬롯 바를 즉시 갱신합니다.</summary>
+    void OnBattleItemUsed(ItemData item, Unit user) => Refresh();
 
     /// <summary>인벤토리 변경 시 슬롯 재생성.</summary>
     public void Refresh()

@@ -1,4 +1,5 @@
 using System.Collections;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -75,9 +76,15 @@ public class TransitionUIController : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            // 컴포넌트만 파괴 — 매니저 루트 오브젝트에 함께 붙은 다른 컴포넌트 보호
+            Destroy(this);
             return;
         }
+    }
+
+    void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
     }
 
     void Start()
@@ -194,6 +201,10 @@ public class TransitionUIController : MonoBehaviour
 
         int count = _uiElements.Length;
 
+        // BloomIn DOTween 트윈이 남아 있을 경우 정리
+        for (int i = 0; i < count; i++)
+            if (_uiElements[i] != null) DOTween.Kill(_uiElements[i]);
+
         // 요소별 랜덤 파라미터 사전 계산
         Vector2[] dirs      = new Vector2[count];
         float[]   distances = new float[count];
@@ -255,8 +266,8 @@ public class TransitionUIController : MonoBehaviour
     }
 
     /// <summary>
-    /// UI 순차 등장 — 단일 코루틴에서 모든 요소를 stagger 오프셋으로 처리.
-    /// StopCoroutine 으로 일괄 중단 가능.
+    /// UI 순차 등장 — DOTween Ease.OutElastic으로 요소별 stagger 팝인.
+    /// SetUpdate(true) 로 TimeScale 무관 동작.
     /// </summary>
     IEnumerator BloomInRoutine(float duration, float staggerDelay)
     {
@@ -264,42 +275,28 @@ public class TransitionUIController : MonoBehaviour
 
         int count = _uiElements.Length;
 
-        // 요소별 애니메이션 시작 시각 계산
-        float[] startTimes    = new float[count];
-        float   totalDuration = 0f;
-        for (int i = 0; i < count; i++)
-        {
-            startTimes[i] = i * staggerDelay;
-            totalDuration = startTimes[i] + duration;
-        }
-
         // 전 요소 초기화: 활성화 + 스케일 0 + 알파 1
         for (int i = 0; i < count; i++)
         {
             if (_uiElements[i] == null) continue;
+            DOTween.Kill(_uiElements[i]); // 이전 트윈 정리
             _uiElements[i].gameObject.SetActive(true);
             _uiElements[i].localScale = Vector3.zero;
             if (_elementGroups[i] != null) _elementGroups[i].alpha = 1f;
         }
 
-        float elapsed = 0f;
-        while (elapsed < totalDuration)
+        for (int i = 0; i < count; i++)
         {
-            elapsed += Time.unscaledDeltaTime;
-
-            for (int i = 0; i < count; i++)
-            {
-                if (_uiElements[i] == null) continue;
-
-                float localElapsed = elapsed - startTimes[i];
-                if (localElapsed <= 0f) continue; // 아직 시작 전
-
-                float t = Mathf.Clamp01(localElapsed / duration);
-                _uiElements[i].localScale = _originalScales[i] * BounceScale(t);
-            }
-
-            yield return null;
+            if (_uiElements[i] == null) continue;
+            _uiElements[i]
+                .DOScale(_originalScales[i], duration)
+                .SetEase(Ease.OutElastic)
+                .SetDelay(i * staggerDelay)
+                .SetUpdate(true);
         }
+
+        float totalDuration = (count - 1) * staggerDelay + duration;
+        yield return new WaitForSecondsRealtime(totalDuration + 0.05f);
 
         // 최종값 확정
         for (int i = 0; i < count; i++)
@@ -314,15 +311,6 @@ public class TransitionUIController : MonoBehaviour
     // ─────────────────────────────────────────────
     //  내부 헬퍼
     // ─────────────────────────────────────────────
-
-    /// <summary>바운스 곡선: 0 → 1.15(오버슈트) → 1.0(안착)</summary>
-    float BounceScale(float t)
-    {
-        if (t < 0.7f)
-            return Mathf.Lerp(0f, 1.15f, t / 0.7f);
-        else
-            return Mathf.Lerp(1.15f, 1f, (t - 0.7f) / 0.3f);
-    }
 
     /// <summary>원본 anchoredPosition 복구. ShakeUIElements 중단 시 호출.</summary>
     void RestorePositions()

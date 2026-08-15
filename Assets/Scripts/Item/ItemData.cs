@@ -142,9 +142,6 @@ public struct ItemEffect
     [Tooltip("멘탈 변화량 (+:회복, -:피해)")]
     public float mentalChange;
 
-    [Tooltip("오염 수치 (먹이는 대상에게 누적되는 수치)")]
-    public float pollutionAdded;
-
     [Tooltip("플레이어 인형화 수치 변화량 (+: 상승, -: 감소)")]
     public float puppetizationChange;
 

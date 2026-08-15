@@ -94,6 +94,7 @@ public class EnemyAI : MonoBehaviour
             spriteRenderer = GetComponentInChildren<SpriteRenderer>();
 
         _enemyHealth = GetComponent<EnemyHealth>();
+        _baseAttackDamage = attackDamage;
 
         _waitAttackDuration   = new WaitForSeconds(attackDuration);
         _waitKnockbackDuration = new WaitForSeconds(knockbackDuration);
@@ -231,7 +232,18 @@ public class EnemyAI : MonoBehaviour
             float dist = Vector2.Distance(transform.position, _player.position);
             if (dist <= attackRange * attackValidationMultiplier)
             {
-                PlayerStats.Instance?.TakeDamage(attackDamage);
+                // 방어 버프 (DefenseUp/Down) — 핵앤슬래시는 고정 피해라 배율 나눗셈으로 감산
+                float damage = attackDamage;
+                if (BuffManager.Instance != null)
+                    damage /= Mathf.Max(0.1f, BuffManager.Instance.DefenseMultiplier);
+
+                PlayerStats.Instance?.TakeDamage(damage);
+
+                // 피해 반사 버프 (ReflectDamage: value = 반사 비율 %)
+                float reflectPct = BuffManager.Instance != null
+                    ? BuffManager.Instance.GetBuffValue(BuffType.ReflectDamage) : 0f;
+                if (reflectPct > 0f && _enemyHealth != null)
+                    _enemyHealth.TakeRealityDamage(damage * reflectPct / 100f);
 
                 // 플레이어에게 넉백
                 Rigidbody2D playerRb = _playerRb;
@@ -245,21 +257,52 @@ public class EnemyAI : MonoBehaviour
     }
 
     // ─────────────────────────────────────────────
+    //  시한부 공격력 버프 (BuffSelfAction 에서 호출)
+    // ─────────────────────────────────────────────
+    private float     _baseAttackDamage;
+    private Coroutine _attackBuffRoutine;
+
+    /// <summary>
+    /// duration(초) 동안 공격력을 기본값 × multiplier로 올립니다.
+    /// 재호출 시 기존 버프를 중단하고 새로 적용 — 곱연산 중첩을 방지합니다.
+    /// </summary>
+    public void ApplyTimedAttackBuff(float multiplier, float duration)
+    {
+        if (_attackBuffRoutine != null) StopCoroutine(_attackBuffRoutine);
+        _attackBuffRoutine = StartCoroutine(AttackBuffRoutine(multiplier, duration));
+    }
+
+    IEnumerator AttackBuffRoutine(float multiplier, float duration)
+    {
+        attackDamage = _baseAttackDamage * multiplier;
+        yield return new WaitForSeconds(duration);
+        attackDamage = _baseAttackDamage;
+        _attackBuffRoutine = null;
+    }
+
+    // ─────────────────────────────────────────────
     //  피격 시 넉백 (RealityCombatController 에서 호출)
     // ─────────────────────────────────────────────
+    private Coroutine _knockbackRoutine;
+
     public void ApplyKnockback(Vector2 direction)
     {
-        StartCoroutine(KnockbackRoutine(direction));
+        // 넉백 중첩 시 이전 코루틴을 중단 — _stateBeforeKnockback이 Knockback으로 덮여
+        // 원래 상태로 복귀하지 못하는 문제 방지
+        if (_knockbackRoutine != null) StopCoroutine(_knockbackRoutine);
+        _knockbackRoutine = StartCoroutine(KnockbackRoutine(direction));
     }
 
     IEnumerator KnockbackRoutine(Vector2 direction)
     {
-        _stateBeforeKnockback = _state;
+        if (_state != AIState.Knockback)
+            _stateBeforeKnockback = _state;
         _state = AIState.Knockback;
         _rb.linearVelocity = direction.normalized * knockbackForce;
         yield return _waitKnockbackDuration;
         _state = _stateBeforeKnockback;
         _rb.linearVelocity = Vector2.zero;
+        _knockbackRoutine = null;
     }
 
     // ─────────────────────────────────────────────

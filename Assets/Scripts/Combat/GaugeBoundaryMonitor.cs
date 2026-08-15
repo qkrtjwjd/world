@@ -164,14 +164,16 @@ public class GaugeBoundaryMonitor : MonoBehaviour
     {
         if (HackSlashCombatManager.IsActive)
         {
-            // 현실 모드 연출 → 턴제 전환
-            BattleTransitionManager.Instance.TransitionToFantasy();
-            HackSlashCombatManager.Instance.ForceSwitchToTurnBased();
+            // 핵앤슬래시 중에는 마시멜로를 통해서만 턴제 전환 가능 —
+            // ForceSwitchToTurnBased가 차단되므로 환상 전환 연출을 먼저 틀면
+            // 연출만 나오고 모드는 유지되는 모순이 생김. 힌트로 유도만 한다.
+            HintManager.ShowHint("battle_marshmallow_hint",
+                                 "환상이 돌아오려 한다... 마시멜로를 먹으면 넘어갈 수 있다.", 4f);
         }
         else if (BattleSystem.IsActive)
         {
             // 이미 턴제 → 비주얼만
-            BattleTransitionManager.Instance.TransitionToFantasy();
+            BattleTransitionManager.Instance?.TransitionToFantasy();
         }
     }
 
@@ -185,7 +187,7 @@ public class GaugeBoundaryMonitor : MonoBehaviour
         else if (HackSlashCombatManager.IsActive)
         {
             // 이미 액션 모드 → 비주얼만
-            BattleTransitionManager.Instance.TransitionToReality();
+            BattleTransitionManager.Instance?.TransitionToReality();
         }
     }
 

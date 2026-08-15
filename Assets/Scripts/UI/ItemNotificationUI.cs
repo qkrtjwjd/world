@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 아이템 관련 알림을 화면에 1.5~2초간 표시하는 UI.
@@ -14,7 +15,7 @@ public class ItemNotificationUI : MonoBehaviour
 
     [Header("UI 연결")]
     [SerializeField] private GameObject notificationPanel;
-    [SerializeField] private Text       messageText;
+    [SerializeField] private TMP_Text   messageText;
 
     [Header("표시 시간(초)")]
     [SerializeField] private float discardDisplayTime  = 1.5f;

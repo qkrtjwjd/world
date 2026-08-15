@@ -28,11 +28,17 @@ public static class DamageCalculator
     /// <param name="defender">방어 유닛.</param>
     /// <param name="skillMultiplier">스킬 데미지 배수 (기본 1.0).</param>
     /// <param name="weakPointMultiplier">약점/비약점 배수 (기본 1.0).</param>
+    /// <param name="attackMultiplier">공격력 배율 — 버프(AttackUp/Down) 반영용 (기본 1.0).</param>
+    /// <param name="critBonus">크리티컬 확률 가산치(%) — 버프(CritChanceUp/Down) 반영용 (기본 0).</param>
+    /// <param name="defenseMultiplier">방어력 배율 — 버프(DefenseUp/Down) 반영용 (기본 1.0).</param>
     public static DamageResult Calculate(
         Unit  attacker,
         Unit  defender,
         float skillMultiplier      = 1f,
-        float weakPointMultiplier  = 1f)
+        float weakPointMultiplier  = 1f,
+        float attackMultiplier     = 1f,
+        int   critBonus            = 0,
+        float defenseMultiplier    = 1f)
     {
         if (attacker == null || defender == null)
             return DamageResult.Miss;
@@ -40,7 +46,8 @@ public static class DamageCalculator
         return CalculateRaw(
             attacker.level, attacker.attack, attacker.accuracy, attacker.critRate, attacker.critMultiplier,
             defender.level, defender.defense, defender.evasion,
-            skillMultiplier, weakPointMultiplier);
+            skillMultiplier, weakPointMultiplier,
+            attackMultiplier, critBonus, defenseMultiplier);
     }
 
     /// <summary>
@@ -56,25 +63,31 @@ public static class DamageCalculator
         int   defenderDefense,
         int   defenderEvasion,
         float skillMultiplier     = 1f,
-        float weakPointMultiplier = 1f)
+        float weakPointMultiplier = 1f,
+        float attackMultiplier    = 1f,
+        int   critBonus           = 0,
+        float defenseMultiplier   = 1f)
     {
         // 1) 명중 판정
         int hitChance = Mathf.Clamp(attackerAccuracy - defenderEvasion, MinHitChance, MaxHitChance);
         if (Random.Range(0, 100) >= hitChance)
             return DamageResult.Miss;
 
-        // 2) 기본 데미지 (감산 + 레벨 보정)
+        // 2) 기본 데미지 (감산 + 레벨 보정 + 버프 배율)
+        float effAttack   = attackerAttack * Mathf.Max(0f, attackMultiplier);
+        float effDefense  = defenderDefense * Mathf.Max(0f, defenseMultiplier);
         float levelFactor = 1f + (attackerLevel - defenderLevel) * LevelFactorPerLevel;
-        float baseDmg     = (attackerAttack * 2f - defenderDefense) * levelFactor;
+        float baseDmg     = (effAttack * 2f - effDefense) * levelFactor;
         baseDmg           = Mathf.Max(1f, baseDmg);
 
         // 3) 스킬 / 약점 배수
         baseDmg *= Mathf.Max(0f, skillMultiplier);
         baseDmg *= Mathf.Max(0f, weakPointMultiplier);
 
-        // 4) 크리티컬
+        // 4) 크리티컬 (critBonus: 버프 가산치)
         bool isCrit = false;
-        if (attackerCritRate > 0 && Random.Range(0, 100) < attackerCritRate)
+        int  effCritRate = Mathf.Clamp(attackerCritRate + critBonus, 0, 100);
+        if (effCritRate > 0 && Random.Range(0, 100) < effCritRate)
         {
             baseDmg *= attackerCritMultiplier;
             isCrit   = true;

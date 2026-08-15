@@ -24,9 +24,15 @@ public class GaugeTriggerInvoker : MonoBehaviour
         if (GaugeManager.Instance == null) return;
 
         if (mode == InvokeMode.Trigger)
-            GaugeManager.Instance.ApplyTrigger(trigger);
+        {
+            // enum 이름에서 __ 앞의 triggerId 부분만 추출해 string 버전으로 호출
+            string triggerId = trigger.ToString().Split(new[] { "__" }, System.StringSplitOptions.None)[0];
+            GaugeManager.Instance.ApplyTrigger(triggerId);
+        }
         else
+        {
             GaugeManager.Instance.ChangeGauge(amount);
+        }
     }
 
     public void ForceRealityMax()  => GaugeManager.Instance?.ForceRealityMax();

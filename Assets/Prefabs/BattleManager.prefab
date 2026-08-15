@@ -14,10 +14,6 @@ GameObject:
   - component: {fileID: 5342662801359281536}
   - component: {fileID: 7266801288864060273}
   - component: {fileID: 703270256049734327}
-  - component: {fileID: 4819283819292481135}
-  - component: {fileID: 381882376130836763}
-  - component: {fileID: 2424445863976989406}
-  - component: {fileID: 7174460837218760982}
   m_Layer: 0
   m_Name: BattleManager
   m_TagString: Untagged
@@ -99,9 +95,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 254f31747a857b245995719105d41aaf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleModeSwitchDebug
-  switchToHackSlashKey: 286
-  switchToTurnBasedKey: 287
-  unlockSwitchKey: 288
+  switchToHackSlashKey: 289
+  switchToTurnBasedKey: 290
+  unlockSwitchKey: 291
   debugEnemyPrefab: {fileID: 0}
 --- !u!114 &703270256049734327
 MonoBehaviour:
@@ -121,69 +117,3 @@ MonoBehaviour:
   preBattle2Dialogue: {fileID: 0}
   battle2EnemyPrefab: {fileID: 0}
   postBattle2Dialogue: {fileID: 0}
---- !u!114 &4819283819292481135
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1975616361025184746}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f0e96b5a67ac9c040b7d2897bf6af637, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TransitionVFXController
-  _flashOverlay: {fileID: 0}
-  _glassCrackImage: {fileID: 0}
-  _impactFlashImage: {fileID: 0}
-  _watercolorImage: {fileID: 0}
-  _chromaticFlashPeak: 0.6
-  _shatterScaleMax: 1.3
-  _volume: {fileID: 0}
-  _cameraFollow: {fileID: 0}
---- !u!114 &381882376130836763
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1975616361025184746}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0d07f183d8c58634eaf28a4738600e1b, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TransitionSFXController
-  _mixer: {fileID: 0}
-  _sfxSource: {fileID: 0}
-  _glassBreakClip: {fileID: 0}
-  _metalScratchClip: {fileID: 0}
-  _sweetChimeClip: {fileID: 0}
-  _fullCutoff: 22000
---- !u!114 &2424445863976989406
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1975616361025184746}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7d21a50bd7cec9f42a0b0faf4ba2feb8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::TransitionUIController
-  _crackImage: {fileID: 0}
-  _uiElements: []
-  _explodeDistance: 400
---- !u!114 &7174460837218760982
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1975616361025184746}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7f7a27cd802550241b648830ea06ca8c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ObjectSwapController
-  swapPairs: []

@@ -50,6 +50,13 @@ namespace ClearSky
                 return;
             }
 
+            // 기절 디버프 — 이동 불가
+            if (BuffManager.Instance != null && BuffManager.Instance.IsStunned)
+            {
+                _moveInput = Vector2.zero;
+                return;
+            }
+
             float h = Input.GetAxisRaw("Horizontal");
             float v = Input.GetAxisRaw("Vertical");
             _moveInput = new Vector2(h, v);
@@ -66,6 +73,9 @@ namespace ClearSky
         private void FixedUpdate()
         {
             float currentSpeed = walkSpeed * (_isRunning ? runMultiplier : 1f);
+            // 이동속도 버프 (SpeedUp/SpeedDown) 반영
+            if (BuffManager.Instance != null)
+                currentSpeed *= Mathf.Max(0f, BuffManager.Instance.SpeedMultiplier);
             rb.linearVelocity = _moveInput * currentSpeed;
         }
 

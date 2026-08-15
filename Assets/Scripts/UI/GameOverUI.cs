@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 public class GameOverUI : MonoBehaviour
 {
@@ -45,7 +46,7 @@ public class GameOverUI : MonoBehaviour
         AddText(root.transform, "Title", "게임 오버", 64, new Vector2(0f, 120f), new Vector2(500f, 90f));
 
         // 힌트 텍스트 (아무 키 안내)
-        AddText(root.transform, "Hint", "[ 아무 키나 눌러 전투 전으로 돌아가기 ]", 22,
+        AddText(root.transform, "Hint", "[ 아무 키나 눌러 마지막 저장 지점으로 ]", 22,
             new Vector2(0f, -20f), new Vector2(600f, 40f));
 
         // 타이틀 버튼
@@ -71,12 +72,11 @@ public class GameOverUI : MonoBehaviour
     {
         var go  = new GameObject(name);
         go.transform.SetParent(parent, false);
-        var txt = go.AddComponent<Text>();
+        var txt = go.AddComponent<TextMeshProUGUI>();
         txt.text      = text;
         txt.fontSize  = fontSize;
         txt.color     = Color.white;
-        txt.alignment = TextAnchor.MiddleCenter;
-        txt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        txt.alignment = TextAlignmentOptions.Center;
         var rect = go.GetComponent<RectTransform>();
         rect.anchoredPosition = anchoredPos;
         rect.sizeDelta        = sizeDelta;
@@ -107,7 +107,14 @@ public class GameOverUI : MonoBehaviour
     // ─── 입력 감지 ────────────────────────────────────────────────
     void Update()
     {
-        if (_isShowing && _canAcceptInput && Input.anyKeyDown)
+        // 마우스 클릭은 제외 — 포함하면 '타이틀로' 버튼 클릭(마우스 다운)이
+        // 버튼 이벤트보다 먼저 OnClickLoad를 실행해 버튼이 동작하지 않음
+        bool keyboardKeyDown = Input.anyKeyDown
+            && !Input.GetMouseButtonDown(0)
+            && !Input.GetMouseButtonDown(1)
+            && !Input.GetMouseButtonDown(2);
+
+        if (_isShowing && _canAcceptInput && keyboardKeyDown)
             OnClickLoad();
     }
 
@@ -146,9 +153,27 @@ public class GameOverUI : MonoBehaviour
 
     public void OnClickLoad()
     {
+        var sm = SaveManager.Instance;
+        SaveData pre = sm != null ? sm.GetPreBattleData()  : null;
+        SaveData cp  = sm != null ? sm.GetCheckpointData() : null;
+
+        // 복구 지점이 하나도 없으면(예: 저장 이전 시점 사망) HP 0 상태로 방치되지 않도록 타이틀로 폴백
+        if (pre == null && cp == null)
+        {
+            Debug.LogWarning("[GameOverUI] 복구할 저장 데이터가 없어 타이틀로 이동합니다.");
+            OnClickTitle();
+            return;
+        }
+
         Hide();
         Time.timeScale = 1f;
-        SaveManager.Instance?.LoadPreBattle();
+
+        // 전투 전 저장 vs 체크포인트 중 saveTicks 가 최신인 쪽으로 복귀
+        // (v6 이전 저장은 saveTicks=0 → 자연스럽게 상대편이 채택됨)
+        if (cp == null || (pre != null && pre.saveTicks >= cp.saveTicks))
+            sm.LoadPreBattle();
+        else
+            sm.LoadCheckpoint();
     }
 
     public void OnClickTitle()

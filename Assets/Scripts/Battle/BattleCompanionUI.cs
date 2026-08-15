@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 전투 화면의 동료 캐릭터 UI를 관리합니다.
@@ -13,7 +14,7 @@ public class BattleCompanionUI : MonoBehaviour
     [Header("UI 연결")]
     public Image      portraitImage;       // 좌측 상단 초상화
     public GameObject dialogueArea;        // 하단 대화창 영역
-    public Text       companionDialogue;   // 동료 대사 텍스트
+    public TMP_Text   companionDialogue;   // 동료 대사 텍스트
 
     [Header("위치")]
     public RectTransform companionRoot;    // 동료 오브젝트 루트

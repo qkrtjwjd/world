@@ -1,0 +1,358 @@
+{
+  "_about": [
+    "정본 씬(S#xx) → Yarn 노드 매핑. scenario_parser.py 가 읽는다.",
+    "정본 1씬이 여러 노드로 쪼개져 있는 것은 의도적이다 —",
+    "NightSequenceManager / KitchenTriggerCutscene 이 노드 사이에 클로즈업·무음 같은",
+    "연출을 끼워넣는다. House_Opening.yarn:12-14 참조. 임의로 합치지 말 것.",
+    "노드 이름은 C# 인스펙터에 직렬화돼 있으므로 바꾸면 유니티 재배선이 필요하다.",
+    "",
+    "count  = 그 노드에 배분할 '통과된 대사' 수. 씬의 대사를 노드 순서대로 count 만큼 잘라 배분한다.",
+    "anchor = 그 노드의 첫 대사 앞부분(정본 원문 그대로, 이름 치환 전). 배분이 밀렸는지 교차 검증용.",
+    "         count 가 0인 노드는 anchor 가 null 이다."
+  ],
+
+  "speaker_display": {
+    "_about": [
+      "화자 표시명·포트레이트 규약. CLAUDE.md §5 가 규칙의 출처다.",
+      "⚠ 파서는 이 블록을 읽지 않는다 — scenario_parser.py 의 SPEAKERS 상수가 실동작이다.",
+      "   여기는 규약의 문서상 단일 출처이고, 어긋나면 파서 쪽을 고쳐야 한다.",
+      "style 은 Dialogue Runner 가 런타임에 화자 ID 기준으로 적용한다.",
+      "   .yarn 산출물에는 <i> · <color=> 같은 서식 태그를 넣지 않는다."
+    ],
+    "세라":     { "display": "세라",     "portrait": "left",  "style": null },
+    "쿠루":     { "display": "쿠루",     "portrait": "left",  "style": null },
+    "루":       { "display": "{$이름}",  "portrait": "right", "style": null },
+    "부엉이":   { "display": "부엉이",   "portrait": "left",  "style": null,
+                 "_note": "CLAUDE.md §5 표는 '없음' 이지만 그것은 스프라이트 미제작 때문이다. 제작 후 왼쪽으로 넣는다 (2026-08-14 확인). 코드도 PortraitRegistry 기본값 Left 로 동작한다." },
+    "솔":       { "display": "솔",       "portrait": "left",  "style": null },
+    "미루":     { "display": "미루",     "portrait": "left",  "style": null },
+    "아모":     { "display": "아모",     "portrait": "left",  "style": null },
+    "radio_yu": { "display": "라디오",   "portrait": null,    "style": { "italic": true, "color": "#d4c97a" } },
+    "루독백":   { "display": "",         "portrait": null,    "style": { "italic": true } },
+    "_원고표기": [
+      "정본에서 루독백으로 판정되는 표기는 두 가지다.",
+      "  (루): '...'   — 문단 전체 이탤릭 (집 구간. 현재 D 에는 S#01·S#03 2건)",
+      "  루 (속으로) \"...\" — 첫 run 볼드 (마을 구간 S#14·S#15). 정본 [UI] 지시가 '독백 처리. 대사창 이탤릭'"
+    ]
+  },
+
+  "narration_whitelist": [
+    "못 본 척해야 한다. 언제나처럼. 창밖에 던지거나 삼키거나."
+  ],
+  "_narration_whitelist_note": [
+    "S#04D 항목 — 정본 문단은 두 문장이 이어져 있으나 앞부분만 출력한다.",
+    "  출력   : \"못 본 척해야 한다. 언제나처럼. 창밖에 던지거나 삼키거나.\"",
+    "  미출력 : \"그런데 손은 주머니 속에 챙긴다.\"  ← 손 동작 연출이지 표시 텍스트가 아니다.",
+    "파서는 startswith 로 판정하고 등재된 문자열만 텍스트로 삼으므로 분할이 이미 강제된다."
+  ],
+  "note_scene": "S#04D",
+  "expected_totals": {
+    "_about": [
+      "⭐ D 실측 기준이다. CLAUDE.md §6 게이트 표와 일치한다.",
+      "  집 구간 D-1 (S#01~S#13) : 64 = 대사 61(화자대사 59 + 루독백 2) + 쪽지 2 + 나레이션 1",
+      "  마을 구간 D-2 (S#14~S#15) : 21 = 화자대사 19 + 루독백 2",
+      "  숲 구간 D-3 (S#16A~S#17E) : 48 = 화자대사 48 (루독백 없음)",
+      "  데모 총계 133",
+      "⚠ dialogue 카운트에 루독백이 섞여 들어간다. 집의 61은 화자대사 59 + 루독백 2다.",
+      "   화자별 배분(by_speaker) 대조를 함께 걸어 이 혼동을 막는다.",
+      "⚠ S#07 승격분 2줄은 아직 D 에 없다. CLAUDE.md §9-1 — D 가 정본이므로 현재 기준은 '없음'.",
+      "   D 에 들어간 뒤에 S#07 0→2 · 집 64→66 · 총계 133→135 로 올린다. 미리 올리지 않는다.",
+      "2026-08-15 — D 에 숲 원고 S#16A~S#17E 가 들어와 등재했다(대사 48 · 13노드).",
+      "   그 전까지는 '원고 미작성 · 뼈대만' 이라 비워 두었고, 등재 전에는 게이트가",
+      "   'node_map 에 없는 씬인데 통과 항목이 있음' 으로 8건 FAIL 했다.",
+      "S#18 · S#19 · S#20 은 여전히 비트 뼈대만이고 대사가 없다. 원고가 오면 등재한다."
+    ],
+    "dialogue": 130,
+    "note": 2,
+    "narration": 1,
+    "all": 133
+  },
+
+  "scenes": [
+    {
+      "scene": "S#01", "expected": 2, "file": "House_Opening",
+      "by_speaker": { "부엉이": 1, "루독백": 1 },
+      "nodes": [
+        { "node": "House_Owl_Wake", "count": 2, "anchor": "후우… 후우…" }
+      ]
+    },
+    {
+      "scene": "S#02", "expected": 5, "file": "House_Opening",
+      "by_speaker": { "세라": 4, "루": 1 },
+      "nodes": [
+        { "node": "House_Sera_Lock_Enter",  "count": 3, "anchor": "루. 아가, 아직 안 자고 있니?" },
+        { "node": "House_Sera_Lock_Window", "count": 1, "anchor": "밖은 위험해." },
+        { "node": "House_Sera_Lock_Tuck",   "count": 1, "anchor": "엄마가 있으니까 괜찮아." }
+      ]
+    },
+    {
+      "scene": "S#03", "expected": 2, "file": "House_Opening",
+      "by_speaker": { "부엉이": 1, "루독백": 1 },
+      "nodes": [
+        { "node": "House_Unheard_Owl",   "count": 1, "anchor": "후우…" },
+        { "node": "House_Unheard_Close", "count": 1, "anchor": "소리가 나네." }
+      ]
+    },
+    {
+      "scene": "S#04A", "expected": 2, "file": "House_Opening",
+      "by_speaker": { "세라": 2 },
+      "nodes": [
+        { "node": "House_Kitchen_ThreePlates", "count": 2, "anchor": "루, 아가. 내려와. 다 됐어." }
+      ]
+    },
+    {
+      "scene": "S#04B", "expected": 6, "file": "House_Opening",
+      "by_speaker": { "쿠루": 3, "세라": 3 },
+      "nodes": [
+        { "node": "House_Doorbell_Ring",  "count": 2, "anchor": "계세요~? 아침부터 죄송한데요." },
+        { "node": "House_Doorbell_Tap",   "count": 3, "anchor": "…길을 잘못 드셨네요." },
+        { "node": "House_Doorbell_Sugar", "count": 1, "anchor": "…들어오세요." }
+      ]
+    },
+    {
+      "scene": "S#04C", "expected": 24, "file": "House_Opening",
+      "by_speaker": { "세라": 11, "쿠루": 13 },
+      "nodes": [
+        { "node": "House_Eavesdrop_Tea",     "count": 10, "anchor": "무슨 차를 드시겠어요?" },
+        { "node": "House_Eavesdrop_Silence", "count": 3,  "anchor": "…집에 누구 있어요? 소리 나는데." },
+        { "node": "House_Eavesdrop_Name",    "count": 9,  "anchor": "손님. 이름을 안 물어봤네요." },
+        { "node": "House_Eavesdrop_Light",   "count": 2,  "anchor": "…나가세요." }
+      ]
+    },
+    {
+      "scene": "S#04D", "expected": 3, "file": "House_Opening",
+      "by_speaker": { "세라": 2, "루": 1 },
+      "nodes": [
+        { "node": "House_Note",       "count": 3, "anchor": "루? 내려와서 밥 먹어. 식겠네." },
+        { "node": "House_Note_Table", "count": 0, "anchor": null }
+      ],
+      "_note": "쪽지 2줄과 나레이션 1줄은 대사 배분과 별도로 집계된다. 쪽지는 대화창이 아니라 전용 UI."
+    },
+    {
+      "scene": "S#04E", "expected": 2, "file": "House_Opening",
+      "by_speaker": { "세라": 2 },
+      "nodes": [
+        { "node": "House_Marshmallow_Eat", "count": 2, "anchor": "많이 먹으렴." }
+      ]
+    },
+    {
+      "scene": "S#04F", "expected": 1, "file": "House_Opening",
+      "by_speaker": { "루": 1 },
+      "nodes": [
+        { "node": "House_Yard_Sugar", "count": 1, "anchor": "…엄마. 저 잠깐 마당에 나가서 꽃 좀 봐도 돼요?" }
+      ]
+    },
+    {
+      "scene": "S#04G", "expected": 8, "file": "House_Opening",
+      "by_speaker": { "세라": 6, "루": 2 },
+      "nodes": [
+        { "node": "House_Yard_Refuse",  "count": 4, "anchor": "…꽃? 왜 갑자기 꽃이야?" },
+        { "node": "House_Yard_Refuse2", "count": 4, "anchor": "마당인데요." }
+      ]
+    },
+    {
+      "scene": "S#04H", "expected": 1, "file": "House_Opening",
+      "by_speaker": { "루": 1 },
+      "nodes": [
+        { "node": "House_Window_Plea", "count": 1, "anchor": "…부엉이가 당신 거였다면요." }
+      ]
+    },
+    {
+      "scene": "S#06", "expected": 0, "file": "House_Attic",
+      "by_speaker": {},
+      "nodes": [
+        { "node": "House_Doorknob_Refused", "count": 0, "anchor": null }
+      ]
+    },
+    {
+      "scene": "S#07", "expected": 0, "file": "House_Attic",
+      "by_speaker": {},
+      "nodes": [
+        { "node": "House_Search_Drawer",   "count": 0, "anchor": null },
+        { "node": "House_Search_SeraDoor", "count": 0, "anchor": null }
+      ],
+      "_note": [
+        "⚠ 승격 대기 중이다. CLAUDE.md §9-1 — D 에 아직 없으므로 현재 기준은 0 이다.",
+        "D 에 들어가면 이렇게 올린다 (그 전에는 절대 미리 올리지 않는다):",
+        "  expected 2 · by_speaker {\"루독백\": 2}",
+        "  House_Search_Drawer   count 1 · anchor \"비어 있다.\"                       ← 거실 서랍장",
+        "  House_Search_SeraDoor count 1 · anchor \"잠겨 있다. 손잡이는… 뜨겁지 않네.\"  ← 세라의 방 문",
+        "현재 D 에는 '·' 에셋 목록으로만 존재해 차단된다.",
+        "현행 yarn 의 같은 2줄은 수기 작성분이며, 차단됐다고 지우지 않는다 (CLAUDE.md §6 차단된 대사 처리)."
+      ]
+    },
+    {
+      "scene": "S#08", "expected": 0, "file": "House_Attic",
+      "by_speaker": {},
+      "nodes": [
+        { "node": "House_Kitchen_Drawer", "count": 0, "anchor": null }
+      ]
+    },
+    {
+      "scene": "S#09", "expected": 0, "file": "House_Attic",
+      "by_speaker": {},
+      "nodes": [
+        { "node": "House_Attic_Box", "count": 0, "anchor": null }
+      ]
+    },
+    {
+      "scene": "S#10", "expected": 1, "file": "House_Attic",
+      "by_speaker": { "루": 1 },
+      "nodes": [
+        { "node": "House_Coat_Key", "count": 1, "anchor": "…아빠. …밖에서 안 들어올 바람." }
+      ]
+    },
+    {
+      "scene": "S#11", "expected": 3, "file": "House_Attic",
+      "by_speaker": { "radio_yu": 2, "루": 1 },
+      "nodes": [
+        { "node": "House_Radio_Yu_First", "count": 3, "anchor": "루. 아빠가 잠깐 나갈 일이 생겨서." }
+      ]
+    },
+    {
+      "scene": "S#12", "expected": 1, "file": "House_Attic",
+      "by_speaker": { "루": 1 },
+      "nodes": [
+        { "node": "House_Dagger_Flash", "count": 1, "anchor": "…방금 뭐였지." }
+      ]
+    },
+    {
+      "scene": "S#13", "expected": 0, "file": "House_Attic",
+      "by_speaker": {},
+      "nodes": [
+        { "node": "House_FrontDoor_Depart", "count": 0, "anchor": null }
+      ]
+    },
+
+    {
+      "scene": "S#14", "expected": 13, "file": "Village_Demo",
+      "by_speaker": { "솔": 9, "루": 3, "루독백": 1 },
+      "anchors": { "first": "안녕", "last": "우리 세계에 돈이 생긴 지 얼마 안 됐어." },
+      "nodes": [
+        { "node": "Village_Sol_Square",      "count": 7, "anchor": "안녕" },
+        { "node": "Village_Sol_Talk_Purity", "count": 1, "anchor": "순도란, 우리들이 만들어내는 거" },
+        { "node": "Village_Sol_Talk_Since",  "count": 4, "anchor": "마을에 언제부터 있었어요?" },
+        { "node": "Village_Sol_Talk_Money",  "count": 1, "anchor": "우리 세계에 돈이 생긴 지 얼마 안 됐어." }
+      ],
+      "_note": [
+        "Village_Sol_Square 는 SolNPC.autoGreetNode 기본값이라 이름을 유지했다 (재배선 불필요).",
+        "상시 대화 3종은 정본상 '순서 없음 · 반복 선택 가능' 이라 노드를 분리했다 — 신규 배선 필요.",
+        "Village_Sol_Talk_Since 의 마지막 줄은 루 (속으로) 독백이다."
+      ]
+    },
+    {
+      "scene": "S#15", "expected": 8, "file": "Village_Demo",
+      "by_speaker": { "세라": 1, "미루": 2, "아모": 1, "루": 1, "솔": 2, "루독백": 1 },
+      "anchors": { "first": "…루?", "last": "…누구랑 얘기해?" },
+      "nodes": [
+        { "node": "Village_Sera_Spotted",     "count": 1, "anchor": "…루?" },
+        { "node": "Village_Bakery",           "count": 3, "anchor": "어서 오세요! 갓 구운 빵이 있어요" },
+        { "node": "Village_FlowerShop",       "count": 1, "anchor": "어서오세요. 오늘도 꽃들이 예쁘게 피었답니다." },
+        { "node": "Village_Square_Children",  "count": 0, "anchor": null },
+        { "node": "Village_Sol_Trade_Sugar",  "count": 1, "anchor": "이건… 아직 쓸 수 없어." },
+        { "node": "Sol_BreadDoughReject",     "count": 1, "anchor": "비어 있는건 안 받아." },
+        { "node": "Village_Sol_Radio",        "count": 1, "anchor": "…누구랑 얘기해?" }
+      ],
+      "_note": [
+        "정본 15-A ~ 15-F 를 노드로 그대로 옮겼다. 15-E(거래창 자체)는 트리거뿐이라 노드가 없다.",
+        "기존 이름 유지(재배선 불필요): Village_Bakery(BakeryNPC.storyNode) ·",
+        "  Village_FlowerShop · Sol_BreadDoughReject(SolNPC.breadRejectNode).",
+        "신규 배선 필요: Village_Sera_Spotted · Village_Square_Children(대사 0, 연출 전용) ·",
+        "  Village_Sol_Trade_Sugar · Village_Sol_Radio.",
+        "Village_Sol_Trade_Sugar 는 루 (속으로) 독백 1줄이다.",
+        "⚠ 현행 Village_Demo.yarn 의 남은 본문은 아직 옛 원고(명세서 v7, S#13~S#18) 기준이다.",
+        "2026-08-14 — 정본에 대응 항목이 없는 노드 4개는 사용자 지시로 삭제됐다",
+        "  (Village_Entrance · Village_DaggerDistortion · Village_Exit_Sol · Village_Exit_KuruMeet).",
+        "BakeryNPC_Loop_Normal/Dagger 는 존치한다. 정본 15-B 가 반복을 명시하므로 남겼고,",
+        "  루프는 Village_Bakery 대사의 재생 방식이지 별도 대사가 아니라서 여기 매핑하지 않는다."
+      ]
+    },
+    {
+      "scene": "S#16A", "expected": 0, "file": "Forest_Demo",
+      "by_speaker": {},
+      "nodes": [
+        { "node": "Forest_Entrance", "count": 0, "anchor": null }
+      ],
+      "_note": [
+        "대사 0줄. 지형 전환과 딱 소리 1회로만 이루어진 씬이다.",
+        "[UI]·[TRIGGER] 가 유일한 전달 수단이므로 배선 확인이 필요하다 (집 구간 S#06·S#13 과 같은 성격)."
+      ]
+    },
+    {
+      "scene": "S#16B", "expected": 3, "file": "Forest_Demo",
+      "by_speaker": { "쿠루": 3 },
+      "nodes": [
+        { "node": "Forest_Kuru_Greet", "count": 3, "anchor": "안녕" }
+      ]
+    },
+    {
+      "scene": "S#16C", "expected": 5, "file": "Forest_Demo",
+      "by_speaker": { "루": 2, "쿠루": 3 },
+      "nodes": [
+        { "node": "Forest_Kuru_Radio", "count": 5, "anchor": "어— 이거" }
+      ]
+    },
+    {
+      "scene": "S#16D", "expected": 3, "file": "Forest_Demo",
+      "by_speaker": { "루": 1, "쿠루": 2 },
+      "nodes": [
+        { "node": "Forest_Kuru_SugarCube", "count": 3, "anchor": "…둘 다." }
+      ]
+    },
+    {
+      "scene": "S#17A", "expected": 9, "file": "Forest_Demo",
+      "by_speaker": { "루": 5, "쿠루": 4 },
+      "nodes": [
+        { "node": "Forest_Wolf_Encounter", "count": 9, "anchor": "…개다" }
+      ]
+    },
+    {
+      "scene": "S#17B", "expected": 11, "file": "Forest_Demo",
+      "by_speaker": { "루": 1, "쿠루": 10 },
+      "nodes": [
+        { "node": "Forest_Wolf_Tutorial",     "count": 5, "anchor": "루, 잘 들어 저건 개가 아니야" },
+        { "node": "Forest_Wolf_Guard_Praise", "count": 1, "anchor": "잘 했어" },
+        { "node": "Forest_Wolf_React_Attack", "count": 1, "anchor": "위험했지만 잘했어. 공격은 항상 신중하게 해. 공격을 한 땐 방어를 할 수 없으니까." },
+        { "node": "Forest_Wolf_React_Guard",  "count": 1, "anchor": "그래 뭘 하기 애매한 땐 방어가 가장 낫지 잘했어" },
+        { "node": "Forest_Wolf_React_Pet",    "count": 1, "anchor": "…미쳤어? 상대가 어떻게 나올지 모른다면 공격이나 방어를 해야지! 진짜로 죽을 수도 있다고" },
+        { "node": "Forest_Wolf_Pet2",         "count": 1, "anchor": "…진심이야? 계속 쓰다듬으면 저 개가 너한테 꼬리라도 흔들 거 같아?" },
+        { "node": "Forest_Wolf_Pet3",         "count": 1, "anchor": "난… 이제 모르겠다. 너 마음대로 해라" }
+      ],
+      "_note": [
+        "한 씬을 7노드로 쪼갠 것은 전투 시스템이 조건에 따라 서로 다른 시점에 호출하기 때문이다.",
+        "  Tutorial     : 전투 진입 직후 1회",
+        "  Guard_Praise : 첫 턴 [방어] 선택 시",
+        "  React_*      : 각 행동을 처음 선택했을 때 1회만 (정본 ▶ 행동별 반응)",
+        "  Pet2 / Pet3  : [쓰다듬기] 누적 2회차 / 3회차. 3회차 대사 종료 직후 정화 발동(F-2-6)",
+        "React_* 3줄은 정본 화자 표기가 「쿠루 · 행동명」이다. 파서가 SPEAKER_WITH_CONDITION 으로",
+        "  받아 화자는 쿠루로, 행동명은 Item.condition 으로 남긴다. 원고를 고친 것이 아니다.",
+        "⚠ React_Pet 앵커의 「미쳤어?」는 손글씨 원고 판독이 확실하지 않다(정본 주석).",
+        "  「뭐 했어?」일 가능성이 있으며, 확정되면 D 와 이 앵커를 함께 고친다."
+      ]
+    },
+    {
+      "scene": "S#17C", "expected": 4, "file": "Forest_Demo",
+      "by_speaker": { "루": 1, "쿠루": 3 },
+      "nodes": [
+        { "node": "Forest_Wolf_Hurt", "count": 4, "anchor": "루, 다친 건 가방 안에 있는 물건이나 먹을 걸로 치료 가능해 우선은 내가 줬던 각설탕 아직 가지고 있지? 그거 먹어" }
+      ],
+      "_note": "루가 피해를 입은 직후 1회만. 아이템 사용이 턴을 소모한다는 규칙을 여기서 처음 가르친다."
+    },
+    {
+      "scene": "S#17D", "expected": 6, "file": "Forest_Demo",
+      "by_speaker": { "루": 2, "쿠루": 4 },
+      "nodes": [
+        { "node": "Forest_Wolf_KillEnd", "count": 6, "anchor": "생각보다 별거 아니지?" }
+      ],
+      "_note": "[공격] 마무리 분기. 검은 구슬 획득 · 인형화 +2. 붉은 결정은 나오지 않는다."
+    },
+    {
+      "scene": "S#17E", "expected": 7, "file": "Forest_Demo",
+      "by_speaker": { "루": 3, "쿠루": 4 },
+      "nodes": [
+        { "node": "Forest_Wolf_PurifyEnd", "count": 7, "anchor": "그거 이전에도 해본 적 있어?" }
+      ],
+      "_note": "[쓰다듬기] 3회 정화 마무리 분기. 붉은 결정 획득 · 인형화 -2 · 심리 게이지 +5."
+    }
+  ]
+}

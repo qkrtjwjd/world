@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// HP 바를 부드럽게 애니메이션합니다.
@@ -11,8 +12,8 @@ public class SmoothHPBar : MonoBehaviour
 {
     [Header("UI 연결")]
     public Slider   hpSlider;
-    public Text     hpText;       // "HP 00000" 형식
-    public Text     lvText;       // "LV 00" 형식
+    public TMP_Text hpText;       // "HP 00000" 형식
+    public TMP_Text lvText;       // "LV 00" 형식
 
     [Header("애니메이션")]
     [Tooltip("HP 바 감소 속도 (높을수록 빠름)")]

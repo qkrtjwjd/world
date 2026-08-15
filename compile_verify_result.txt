@@ -1,0 +1,7 @@
+[CompileVerifier] 컴파일 완료: 2026-06-05 오후 5:09:22
+Assembly-CSharp 소스 파일 수: 219
+  포함: Assets/Scripts/Dialogue/YarnCommandBridge.cs
+  포함: Assets/Scripts/Player/CameraFollow.cs
+  포함: Assets/Scripts/UI/ObjectiveManager.cs
+  포함: Assets/Scripts/System/SaveManager.cs
+결과: 오류 없음 (컴파일 성공)

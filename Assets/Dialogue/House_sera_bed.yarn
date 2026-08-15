@@ -1,0 +1,12 @@
+title: House_sera_bed
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: <i>{$이름}: 엄마의 침대다. 항상 반듯하게 정리되어 있다</i>
+<<showSprite "루" "holding_tears" "right">>
+{$이름}: ...아빠 자리는 역시 없네
+===
+title: House_sera_closet
+---
+<<showSprite "루" "neutral" "right">>
+{$이름}: <i>엄마의 옷장이다. 흰 옷밖에 없다</i>
+===

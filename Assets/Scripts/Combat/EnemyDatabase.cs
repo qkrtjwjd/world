@@ -22,6 +22,8 @@ public class EnemyDatabase : ScriptableObject
         public GameObject battlePrefab;
         [Tooltip("이 적이 드랍할 수 있는 아이템 목록. 없으면 드랍 없음.")]
         public LootTable lootTable;
+        [Tooltip("처치/공감 승리 시 지급할 경험치.")]
+        public int xpReward = 0;
     }
 
     [Tooltip("등록된 적 목록. Enemy ID는 중복 없이 입력하세요.")]
@@ -45,5 +47,15 @@ public class EnemyDatabase : ScriptableObject
             if (entry != null && entry.enemyID == id)
                 return entry.lootTable;
         return null;
+    }
+
+    /// <summary>ID로 경험치 보상을 반환합니다. 없으면 0.</summary>
+    public int GetXpReward(string id)
+    {
+        if (string.IsNullOrEmpty(id)) return 0;
+        foreach (var entry in enemies)
+            if (entry != null && entry.enemyID == id)
+                return entry.xpReward;
+        return 0;
     }
 }

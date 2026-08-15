@@ -16,6 +16,9 @@ public static class BattleEvents
     /// <summary>유닛이 사망한 직후. (사망 유닛).</summary>
     public static event Action<Unit> OnUnitDied;
 
+    /// <summary>유닛이 회복된 직후. (회복된 유닛, 회복량). HP바 갱신용.</summary>
+    public static event Action<Unit, int> OnUnitHealed;
+
     /// <summary>전투 모드 전환 완료 시. (전환 후 모드).</summary>
     public static event Action<BattleMode> OnModeChanged;
 
@@ -37,6 +40,7 @@ public static class BattleEvents
     // ─── 발행 헬퍼 ─────────────────────────────────────────────
     public static void RaiseUnitDamaged(Unit unit, DamageResult result) => OnUnitDamaged?.Invoke(unit, result);
     public static void RaiseUnitDied(Unit unit)                          => OnUnitDied?.Invoke(unit);
+    public static void RaiseUnitHealed(Unit unit, int amount)            => OnUnitHealed?.Invoke(unit, amount);
     public static void RaiseModeChanged(BattleMode mode)                 => OnModeChanged?.Invoke(mode);
     public static void RaiseTurnStarted(Unit unit)                       => OnTurnStarted?.Invoke(unit);
     public static void RaiseBattleEnded()                                => OnBattleEnded?.Invoke();
@@ -55,6 +59,7 @@ public static class BattleEvents
     {
         OnUnitDamaged    = null;
         OnUnitDied       = null;
+        OnUnitHealed     = null;
         OnModeChanged    = null;
         OnTurnStarted    = null;
         OnBattleEnded    = null;

@@ -1,4 +1,5 @@
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -20,14 +21,14 @@ using UnityEngine.UI;
 ///   [ScrollContent]
 ///     - ScrollViewport 자식 RectTransform
 ///     - Anchor: 상단 중앙, Pivot: (0.5, 1)
-///     - Text 또는 VerticalLayoutGroup + 여러 Text로 크레딧 내용 구성
+///     - TMP_Text 또는 VerticalLayoutGroup + 여러 TMP_Text로 크레딧 내용 구성
 ///     - 시작 위치: anchoredPosition Y = 0 (또는 화면 높이의 절반 아래)
 ///     - → scrollContent 필드에 연결
 ///
 ///   [ResultPanel]
 ///     - Canvas 직접 자식, 초기 비활성화
 ///     - 인형화 수치 Text (puppetizationText) + 메시지 Text (messageText) 포함
-///     - → resultPanel, puppetizationText, messageText 필드에 연결
+///     - → resultPanel, puppetizationText(TMP_Text), messageText(TMP_Text) 필드에 연결
 /// </summary>
 public class CreditsManager : MonoBehaviour
 {
@@ -36,8 +37,8 @@ public class CreditsManager : MonoBehaviour
     public RectTransform scrollContent;
     public RectTransform viewport;
     public GameObject    resultPanel;
-    public Text          puppetizationText;
-    public Text          messageText;
+    public TMP_Text      puppetizationText;
+    public TMP_Text      messageText;
 
     [Header("설정")]
     public float scrollSpeed       = 60f;
@@ -93,7 +94,9 @@ public class CreditsManager : MonoBehaviour
     {
         resultPanel.SetActive(true);
 
-        float pct = GameState.player.IsInitialized ? GameState.player.puppetization : 0f;
+        float pct = CorruptionManager.Instance != null
+            ? CorruptionManager.Instance.currentCorruption
+            : (GameState.player.IsInitialized ? GameState.player.puppetization : 0f);
 
         puppetizationText.text = $"최종 인형화 수치: {pct:F0}%";
 

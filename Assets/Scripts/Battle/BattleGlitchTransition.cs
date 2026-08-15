@@ -1,6 +1,7 @@
 using System.Collections;
+using DG.Tweening;
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// BattleSystem에서 분리된 글리치 전환 연출 컨트롤러.
@@ -24,7 +25,7 @@ public class BattleGlitchTransition : MonoBehaviour
     public Coroutine StartGlitchSwitch(
         string       triggerMessage,
         GameObject[] panels,
-        Text         dialogueText)
+        TMP_Text     dialogueText)
     {
         return StartCoroutine(GlitchAndSwitch(triggerMessage, panels, dialogueText));
     }
@@ -32,10 +33,11 @@ public class BattleGlitchTransition : MonoBehaviour
     IEnumerator GlitchAndSwitch(
         string       triggerMessage,
         GameObject[] panels,
-        Text         dialogueText)
+        TMP_Text     dialogueText)
     {
         if (dialogueText != null) dialogueText.text = triggerMessage;
 
+        PlayerInputLock.Instance?.Lock();
         Time.timeScale = 0.3f;
         var vfx = TransitionVFXController.Instance;
 
@@ -49,8 +51,7 @@ public class BattleGlitchTransition : MonoBehaviour
                 vfx.ImpactFlash(stabUV, 0.1f);
                 vfx.CameraShake(0.55f, 0.12f);
                 vfx.StartScreenCrack(0.2f, stabUV);
-                if (sfxSource != null && glassShatterSE != null)
-                    sfxSource.PlayOneShot(glassShatterSE);
+                PlayShatterSFX();
                 StartCoroutine(ExplodePanels(panels, dialogueText));
             });
 
@@ -67,8 +68,7 @@ public class BattleGlitchTransition : MonoBehaviour
                 vfx.CameraShake(0.55f, 0.12f);
                 vfx.StartScreenCrack(0.2f, impactUV);
             }
-            if (sfxSource != null && glassShatterSE != null)
-                sfxSource.PlayOneShot(glassShatterSE);
+            PlayShatterSFX();
             StartCoroutine(ExplodePanels(panels, dialogueText));
 
             yield return _wait025;
@@ -95,13 +95,24 @@ public class BattleGlitchTransition : MonoBehaviour
         Destroy(gameObject.transform.root.gameObject);
 
         if (hackSlash != null)
-            hackSlash.BeginCombat(enemyObj, null);  // 기존 씬 적만 사용, 새 적 스폰 금지
+            // 씬 적이 있으면 그대로 사용(새 스폰 금지), 없으면(랜덤 인카운터) 프리팹으로 스폰
+            // — 적 없이 시작하면 CombatLoop가 즉시 승리 처리하는 문제 방지
+            hackSlash.BeginCombat(enemyObj, enemyObj != null ? null : enemyPrefab);
         else
             Debug.LogError("[BattleGlitchTransition] HackSlashCombatManager가 현재 씬에 없습니다.");
     }
 
+    /// <summary>유리 깨짐 SFX. 인스펙터 연결이 없으면 TransitionSFXController로 폴백.</summary>
+    void PlayShatterSFX()
+    {
+        if (sfxSource != null && glassShatterSE != null)
+            sfxSource.PlayOneShot(glassShatterSE);
+        else
+            TransitionSFXController.Instance.PlayGlassBreak();
+    }
+
     // ── Phase 1 경직 → Phase 2 찌그러짐 → Phase 3 산산조각
-    IEnumerator ExplodePanels(GameObject[] panels, Text dialogueText)
+    IEnumerator ExplodePanels(GameObject[] panels, TMP_Text dialogueText)
     {
         const float P1 = 0.1f;
         const float P2 = 0.1f;
@@ -173,41 +184,29 @@ public class BattleGlitchTransition : MonoBehaviour
             yield return null;
         }
 
-        // ── Phase 3: 산산조각 ──────────────────────────────────────────
-        float[]   stagger   = { 0f, 0.02f, 0.04f };
-        Vector2[] flyVels   = new Vector2[count];
-        float[]   rotSpeeds = new float[count];
+        // ── Phase 3: 산산조각 (DOTween) ───────────────────────────────
+        float[] stagger = { 0f, 0.02f, 0.04f };
 
         for (int i = 0; i < count; i++)
         {
-            flyVels[i]   = Random.insideUnitCircle.normalized * Random.Range(1800f, 2600f);
-            rotSpeeds[i] = (Random.value > 0.5f ? 1f : -1f) * 2400f;
+            if (panels[i] == null) continue;
+            int   idx = i;
+            float del = stagger[Mathf.Min(i, stagger.Length - 1)];
+
+            Vector2 flyDest = origins[idx] + Random.insideUnitCircle.normalized * Random.Range(1800f, 2600f) * P3;
+            float   rotEnd  = (Random.value > 0.5f ? 1f : -1f) * 720f;
+            float   curRot  = rts[idx].localEulerAngles.z;
+
+            rts[idx].DOAnchorPos(flyDest, P3).SetEase(Ease.InCubic).SetDelay(del).SetUpdate(true);
+            rts[idx].DOScale(new Vector3(0.1f, 0.1f, 1f), P3).SetEase(Ease.InQuad).SetDelay(del).SetUpdate(true);
+            rts[idx].DORotate(new Vector3(0f, 0f, curRot + rotEnd), P3, RotateMode.FastBeyond360)
+                    .SetEase(Ease.InQuad).SetDelay(del).SetUpdate(true);
+            if (cgs[idx] != null)
+                cgs[idx].DOFade(0f, P3).SetEase(Ease.InQuad).SetDelay(del).SetUpdate(true);
         }
 
-        elapsed = 0f;
         float lastStagger = stagger[Mathf.Min(count - 1, stagger.Length - 1)];
-        while (elapsed < P3 + lastStagger)
-        {
-            elapsed += Time.unscaledDeltaTime;
-
-            for (int i = 0; i < count; i++)
-            {
-                if (panels[i] == null) continue;
-                float local = elapsed - stagger[Mathf.Min(i, stagger.Length - 1)];
-                if (local <= 0f) continue;
-
-                float t = Mathf.Clamp01(local / P3);
-                if (rts[i] != null)
-                {
-                    rts[i].anchoredPosition = origins[i] + flyVels[i] * local;
-                    rts[i].localEulerAngles = new Vector3(0f, 0f, rotSpeeds[i] * local);
-                    rts[i].localScale       = Vector3.Lerp(squishScales[i % squishScales.Length],
-                                                           new Vector3(0.1f, 0.1f, 1f), t);
-                }
-                if (cgs[i] != null) cgs[i].alpha = Mathf.Lerp(1f, 0f, t);
-            }
-            yield return null;
-        }
+        yield return new WaitForSecondsRealtime(P3 + lastStagger + 0.05f);
 
         for (int i = 0; i < count; i++)
             if (panels[i] != null) panels[i].SetActive(false);

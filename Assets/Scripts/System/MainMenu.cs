@@ -9,6 +9,12 @@ public class MainMenu : MonoBehaviour
 
     public void OnClickStart()
     {
+        // 이름을 정한 뒤에 인트로로 넘어간다. 확정 콜백에서 기존 전환 로직을 그대로 탄다.
+        NameEntryUI.Show(StartIntro);
+    }
+
+    static void StartIntro()
+    {
         if (TransitionManager.Instance != null)
             TransitionManager.Instance.DoSceneTransition(SceneNames.Intro);
         else

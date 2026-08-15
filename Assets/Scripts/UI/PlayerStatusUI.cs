@@ -1,5 +1,6 @@
 using UnityEngine;
-using UnityEngine.UI; // Legacy Text 사용
+using UnityEngine.UI;
+using TMPro;
 
 public class PlayerStatusUI : MonoBehaviour
 {
@@ -7,12 +8,9 @@ public class PlayerStatusUI : MonoBehaviour
     public Slider hpSlider;         // 체력바
     public Slider mentalSlider;     // 정신력바
 
-    [Header("■ 연결할 텍스트 (Legacy Text)")]
-    public Text hpText;
-    public Text mentalText;
-
-    // 플레이어 스탯 스크립트 (나중에 만들어서 연결해야 함)
-    // private PlayerStats playerStats; 
+    [Header("■ 연결할 텍스트")]
+    public TMP_Text hpText;
+    public TMP_Text mentalText;
 
     public static PlayerStatusUI Instance;
 

@@ -39,10 +39,16 @@ public class EnemyGlitchEffect : MonoBehaviour
     // ─────────────────────────────────────────────
     private SpriteRenderer _sr;
     private Vector3 _originPos;
+    // 원본 알파는 1회만 캐시 — Flicker 진입 시마다 현재 알파를 캡처하면
+    // 다른 Flicker가 낮춰 둔 알파를 "원본"으로 오인해 반투명이 잔존할 수 있음
+    private float _originAlpha = 1f;
+    private Coroutine _triggerFlicker;
+    private Coroutine _triggerShake;
 
     void Awake()
     {
         _sr = GetComponentInChildren<SpriteRenderer>();
+        if (_sr != null) _originAlpha = _sr.color.a;
     }
 
     void OnEnable()
@@ -65,10 +71,12 @@ public class EnemyGlitchEffect : MonoBehaviour
     void OnDisable()
     {
         // 비활성화 시 원래 상태로 복원 (코루틴은 자동 정지)
+        _triggerFlicker = null;
+        _triggerShake   = null;
         if (_sr != null)
         {
             Color c = _sr.color;
-            c.a = 1f;
+            c.a = _originAlpha;
             _sr.color = c;
         }
         transform.localPosition = _originPos;
@@ -103,7 +111,7 @@ public class EnemyGlitchEffect : MonoBehaviour
         }
 
         Color c = _sr.color;
-        float original = c.a;
+        float original = _originAlpha;
 
         // 빠른 알파 진동
         float elapsed = 0f;
@@ -155,7 +163,13 @@ public class EnemyGlitchEffect : MonoBehaviour
     /// <summary>전투 종료 또는 데미지 연출 시 강도 높은 글리치를 1회 실행.</summary>
     public void TriggerGlitch()
     {
-        StartCoroutine(Flicker());
-        StartCoroutine(Shake());
+        // 비활성 상태에서 StartCoroutine 호출 시 예외 발생 방지 (사망 연출 중 피격 등)
+        if (!isActiveAndEnabled) return;
+
+        // 연타 피격 시 이전 단발 코루틴을 중단하고 재시작 — 동시 실행 경합 방지
+        if (_triggerFlicker != null) StopCoroutine(_triggerFlicker);
+        if (_triggerShake   != null) StopCoroutine(_triggerShake);
+        _triggerFlicker = StartCoroutine(Flicker());
+        _triggerShake   = StartCoroutine(Shake());
     }
 }

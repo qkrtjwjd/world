@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 이스터에그 편지 컴포넌트.
@@ -108,12 +109,11 @@ public class EasterEggLetter : MonoBehaviour
         {
             var txtGo  = new GameObject("HintText");
             txtGo.transform.SetParent(canvasGo.transform, false);
-            var txt    = txtGo.AddComponent<Text>();
+            var txt    = txtGo.AddComponent<TextMeshProUGUI>();
             txt.text      = "아무 키나 누르세요";
             txt.fontSize  = 22;
             txt.color     = new Color(0.8f, 0.8f, 0.8f, 1f);
-            txt.alignment = TextAnchor.LowerCenter;
-            txt.font      = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            txt.alignment = TextAlignmentOptions.Bottom;
             var tr = txtGo.GetComponent<RectTransform>();
             tr.anchorMin = new Vector2(0f, 0f);
             tr.anchorMax = new Vector2(1f, 0.12f);

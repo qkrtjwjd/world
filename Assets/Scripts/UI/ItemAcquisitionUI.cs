@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 /// <summary>
 /// 아이템 획득 시 화면에 잠깐 표시되는 알림 UI.
@@ -16,11 +17,11 @@ public class ItemAcquisitionUI : MonoBehaviour
 
     [Header("UI 연결")]
     public GameObject notificationPanel;
-    public Text       messageText;
+    public TMP_Text   messageText;
 
     [Header("아이콘 슬롯 (왼쪽부터 순서대로 인스펙터에 연결)")]
-    public Image[] iconSlots;
-    public Text[]  countTexts; // iconSlots 와 1:1 대응 — 각 슬롯 자식의 수량 Text
+    public Image[]    iconSlots;
+    public TMP_Text[] countTexts;
 
     [Header("표시 시간 (초)")]
     public float displayDuration = 2f;

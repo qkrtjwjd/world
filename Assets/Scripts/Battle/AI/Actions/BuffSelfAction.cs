@@ -20,19 +20,15 @@ public class BuffSelfAction : EnemyAction
     {
         if (ai == null) return false;
         var eh = ai.GetComponent<EnemyHealth>();
-        if (eh == null || eh.maxHealth <= 0f) return true;
+        if (eh == null || eh.maxHealth <= 0f) return false;
         return eh.currentHealth / eh.maxHealth <= hpRatioThreshold;
     }
 
     public override IEnumerator Execute(EnemyAI ai, Transform target)
     {
-        if (ai == null) yield break;
-
-        float originalDamage = ai.attackDamage;
-        ai.attackDamage = originalDamage * attackMultiplier;
-
-        yield return new WaitForSeconds(duration);
-
-        if (ai != null) ai.attackDamage = originalDamage;
+        // 원복은 EnemyAI 내부 코루틴이 담당 — 여기서 duration을 기다리면
+        // _isProfileActionRunning이 유지되어 버프 내내 다른 행동을 못 하게 됨
+        if (ai != null) ai.ApplyTimedAttackBuff(attackMultiplier, duration);
+        yield break;
     }
 }

@@ -54,7 +54,7 @@ public class ShelterFeedingSystem : MonoBehaviour
                 PlayerStats.Instance.AddPuppetization(puppetizationAmount);
             }
 
-            // 피드백 (UI 매니저가 있다면 사용, 여기선 디버그/임시)
+            // 피드백: InteractionTextUI로 결과 메시지 표시
             Dbg.Log(successMessage);
             if (InteractionTextUI.Instance != null)
             {

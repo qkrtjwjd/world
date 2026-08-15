@@ -1,0 +1,13 @@
+{
+  "_about": "자동 생성 파일. 직접 고치지 마세요 — Scenario/node_map.json 의 speaker_display 를 고치고 메뉴 [무채색낙원/화자 스타일 갱신] 을 다시 실행하세요.",
+  "entries": [
+    { "id": "세라", "display": "세라", "italic": false, "color": "" },
+    { "id": "쿠루", "display": "쿠루", "italic": false, "color": "" },
+    { "id": "부엉이", "display": "부엉이", "italic": false, "color": "" },
+    { "id": "솔", "display": "솔", "italic": false, "color": "" },
+    { "id": "미루", "display": "미루", "italic": false, "color": "" },
+    { "id": "아모", "display": "아모", "italic": false, "color": "" },
+    { "id": "radio_yu", "display": "라디오", "italic": true, "color": "#d4c97a" },
+    { "id": "루독백", "display": "", "italic": true, "color": "" }
+  ]
+}

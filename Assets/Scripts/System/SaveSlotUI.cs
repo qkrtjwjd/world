@@ -1,11 +1,11 @@
 using UnityEngine;
-using UnityEngine.UI;
+using TMPro;
 
 public class SaveSlotUI : MonoBehaviour
 {
     [Header("설정")]
     public int  slotIndex;
-    public Text slotInfoText;
+    public TMP_Text slotInfoText;
 
     private void OnEnable() => UpdateSlotInfo();
 
@@ -24,7 +24,9 @@ public class SaveSlotUI : MonoBehaviour
         int minutes = (total % 3600) / 60;
 
         string time = hours > 0 ? $"{hours}시간 {minutes}분" : $"{minutes}분";
-        return $"장소: {data.sceneName}\n플레이: {time}\n{data.saveDate}";
+        // v6 이하 세이브는 playerName이 비어 있으므로 기본 이름으로 표시
+        string name = string.IsNullOrWhiteSpace(data.playerName) ? PlayerIdentity.DefaultName : data.playerName;
+        return $"{name}  Lv.{data.playerLevel}\n장소: {data.sceneName}\n플레이: {time}\n{data.saveDate}";
     }
 
     public void OnClickSave()

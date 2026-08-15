@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class Unit : MonoBehaviour
 {
     public string unitName;
     public int    unitLevel;
-    public int    damage;        // 레거시 — 신규 계산 경로(DamageCalculator)는 attack 사용
     public int    maxHP;
     public int    currentHP;
 
@@ -24,11 +22,6 @@ public class Unit : MonoBehaviour
     /// <summary>스킬별 남은 쿨다운(턴). 직렬화하지 않음 — 전투 시작 시 깨끗한 상태.</summary>
     [NonSerialized] public Dictionary<SkillData, int> skillCooldowns = new Dictionary<SkillData, int>();
     [NonSerialized] private List<SkillData> _cooldownKeys = new List<SkillData>();
-
-    [Header("HP 슬라이더 (레거시 — HPBarController 권장)")]
-    [Tooltip("[Deprecated] 신규 코드는 HPBarController를 사용하세요. 인스펙터 연결 보존을 위해 필드는 유지됩니다.")]
-    [Obsolete("Use HPBarController which subscribes to BattleEvents.OnUnitDamaged instead.")]
-    public Slider hpSlider;
 
     [Header("전투 스탯 (DamageCalculator용)")]
     [Tooltip("유닛 레벨. 공격자/방어자 차이로 ±5%/Lv 배율 적용. unitLevel(표시용 레거시)과 별개 — DamageCalculator는 이 필드를 사용합니다.")]
@@ -53,30 +46,8 @@ public class Unit : MonoBehaviour
 
     public bool isDefending = false;
 
-    /// <summary>HP 변동 이벤트. (currentHP, maxHP). UI 구독용.</summary>
-    public event Action<int, int> OnHPChanged;
-
     /// <summary>마지막 피격 결과. UI/이펙트가 즉시 조회 가능.</summary>
     public DamageResult LastDamageResult { get; private set; }
-
-    /// <summary>
-    /// [Deprecated] 슬라이더에 초기 HP 값을 세팅합니다.
-    /// 신규 코드는 HPBarController.SetTarget(unit) 을 사용하세요.
-    /// 인스펙터에 hpSlider가 직접 연결된 레거시 프리팹 호환을 위해 유지됩니다.
-    /// </summary>
-    [Obsolete("Use HPBarController.SetTarget(unit) which initializes from BattleEvents subscriptions.")]
-    public void SetHUD()
-    {
-        if (hpSlider == null)
-            hpSlider = GetComponentInChildren<Slider>();
-
-        if (hpSlider != null)
-        {
-            hpSlider.minValue = 0;
-            hpSlider.maxValue = maxHP;
-            hpSlider.value    = currentHP;
-        }
-    }
 
     public void ResetState()
     {
@@ -91,9 +62,6 @@ public class Unit : MonoBehaviour
 
         currentHP = Mathf.Max(0, currentHP - dmg);
         LastDamageResult = DamageResult.Hit(dmg);
-        RefreshSlider();
-        OnHPChanged?.Invoke(currentHP, maxHP);
-
         BattleEvents.RaiseUnitDamaged(this, LastDamageResult);
         bool died = currentHP <= 0;
         if (died) BattleEvents.RaiseUnitDied(this);
@@ -107,7 +75,6 @@ public class Unit : MonoBehaviour
         if (result.isMiss)
         {
             LastDamageResult = result;
-            OnHPChanged?.Invoke(currentHP, maxHP);
             BattleEvents.RaiseUnitDamaged(this, result);
             return false;
         }
@@ -118,8 +85,6 @@ public class Unit : MonoBehaviour
 
         currentHP = Mathf.Max(0, currentHP - dmg);
         LastDamageResult = DamageResult.Hit(dmg, result.isCrit);
-        RefreshSlider();
-        OnHPChanged?.Invoke(currentHP, maxHP);
         BattleEvents.RaiseUnitDamaged(this, LastDamageResult);
 
         bool died = currentHP <= 0;
@@ -129,17 +94,9 @@ public class Unit : MonoBehaviour
 
     public void Heal(int amount)
     {
+        int before = currentHP;
         currentHP = Mathf.Min(maxHP, currentHP + amount);
-        RefreshSlider();
-        OnHPChanged?.Invoke(currentHP, maxHP);
-    }
-
-    private void RefreshSlider()
-    {
-#pragma warning disable CS0618
-        if (hpSlider != null)
-            hpSlider.value = currentHP;
-#pragma warning restore CS0618
+        BattleEvents.RaiseUnitHealed(this, currentHP - before);
     }
 
     // ─── 스킬 쿨다운 헬퍼 ───────────────────────────────────────────

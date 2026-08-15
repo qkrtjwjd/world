@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using TMPro;
 
 public class ItemSlotUI : MonoBehaviour, ISubmitHandler
 {
@@ -8,7 +9,7 @@ public class ItemSlotUI : MonoBehaviour, ISubmitHandler
     public Image iconImage;
 
     [Header("갯수 텍스트 (선택)")]
-    public Text countText;
+    public TMP_Text countText;
 
     private ItemData _item;
 

@@ -49,8 +49,14 @@ public class ObjectSwapController : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            // 컴포넌트만 파괴 — 매니저 루트 오브젝트에 함께 붙은 다른 컴포넌트 보호
+            Destroy(this);
         }
+    }
+
+    void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
     }
 
     // ─────────────────────────────────────────────

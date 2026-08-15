@@ -4,11 +4,13 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class GaugeManager : MonoBehaviour
+public class GaugeManager : PersistentSingleton<GaugeManager>
 {
-    public static GaugeManager Instance { get; private set; }
-
     public const float DEFAULT_GAUGE = 30f;
+
+    private const float DollificationDimThreshold  = 81f;
+    private const float DollificationGaugeDecrease =  3f;
+    private const float SliderDimmedAlpha          = 0.4f;
 
     [Header("게이지 값")]
     [Range(0f, 100f)] public float fantasyRealityGauge = DEFAULT_GAUGE;
@@ -26,9 +28,9 @@ public class GaugeManager : MonoBehaviour
     [Tooltip("슬라이더와 텍스트 레이블을 함께 감싸는 루트 CanvasGroup.\n설정하면 텍스트도 게이지와 함께 페이드됩니다.")]
     public CanvasGroup gaugeRootGroup;
 
-    [Header("SFX 키 (AudioManager 등록 이름)")]
-    public string sfxGlitch  = "glitch";
-    public string sfxPop     = "pop";
+    [Header("효과음")]
+    [SerializeField] private AudioClip sfxGlitch;
+    [SerializeField] private AudioClip sfxPop;
 
     public event System.Action<float> OnGaugeChanged;
     public event System.Action<bool>  OnVisibilityChanged;
@@ -41,8 +43,12 @@ public class GaugeManager : MonoBehaviour
     public float showFadeDuration = 1.5f;
 
     [Header("임시 강제 복원")]
-    [Tooltip("단검/마시멜로 선택 후 이전 게이지로 복원하기까지의 대기 시간(초)")]
+    [Tooltip("단검 선택(전투 진입) 후 이전 게이지로 복원하기까지의 대기 시간(초)")]
     public float tempForceDuration = 5f;
+
+    [Header("맵 단검 픽업 시간제한")]
+    [Tooltip("맵에서 단검 픽업 후 현실 100% 유지 시간(초). 이후 이전 게이지로 복원됩니다.")]
+    public float mapDaggerDuration = 60f;
 
     private float       _crackCooldownRemaining;
     private Coroutine   _forceReturnCoroutine;
@@ -68,20 +74,14 @@ public class GaugeManager : MonoBehaviour
     // ──────────────────────────────────────────
     //  생명주기
     // ──────────────────────────────────────────
-    void Awake()
+    protected override void OnAwake()
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-            SceneManager.sceneLoaded += OnSceneLoaded;
-            // Inspector 직렬화 값이 덮어쓰는 것을 막고 항상 DEFAULT_GAUGE로 시작
-            fantasyRealityGauge = DEFAULT_GAUGE;
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        // Inspector 직렬화 값이 덮어쓰는 것을 막고 항상 DEFAULT_GAUGE로 시작
+        fantasyRealityGauge = DEFAULT_GAUGE;
+
+        // 설정: 환상/현실 게이지 가시성 이벤트 구독
+        SettingsManager.OnShowFantasyRealityGaugeChanged += OnFantasyGaugeVisibilityChanged;
     }
 
     void Start()
@@ -98,25 +98,34 @@ public class GaugeManager : MonoBehaviour
             _edgeCanvasGroup.alpha = 0f;
         }
 
+        // 설정에서 게이지 가시성 반영
+        bool gaugeAllowed = SettingsManager.Instance?.showFantasyRealityGauge ?? true;
+
         string scene = SceneManager.GetActiveScene().name;
-        if (IsGameplayScene(scene))
+        if (IsGameplayScene(scene) && gaugeAllowed)
             ShowGauge();
         else
             SetSliderAlpha(0f);
     }
 
-    void OnDestroy()
+    protected override void OnDestroy()
     {
-        if (Instance == this) Instance = null;
-        var corruption = CorruptionManager.Instance;
-        if (corruption != null)
-            corruption.OnCorruptionChanged -= OnDollificationChanged;
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        SettingsManager.OnShowFantasyRealityGaugeChanged -= OnFantasyGaugeVisibilityChanged;
+        if (Instance == this)
+        {
+            var corruption = CorruptionManager.Instance;
+            if (corruption != null)
+                corruption.OnCorruptionChanged -= OnDollificationChanged;
+            SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+        base.OnDestroy();
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (IsGameplayScene(scene.name))
+        // 설정에서 게이지 표시를 꺼둔 경우 씬 이동 후에도 숨김 유지
+        bool gaugeAllowed = SettingsManager.Instance?.showFantasyRealityGauge ?? true;
+        if (IsGameplayScene(scene.name) && gaugeAllowed)
         {
             if (!isGaugeVisible) ShowGauge();
         }
@@ -136,8 +145,6 @@ public class GaugeManager : MonoBehaviour
     {
         if (_crackCooldownRemaining > 0f)
             _crackCooldownRemaining -= Time.deltaTime;
-
-        GameState.battleReturn.Tick(Time.deltaTime);
     }
 
     // ──────────────────────────────────────────
@@ -155,6 +162,16 @@ public class GaugeManager : MonoBehaviour
         isGaugeVisible = false;
         SetSliderAlpha(0f);
         OnVisibilityChanged?.Invoke(false);
+    }
+
+    /// <summary>설정 메뉴에서 환상/현실 게이지 표시 토글 시 호출됩니다.</summary>
+    void OnFantasyGaugeVisibilityChanged(bool visible)
+    {
+        string scene = SceneManager.GetActiveScene().name;
+        if (visible && IsGameplayScene(scene))
+            ShowGauge();
+        else
+            HideGauge();
     }
 
     IEnumerator FadeInRoutine()
@@ -203,6 +220,7 @@ public class GaugeManager : MonoBehaviour
     {
         if (_forceReturnCoroutine != null)
             StopCoroutine(_forceReturnCoroutine);
+        _forceReturnCoroutine = null;
 
         fantasyRealityGauge = 100f;
         OnGaugeChanged?.Invoke(fantasyRealityGauge);
@@ -219,6 +237,7 @@ public class GaugeManager : MonoBehaviour
     {
         if (_forceReturnCoroutine != null)
             StopCoroutine(_forceReturnCoroutine);
+        _forceReturnCoroutine = null;
 
         fantasyRealityGauge = 0f;
         OnGaugeChanged?.Invoke(fantasyRealityGauge);
@@ -303,14 +322,22 @@ public class GaugeManager : MonoBehaviour
         SetGauge(targetGauge);
     }
 
-    /// <summary>마시멜로 선택: 환상 100% 강제 후 tempForceDuration 초 뒤 이전 게이지로 복원.</summary>
+    /// <summary>마시멜로 선택: 환상 100% 강제 후 복원 없이 유지.</summary>
     public void ForceTempFantasy()
     {
         if (YarnDialogue.IsRunning) return;
-        _savedGaugeBeforeForce = fantasyRealityGauge;
+        if (_tempForceCoroutine != null) { StopCoroutine(_tempForceCoroutine); _tempForceCoroutine = null; }
         ForceFantasyMax();
+    }
+
+    /// <summary>맵에서 단검 픽업 시: 현실 100% 강제 후 mapDaggerDuration 초 뒤 이전 게이지로 복원.</summary>
+    public void ForceMapDaggerPickup()
+    {
+        if (YarnDialogue.IsRunning) return;
+        _savedGaugeBeforeForce = fantasyRealityGauge;
+        ForceRealityMax();
         if (_tempForceCoroutine != null) StopCoroutine(_tempForceCoroutine);
-        _tempForceCoroutine = StartCoroutine(RestoreGaugeAfterDelay(_savedGaugeBeforeForce, tempForceDuration));
+        _tempForceCoroutine = StartCoroutine(RestoreGaugeAfterDelay(_savedGaugeBeforeForce, mapDaggerDuration));
     }
 
     IEnumerator RestoreGaugeAfterDelay(float targetGauge, float delay)
@@ -354,27 +381,17 @@ public class GaugeManager : MonoBehaviour
     // ──────────────────────────────────────────
     //  트리거
     // ──────────────────────────────────────────
-    public void ApplyTrigger(GaugeTrigger trigger)
+    /// <summary>triggerId 문자열로 게이지 트리거를 적용합니다. GaugeTriggerRegistry를 참조합니다.</summary>
+    public void ApplyTrigger(string triggerId)
     {
-        ChangeGauge(GetTriggerAmount(trigger));
+        if (!GaugeTriggerRegistry.TryGetAmount(triggerId, out float amount))
+        {
+            Debug.LogWarning($"[GaugeManager] ApplyTrigger: '{triggerId}' 트리거를 찾지 못했습니다.");
+            return;
+        }
+        ChangeGauge(amount);
     }
 
-    static float GetTriggerAmount(GaugeTrigger trigger) => trigger switch
-    {
-        GaugeTrigger.무서운것_목격__현실_15       =>  15f,
-        GaugeTrigger.신체_고통__현실_10           =>  10f,
-        GaugeTrigger.쿠루_직접_대화__현실_10      =>  10f,
-        GaugeTrigger.아버지_유품_접촉__현실_10    =>  10f,
-        GaugeTrigger.루_감정_폭발__현실_10        =>  10f,
-        GaugeTrigger.환상_평화주의_성공__현실_5   =>   5f,
-        GaugeTrigger.세라_목소리_들림__환상_25    => -25f,
-        GaugeTrigger.무서운것_회피__환상_15       => -15f,
-        GaugeTrigger.NPC_눈_마주침__환상_10       => -10f,
-        GaugeTrigger.쿠루_부재__환상_10           => -10f,
-        GaugeTrigger.마시멜로_냄새__환상_5        =>  -5f,
-        GaugeTrigger.세라_흔적_발견__환상_5       =>  -5f,
-        _                                         =>   0f,
-    };
 
     // ──────────────────────────────────────────
     //  인형화 연동
@@ -382,10 +399,10 @@ public class GaugeManager : MonoBehaviour
     void OnDollificationChanged(float delta)
     {
         if (delta > 0f)
-            ChangeGauge(-3f);
+            ChangeGauge(-DollificationGaugeDecrease);
 
         if (isGaugeVisible)
-            SetSliderAlpha(dollificationGauge >= 81f ? 0.4f : 1f);
+            SetSliderAlpha(dollificationGauge >= DollificationDimThreshold ? SliderDimmedAlpha : 1f);
     }
 
     // ──────────────────────────────────────────

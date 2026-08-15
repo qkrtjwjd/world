@@ -5,22 +5,23 @@ public class MirrorObject : MonoBehaviour
     [Header("연결할 것")]
     public GameObject mirrorUIPanel;
 
-    [Header("설정")]
-    public KeyCode interactKey = KeyCode.F;
-
     private bool isPlayerNear = false;
 
     void Update()
     {
         if (mirrorUIPanel == null) return;
 
-        // 플레이어가 근처에 있고 F키를 눌렀을 때
-        if (isPlayerNear && Input.GetKeyDown(interactKey))
+        // 설정 메뉴에서 리바인딩한 단검 키 사용
+        KeyCode daggerKey = SettingsManager.Instance?.keyDagger ?? KeyCode.F;
+        if (isPlayerNear && Input.GetKeyDown(daggerKey))
         {
+            if (YarnDialogue.IsRunning) return;
+            if (!DaggerKeyRegistry.IsClosest(this)) return;
+
             // 현재 꺼져있으면 -> 켜야 함 (true)
             // 현재 켜져있으면 -> 꺼야 함 (false)
             bool willOpen = !mirrorUIPanel.activeSelf;
-            
+
             ToggleMirror(willOpen);
         }
     }
@@ -49,6 +50,7 @@ public class MirrorObject : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             isPlayerNear = true;
+            DaggerKeyRegistry.Register(this);
         }
     }
 
@@ -57,6 +59,7 @@ public class MirrorObject : MonoBehaviour
         if (other.CompareTag("Player"))
         {
             isPlayerNear = false;
+            DaggerKeyRegistry.Unregister(this);
 
             // ★ 중요: 거울을 켜둔 채로 멀어지면?
             // 강제로 끄면서 시간도 다시 흐르게 해줘야 함! (안 그러면 영원히 시간 멈춤)
@@ -65,5 +68,10 @@ public class MirrorObject : MonoBehaviour
                 ToggleMirror(false); // 끄기 실행
             }
         }
+    }
+
+    private void OnDisable()
+    {
+        DaggerKeyRegistry.Unregister(this);
     }
 }

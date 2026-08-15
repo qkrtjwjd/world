@@ -12,7 +12,7 @@ public class InventoryManager : MonoBehaviour, IInventoryService
 
     [Header("UI")]
     public GameObject inventoryPanel;
-    public UnityEngine.UI.Text quantityText;
+    public TMPro.TMP_Text quantityText;
 
     [Header("시작 아이템")]
     public List<ItemData> startingItems = new List<ItemData>();
