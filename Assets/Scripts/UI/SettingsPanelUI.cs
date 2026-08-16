@@ -30,7 +30,7 @@ public class SettingsPanelUI : MonoBehaviour
     Button[]     _tabButtons;
 
     /// <summary>설정 패널 전체 배율. 항목 좌표가 전부 상수라 스케일로 크기를 조절한다.</summary>
-    const float PanelScale = 0.78f;
+    const float PanelScale = 1.3f;
 
     static readonly Color TabActive   = new Color(0.30f, 0.55f, 0.90f, 1f);
     static readonly Color TabInactive = new Color(0.22f, 0.22f, 0.22f, 1f);
