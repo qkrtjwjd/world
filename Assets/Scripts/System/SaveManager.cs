@@ -51,6 +51,9 @@ public class SaveManager : PersistentSingleton<SaveManager>
     // CheckpointKey 를 재사용하지 않는 이유 — 체크포인트는 대화 종료마다 덮어써지므로(OnDialogueEnded)
     // 90초 도중 S#12 단검 대사가 끝나면 밀린다. '집 = S#11 직후 / 마을 = 진입 지점' 을 보존해야 한다.
     const string RewindKey    = "RewindSave";
+    // 중단 저장(F-5-5) — 메뉴 '그만두기' 전용 슬롯 1개.
+    // 슬롯 3개(SaveFile0~2) 목록에 섞지 않고, 불러온 즉시 삭제한다.
+    const string SuspendKey   = "SuspendSave";
 
     SaveData BuildSaveData()
     {
@@ -129,7 +132,61 @@ public class SaveManager : PersistentSingleton<SaveManager>
         SaveData data = BuildSaveData();
         PlayerPrefs.SetString(SlotKey(slot), JsonUtility.ToJson(data));
         PlayerPrefs.Save();
+        // 토끼로 저장하면 중단 저장을 지운다 — 복귀 지점이 둘이 되지 않게 (CLAUDE.md §8)
+        DeleteSuspend();
         Dbg.Log($"[SaveManager] 슬롯 {slot} 저장 완료");
+    }
+
+    // ─────────────────────────────────────────────
+    //  중단 저장 (F-5-5) — 메뉴 '그만두기' 전용
+    // ─────────────────────────────────────────────
+
+    /// <summary>중단 저장이 존재하는지 여부.</summary>
+    public bool HasSuspendSave => PlayerPrefs.HasKey(SuspendKey);
+
+    /// <summary>현재 상태를 중단 저장 전용 키에 저장합니다. 슬롯 3개와는 분리됩니다.</summary>
+    public void SaveSuspend()
+    {
+        SaveData data = BuildSaveData();
+        PlayerPrefs.SetString(SuspendKey, JsonUtility.ToJson(data));
+        PlayerPrefs.Save();
+        Dbg.Log("[SaveManager] 중단 저장 완료");
+    }
+
+    /// <summary>중단 저장 데이터. 표시용(위치·플레이 시간)으로 읽습니다. 없으면 null.</summary>
+    public SaveData GetSuspendData()
+        => PlayerPrefs.HasKey(SuspendKey)
+           ? JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SuspendKey)) : null;
+
+    /// <summary>중단 저장을 삭제합니다.</summary>
+    public void DeleteSuspend()
+    {
+        if (!PlayerPrefs.HasKey(SuspendKey)) return;
+        PlayerPrefs.DeleteKey(SuspendKey);
+        PlayerPrefs.Save();
+        Dbg.Log("[SaveManager] 중단 저장 삭제");
+    }
+
+    /// <summary>
+    /// 중단 저장을 불러옵니다. <b>불러오는 즉시 삭제합니다</b>(F-5-5) —
+    /// 씬 전환 전에 지워서, 전환 도중 죽어도 저장본이 남지 않게 합니다.
+    /// </summary>
+    public void LoadSuspend()
+    {
+        if (!PlayerPrefs.HasKey(SuspendKey))
+        {
+            Debug.LogWarning("[SaveManager] 중단 저장 데이터가 없습니다.");
+            return;
+        }
+        SaveData data = JsonUtility.FromJson<SaveData>(PlayerPrefs.GetString(SuspendKey));
+        DeleteSuspend();
+
+        _pendingData = data;
+        _isLoading   = true;
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(data.sceneName);
+        else
+            SceneManager.LoadScene(data.sceneName);
     }
 
     /// <summary>전투 직전 저장 데이터가 존재하는지 여부. GameOverUI가 불러오기 가능 여부 판단에 사용.</summary>
@@ -505,6 +562,8 @@ public class SaveManager : PersistentSingleton<SaveManager>
         PlayerPrefs.DeleteKey(CheckpointKey);
         // 남겨두면 새 게임에서 배드 엔딩에 걸렸을 때 이전 플레이의 되감기 지점으로 복귀한다
         PlayerPrefs.DeleteKey(RewindKey);
+        // 같은 이유 — 남겨두면 새 게임에서 이전 플레이의 중단 지점을 이어받는다
+        PlayerPrefs.DeleteKey(SuspendKey);
         PlayerPrefs.Save();
         Dbg.Log("[SaveManager] 모든 슬롯 삭제 완료");
     }

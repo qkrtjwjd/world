@@ -23,6 +23,14 @@ public class MainMenu : MonoBehaviour
 
     public void OnClickLoad()
     {
+        // 중단 저장(F-5-5)이 있으면 그쪽이 우선이다. 슬롯 3개 목록에 섞지 않는다.
+        // LoadSuspend() 가 불러오는 즉시 저장본을 지우므로 다음 번엔 평소 흐름으로 돌아간다.
+        if (SaveManager.Instance != null && SaveManager.Instance.HasSuspendSave)
+        {
+            SaveManager.Instance.LoadSuspend();
+            return;
+        }
+
         if (loadPanel != null)
         {
             loadPanel.SetActive(true);

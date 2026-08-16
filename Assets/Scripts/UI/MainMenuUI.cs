@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 /// <summary>
@@ -81,6 +82,9 @@ public class MainMenuUI : MonoBehaviour
     // 장착 선택 목록 (빈 슬롯을 눌렀을 때만 뜬다)
     GameObject             _picker;
     EquipmentManager.Slot  _pickerSlot;
+
+    // 그만두기 탭의 위치·플레이 시간 표시 (인형화는 안 쓴다)
+    TMP_Text _quitInfoText;
 
     // InventoryPanel 을 임시로 옮기며 우리가 바꾼 것 (닫을 때 전부 되돌린다)
     Canvas           _invCanvas;
@@ -240,7 +244,48 @@ public class MainMenuUI : MonoBehaviour
                 if (on) SettingsPanelUI.Show();
                 else    SettingsPanelUI.Hide();
                 break;
+            case Tab.Quit:
+                if (on) RefreshQuitInfo();
+                break;
         }
+    }
+
+    // ─── 그만두기 = 중단 저장 (F-5-5) ─────────────────────────────────────
+    void RefreshQuitInfo()
+    {
+        if (_quitInfoText == null) return;
+
+        string where = SceneManager.GetActiveScene().name;
+        float  secs  = SaveManager.Instance != null ? SaveManager.Instance.currentPlayTime : 0f;
+        _quitInfoText.text = $"장소: {where}\n플레이: {FormatPlayTime(secs)}";
+    }
+
+    /// <summary>SaveSlotUI.FormatSlotInfo 와 같은 규칙.</summary>
+    static string FormatPlayTime(float seconds)
+    {
+        int total = (int)seconds;
+        int h = total / 3600;
+        int m = (total % 3600) / 60;
+        return h > 0 ? $"{h}시간 {m}분" : $"{m}분";
+    }
+
+    void OnQuitClicked()
+    {
+        SaveManager.Instance?.SaveSuspend();
+
+        IsOpen = false;
+        CloseEquipPicker();
+        SetTabContent(_current, false);
+        SettingsPanelUI.Hide();
+        ReleaseBackdrop();
+        _front.SetActive(false);
+        gameObject.SetActive(false);
+
+        Time.timeScale = 1f;
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(SceneNames.Title);
+        else
+            SceneManager.LoadScene(SceneNames.Title);
     }
 
     // ─── 아이템 탭 = 기존 InventoryPanel 재사용 ───────────────────────────
@@ -656,18 +701,19 @@ public class MainMenuUI : MonoBehaviour
         // 설정 탭 — 내용은 기존 SettingsPanelUI(99) 가 그린다
         _tabPanels[(int)Tab.Settings] = MakePanel(parent, "Tab_Settings", show: false);
 
-        // 그만두기 탭 — 중단 저장은 아직 구현이 없다(계획서 4단계).
-        // 저장 없이 나가면 진행이 사라지므로 버튼을 눌리지 않게 둔다.
+        // 그만두기 탭 = 중단 저장 (F-5-5). 전용 슬롯 1개, 불러오면 즉시 삭제된다.
         var quit = MakePanel(parent, "Tab_Quit", show: true);
         var quitTitle = MakeText(quit.transform, "그만두기", 30, new Vector2(0f, 200f), new Vector2(500f, 44f));
         quitTitle.fontStyle = FontStyles.Bold;
-        MakeText(quit.transform, "중단 저장 후 게임을 끝냅니다.", 18,
-            new Vector2(0f, 60f), new Vector2(520f, 40f)).color = NoteCol;
-        var quitBtn = MakeButton(quit.transform, "중단 저장 후 종료",
-            new Vector2(0f, -10f), new Vector2(300f, 52f), () => { }, 20);
-        quitBtn.interactable = false;
-        MakeText(quit.transform, "준비 중입니다.", 15,
-            new Vector2(0f, -70f), new Vector2(520f, 32f)).color = NoteCol;
+        MakeText(quit.transform, "여기까지를 저장하고 타이틀로 돌아갑니다.", 18,
+            new Vector2(0f, 110f), new Vector2(520f, 40f)).color = NoteCol;
+
+        // 표시 항목은 위치·플레이 시간뿐이다. 인형화는 어떤 형태로도 쓰지 않는다 (§7 · F-8-4)
+        _quitInfoText = MakeText(quit.transform, "", 17, new Vector2(0f, 30f), new Vector2(520f, 70f));
+        _quitInfoText.color = NoteCol;
+
+        MakeButton(quit.transform, "저장하고 나가기",
+            new Vector2(0f, -80f), new Vector2(300f, 52f), OnQuitClicked, 20);
         _tabPanels[(int)Tab.Quit] = quit;
 
         for (int i = 0; i < _tabPanels.Length; i++)
