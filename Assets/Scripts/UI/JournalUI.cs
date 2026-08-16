@@ -109,10 +109,13 @@ public class JournalUI : MonoBehaviour
         scrollRt.anchoredPosition = new Vector2(0f, -12f);
         scrollRt.sizeDelta        = new Vector2(640f, 430f);
 
+        // ⚠ Mask 를 쓰면 안 된다. Mask 는 그래픽의 알파로 스텐실을 쓰는데, 여기 그래픽은
+        // 색이 Color.clear(알파 0)라 스텐실이 하나도 안 써지고 → 자식이 전부 스텐실 테스트에
+        // 걸려 화면에서 사라진다. RectMask2D 는 사각형으로 자르므로 그래픽이 필요 없다.
+        // (Image 는 ScrollRect 드래그 레이캐스트용으로 남긴다.)
         var viewport = new GameObject("Viewport");
         viewport.transform.SetParent(scrollGo.transform, false);
-        var vpMask = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
+        viewport.AddComponent<RectMask2D>();
         viewport.AddComponent<Image>().color = Color.clear;
         var vpRt = viewport.GetComponent<RectTransform>();
         Stretch(vpRt);
