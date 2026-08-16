@@ -32,6 +32,10 @@ public class SettingsPanelUI : MonoBehaviour
     /// <summary>설정 패널 전체 배율. 항목 좌표가 전부 상수라 스케일로 크기를 조절한다.</summary>
     const float PanelScale = 1.3f;
 
+    /// <summary>패널 가로 폭. 탭 7개 라벨이 들어갈 만큼 넓혀 뒀다(구 680).</summary>
+    const float PanelWidth   = 880f;
+    const float DividerWidth = PanelWidth - 40f;
+
     static readonly Color TabActive   = new Color(0.30f, 0.55f, 0.90f, 1f);
     static readonly Color TabInactive = new Color(0.22f, 0.22f, 0.22f, 1f);
     static readonly Color PanelBg     = new Color(0.10f, 0.10f, 0.12f, 1f);
@@ -113,10 +117,12 @@ public class SettingsPanelUI : MonoBehaviour
         // 중앙 패널
         // 내부 항목 위치가 전부 이 패널 중심 기준 상수라, 크기를 줄이려면 sizeDelta 가 아니라
         // 스케일을 줄여야 한다. sizeDelta 를 건드리면 항목들이 패널 밖으로 밀린다.
+        // 가로만 넓혔다(680 -> 880). 탭 7개 라벨이 버튼 밖으로 넘쳐 잘리기 때문이다.
+        // 세로는 건드리지 않는다 — 항목 y 좌표가 전부 상수라 높이를 바꾸면 밀린다.
         var panel = MakeImage(root, "Panel", PanelBg);
         var pr = panel.rectTransform;
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
-        pr.sizeDelta = new Vector2(680f, 580f);
+        pr.sizeDelta = new Vector2(PanelWidth, 580f);
         pr.anchoredPosition = Vector2.zero;
         pr.localScale = Vector3.one * PanelScale;
         var pt = panel.transform;
@@ -126,16 +132,18 @@ public class SettingsPanelUI : MonoBehaviour
         title.fontStyle = FontStyles.Bold;
 
         // 구분선 (제목 아래)
-        Divider(pt, new Vector2(0f, 225f), 640f);
+        Divider(pt, new Vector2(0f, 225f), DividerWidth);
 
         // 탭 버튼 행
         string[] tabLabels = { "🔊 사운드", "🖥️ 화면", "⌨️ 조작", "♿ 접근성", "💾 저장", "🌐 언어", "📋 게임플레이" };
         _tabButtons = new Button[tabLabels.Length];
         _tabPanels  = new GameObject[tabLabels.Length];
 
-        float tabW   = 88f;
+        // 라벨이 버튼보다 길어 넘치던 것을 버튼 폭·간격을 키워 담는다.
+        // 바깥 버튼 끝 = 360 + 58 = 418 < 440(패널 반폭) 이라 패널 안에 들어온다.
+        float tabW   = 116f;
         float tabH   = 34f;
-        float tabGap = 92f;
+        float tabGap = 120f;
         float tabStartX = -(tabGap * 3f);  // 7개 탭 가운데 정렬
 
         for (int i = 0; i < tabLabels.Length; i++)
@@ -150,12 +158,17 @@ public class SettingsPanelUI : MonoBehaviour
         var scrollGo   = new GameObject("ScrollArea"); scrollGo.transform.SetParent(pt, false);
         var scrollRect = scrollGo.AddComponent<ScrollRect>();
         var scrollRt   = scrollGo.GetComponent<RectTransform>();
-        scrollRt.anchoredPosition = new Vector2(0f, 0f);
-        scrollRt.sizeDelta        = new Vector2(660f, 390f);
+        // 탭 버튼 줄(y 198, 높이 34 → 아래끝 181)과 겹치지 않게 내려서 잡는다.
+        // 아래끝은 닫기 위 구분선(y -231) 위에 둔다.
+        scrollRt.anchoredPosition = new Vector2(0f, -14f);
+        scrollRt.sizeDelta        = new Vector2(PanelWidth - 20f, 366f);   // y -197 ~ 169
 
+        // ⚠ Mask 를 쓰면 안 된다. Mask 는 그래픽의 알파로 스텐실을 쓰는데, 여기 그래픽은
+        // 색이 Color.clear(알파 0)라 스텐실이 하나도 안 써지고 → 자식이 전부 스텐실 테스트에
+        // 걸려 화면에서 사라진다. RectMask2D 는 사각형으로 자르므로 그래픽이 필요 없다.
+        // (Image 는 ScrollRect 드래그 레이캐스트용으로 남긴다.)
         var viewport = new GameObject("Viewport"); viewport.transform.SetParent(scrollGo.transform, false);
-        var vpMask   = viewport.AddComponent<Mask>();
-        vpMask.showMaskGraphic = false;
+        viewport.AddComponent<RectMask2D>();
         viewport.AddComponent<Image>().color = Color.clear;
         var vpRt = viewport.GetComponent<RectTransform>();
         Stretch(vpRt);
@@ -185,7 +198,7 @@ public class SettingsPanelUI : MonoBehaviour
         _tabPanels[6] = BuildGameplayTab(content.transform);
 
         // 구분선 (닫기 위)
-        Divider(pt, new Vector2(0f, -231f), 640f);
+        Divider(pt, new Vector2(0f, -231f), DividerWidth);
 
         // 닫기 버튼
         var closeBtn = MakeButton(pt, "닫기", new Vector2(0f, -257f), new Vector2(160f, 40f), Hide);
@@ -388,17 +401,30 @@ public class SettingsPanelUI : MonoBehaviour
 
     // ─── UI 컨트롤 헬퍼 ───────────────────────────────────────────────────
 
+    /// <summary>
+    /// 탭 내용을 담는 컨테이너.
+    ///
+    /// ⚠ <b>pivot 을 (0.5,0.5) 로 두는 것이 핵심이다.</b> 이 안의 항목들은 MakeText·MakeButton·
+    /// MakeSlider 가 전부 <c>anchor (0.5,0.5)</c> 로 만들어 <b>이 패널의 중심 기준</b>으로 놓인다.
+    /// pivot 이 위쪽이면 중심이 뷰포트 위끝에서 380px(높이 760의 절반) 아래로 내려가,
+    /// 항목이 전부 뷰포트(높이 390) 밖으로 밀려 Mask 에 잘린다 — 화면에 아무것도 안 나온다.
+    /// 같은 스크롤 구조를 쓰는 <see cref="JournalUI"/> 는 행마다 SetTopAnchored 로 재앵커해 피한다.
+    /// 여기서는 항목 좌표를 그대로 두고 컨테이너 기준만 맞춘다.
+    /// </summary>
     static GameObject TabPanel(Transform parent, string name)
     {
         var go = new GameObject(name);
         go.transform.SetParent(parent, false);
         var rt = go.AddComponent<RectTransform>();
         rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
-        rt.pivot     = new Vector2(0.5f, 1f);
+        rt.pivot     = new Vector2(0.5f, 0.5f);
         rt.sizeDelta = new Vector2(640f, 760f);
-        rt.anchoredPosition = Vector2.zero;
+        rt.anchoredPosition = new Vector2(0f, -TabTopMargin);   // 항목 y=0 이 위끝에서 이만큼 아래
         return go;
     }
+
+    /// <summary>탭 내용 첫 항목(y=0)이 뷰포트 위끝에서 떨어지는 거리.</summary>
+    const float TabTopMargin = 24f;
 
     static void Section(GameObject p, string label, float y)
     {
