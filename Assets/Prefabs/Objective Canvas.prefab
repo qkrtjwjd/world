@@ -90,7 +90,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemNotificationUI
   notificationPanel: {fileID: 145485651034456766}
-  messageText: {fileID: 0}
+  messageText: {fileID: 4290107619055202268}
   discardDisplayTime: 1.5
   messageDisplayTime: 1.5
   dialogueDisplayTime: 2
@@ -447,7 +447,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 973d0b660df37c347b1d4f0cc64fc61c, type: 2}
   m_sharedMaterial: {fileID: -5896777379312035082, guid: 973d0b660df37c347b1d4f0cc64fc61c,
@@ -780,7 +780,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 973d0b660df37c347b1d4f0cc64fc61c, type: 2}
   m_sharedMaterial: {fileID: -5896777379312035082, guid: 973d0b660df37c347b1d4f0cc64fc61c,
@@ -993,7 +993,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text:
+  m_text: 
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 973d0b660df37c347b1d4f0cc64fc61c, type: 2}
   m_sharedMaterial: {fileID: -5896777379312035082, guid: 973d0b660df37c347b1d4f0cc64fc61c,
@@ -1437,7 +1437,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemAcquisitionUI
   notificationPanel: {fileID: 2808141584669637886}
-  messageText: {fileID: 0}
+  messageText: {fileID: 261839558904591145}
   iconSlots:
   - {fileID: 2263975008002228843}
   - {fileID: 7964128472484718777}

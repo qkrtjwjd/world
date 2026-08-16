@@ -424,7 +424,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 350952304782273728}
-  countText: {fileID: 0}
+  countText: {fileID: 7431703094734344522}
 --- !u!1 &185950780959123318
 GameObject:
   m_ObjectHideFlags: 0
@@ -1022,7 +1022,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 30585499388512769}
-  countText: {fileID: 0}
+  countText: {fileID: 2283205859701349921}
 --- !u!1 &435167760062260804
 GameObject:
   m_ObjectHideFlags: 0
@@ -1246,7 +1246,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 4493779148503255862}
-  countText: {fileID: 0}
+  countText: {fileID: 649605366708884965}
 --- !u!1 &546650412772680537
 GameObject:
   m_ObjectHideFlags: 0
@@ -1395,7 +1395,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 5608968575800532500}
-  countText: {fileID: 0}
+  countText: {fileID: 4520890144622924119}
 --- !u!1 &610801037383770926
 GameObject:
   m_ObjectHideFlags: 0
@@ -3567,7 +3567,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 697864694535604350}
-  countText: {fileID: 0}
+  countText: {fileID: 6644636511862062215}
 --- !u!1 &1198273744915980238
 GameObject:
   m_ObjectHideFlags: 0
@@ -4544,7 +4544,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 7654740266892765756}
-  countText: {fileID: 0}
+  countText: {fileID: 2170286184501597693}
 --- !u!1 &1389049967702592049
 GameObject:
   m_ObjectHideFlags: 0
@@ -4826,7 +4826,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 3079641109635841371}
-  countText: {fileID: 0}
+  countText: {fileID: 6933195728917033224}
 --- !u!1 &1512773065300844856
 GameObject:
   m_ObjectHideFlags: 0
@@ -5487,7 +5487,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 8015330381627940167}
-  countText: {fileID: 0}
+  countText: {fileID: 6556852959228295832}
 --- !u!1 &1791834541874666213
 GameObject:
   m_ObjectHideFlags: 0
@@ -5912,7 +5912,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 4662150546879274214}
-  countText: {fileID: 0}
+  countText: {fileID: 853426383184366220}
 --- !u!1 &1951374843023987136
 GameObject:
   m_ObjectHideFlags: 0
@@ -6061,7 +6061,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 802517742087361827}
-  countText: {fileID: 0}
+  countText: {fileID: 7913863376447056757}
 --- !u!1 &2028490935484368760
 GameObject:
   m_ObjectHideFlags: 0
@@ -6423,7 +6423,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 5117943378819974353}
-  countText: {fileID: 0}
+  countText: {fileID: 6649730036985116789}
 --- !u!1 &2165917570138046808
 GameObject:
   m_ObjectHideFlags: 0
@@ -6964,7 +6964,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 8711678239283417144}
-  countText: {fileID: 0}
+  countText: {fileID: 9155891650530217877}
 --- !u!1 &2246991970440358359
 GameObject:
   m_ObjectHideFlags: 0
@@ -7113,7 +7113,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 4579763864704756854}
-  countText: {fileID: 0}
+  countText: {fileID: 6598037029999872258}
 --- !u!1 &2273147188140161104
 GameObject:
   m_ObjectHideFlags: 0
@@ -8681,7 +8681,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 781386583116606655}
-  countText: {fileID: 0}
+  countText: {fileID: 1605346288192994051}
 --- !u!1 &2944261663829145199
 GameObject:
   m_ObjectHideFlags: 0
@@ -8830,7 +8830,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 7781377118627937257}
-  countText: {fileID: 0}
+  countText: {fileID: 6989594129240249099}
 --- !u!1 &2994355896639293481
 GameObject:
   m_ObjectHideFlags: 0
@@ -8928,10 +8928,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ItemDetailUI
   panel: {fileID: 2994355896639293481}
   itemIcon: {fileID: 1291672655385018341}
-  nameText: {fileID: 0}
-  descriptionText: {fileID: 0}
-  gradeText: {fileID: 0}
-  quoteText: {fileID: 0}
+  nameText: {fileID: 8512377626306314073}
+  descriptionText: {fileID: 2765238167655638362}
+  gradeText: {fileID: 9201708985791876951}
+  quoteText: {fileID: 640032382352719613}
   useButton: {fileID: 7197212715089060583}
   discardButton: {fileID: 2521195768939652670}
 --- !u!114 &9148355987179818844
@@ -9246,7 +9246,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 6480192101852580496}
-  countText: {fileID: 0}
+  countText: {fileID: 5390437442956019048}
 --- !u!1 &3211776813624843001
 GameObject:
   m_ObjectHideFlags: 0
@@ -10103,7 +10103,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 5899635917379718373}
-  countText: {fileID: 0}
+  countText: {fileID: 4555374628383695312}
 --- !u!1 &3665713650374000228
 GameObject:
   m_ObjectHideFlags: 0
@@ -10465,7 +10465,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 2593584027261931212}
-  countText: {fileID: 0}
+  countText: {fileID: 3620903256606674984}
 --- !u!1 &3759361640656815953
 GameObject:
   m_ObjectHideFlags: 0
@@ -11582,7 +11582,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 1371706037512812551}
-  countText: {fileID: 0}
+  countText: {fileID: 782359176056133999}
 --- !u!1 &4011656465618057710
 GameObject:
   m_ObjectHideFlags: 0
@@ -12445,7 +12445,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 925450698836847955}
-  countText: {fileID: 0}
+  countText: {fileID: 1795734315795207748}
 --- !u!1 &4223926648966081576
 GameObject:
   m_ObjectHideFlags: 0
@@ -12742,7 +12742,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 2156605616505781430}
-  countText: {fileID: 0}
+  countText: {fileID: 7539104283453056722}
 --- !u!1 &4432339320802536342
 GameObject:
   m_ObjectHideFlags: 0
@@ -13028,7 +13028,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 5369004871971591650}
-  countText: {fileID: 0}
+  countText: {fileID: 4056160902845210657}
 --- !u!1 &4494130277528424655
 GameObject:
   m_ObjectHideFlags: 0
@@ -13557,7 +13557,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 6131823927534479154}
-  countText: {fileID: 0}
+  countText: {fileID: 2127228312387434156}
 --- !u!1 &4693345810335771435
 GameObject:
   m_ObjectHideFlags: 0
@@ -13844,7 +13844,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 2540207727236612419}
-  countText: {fileID: 0}
+  countText: {fileID: 7253881785323360288}
 --- !u!1 &4759231820046830832
 GameObject:
   m_ObjectHideFlags: 0
@@ -14131,7 +14131,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 7857366012578595449}
-  countText: {fileID: 0}
+  countText: {fileID: 3817826679909381779}
 --- !u!1 &4855237126104944681
 GameObject:
   m_ObjectHideFlags: 0
@@ -14418,7 +14418,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 4304053240920793334}
-  countText: {fileID: 0}
+  countText: {fileID: 5714014437035634762}
 --- !u!1 &5022532726177370776
 GameObject:
   m_ObjectHideFlags: 0
@@ -14567,7 +14567,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 5046998278459125974}
-  countText: {fileID: 0}
+  countText: {fileID: 8567621867627033559}
 --- !u!1 &5027289894041145523
 GameObject:
   m_ObjectHideFlags: 0
@@ -14929,7 +14929,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 6160931118985622767}
-  countText: {fileID: 0}
+  countText: {fileID: 3708508895106307197}
 --- !u!1 &5248784896014924495
 GameObject:
   m_ObjectHideFlags: 0
@@ -15216,7 +15216,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 6149821798470410961}
-  countText: {fileID: 0}
+  countText: {fileID: 8705357351920219469}
 --- !u!1 &5424305651367956132
 GameObject:
   m_ObjectHideFlags: 0
@@ -15752,7 +15752,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 6551984760065604383}
-  countText: {fileID: 0}
+  countText: {fileID: 515723499421248350}
 --- !u!1 &5561724648379354872
 GameObject:
   m_ObjectHideFlags: 0
@@ -16187,7 +16187,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 1388296266601101882}
-  countText: {fileID: 0}
+  countText: {fileID: 738028823846171948}
 --- !u!1 &5594549474040232734
 GameObject:
   m_ObjectHideFlags: 0
@@ -16336,7 +16336,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 6423766767875040325}
-  countText: {fileID: 0}
+  countText: {fileID: 4626395384037885449}
 --- !u!1 &5603647067814221489
 GameObject:
   m_ObjectHideFlags: 0
@@ -16560,7 +16560,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 424511191079954091}
-  countText: {fileID: 0}
+  countText: {fileID: 3621823639533756394}
 --- !u!1 &5681741304530796019
 GameObject:
   m_ObjectHideFlags: 0
@@ -18735,7 +18735,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 4054354729844415167}
-  countText: {fileID: 0}
+  countText: {fileID: 4247888490130349670}
 --- !u!1 &6248570779355365368
 GameObject:
   m_ObjectHideFlags: 0
@@ -19288,7 +19288,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 3657468383189974}
-  countText: {fileID: 0}
+  countText: {fileID: 2312184855356323941}
 --- !u!1 &6453103139109934494
 GameObject:
   m_ObjectHideFlags: 0
@@ -21022,7 +21022,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 1758952973895975897}
-  countText: {fileID: 0}
+  countText: {fileID: 5435505916697563899}
 --- !u!1 &7091397548552311460
 GameObject:
   m_ObjectHideFlags: 0
@@ -21171,7 +21171,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 1739815355596148407}
-  countText: {fileID: 0}
+  countText: {fileID: 6120424064851775480}
 --- !u!1 &7106129938655254709
 GameObject:
   m_ObjectHideFlags: 0
@@ -21683,7 +21683,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 4373761055646523587}
-  countText: {fileID: 0}
+  countText: {fileID: 5406736741305560244}
 --- !u!1 &7250448391866337325
 GameObject:
   m_ObjectHideFlags: 0
@@ -22326,7 +22326,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 3030767065219068426}
-  countText: {fileID: 0}
+  countText: {fileID: 1096688691198739599}
 --- !u!1 &7558088361879143850
 GameObject:
   m_ObjectHideFlags: 0
@@ -23074,7 +23074,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 7029400479494966286}
-  countText: {fileID: 0}
+  countText: {fileID: 2799156712193571600}
 --- !u!1 &7762050230235061165
 GameObject:
   m_ObjectHideFlags: 0
@@ -23360,7 +23360,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 665478182617439467}
-  countText: {fileID: 0}
+  countText: {fileID: 10495651196482679}
 --- !u!1 &7785960893344288421
 GameObject:
   m_ObjectHideFlags: 0
@@ -24278,7 +24278,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 743585721865104644}
-  countText: {fileID: 0}
+  countText: {fileID: 8952077164668895402}
 --- !u!1 &8116554472384833977
 GameObject:
   m_ObjectHideFlags: 0
@@ -25049,7 +25049,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 5046478469705922844}
-  countText: {fileID: 0}
+  countText: {fileID: 3911748711200722969}
 --- !u!1 &8245533241787016328
 GameObject:
   m_ObjectHideFlags: 0
@@ -25198,7 +25198,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 8723453773753994084}
-  countText: {fileID: 0}
+  countText: {fileID: 8625827907952282909}
 --- !u!1 &8266751831217642615
 GameObject:
   m_ObjectHideFlags: 0
@@ -25520,7 +25520,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 3080031300000878708}
-  countText: {fileID: 0}
+  countText: {fileID: 4210200590088201498}
 --- !u!1 &8341959417053616033
 GameObject:
   m_ObjectHideFlags: 0
@@ -25744,7 +25744,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 3726779171915076683}
-  countText: {fileID: 0}
+  countText: {fileID: 2131117911900466362}
 --- !u!1 &8406134369561767799
 GameObject:
   m_ObjectHideFlags: 0
@@ -26381,7 +26381,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 1976285174540151907}
-  countText: {fileID: 0}
+  countText: {fileID: 7361272824294025087}
 --- !u!1 &8854939868128549850
 GameObject:
   m_ObjectHideFlags: 0
@@ -27019,7 +27019,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemSlotUI
   iconImage: {fileID: 7127802404708739716}
-  countText: {fileID: 0}
+  countText: {fileID: 7940577166951938058}
 --- !u!1 &9030238010045195670
 GameObject:
   m_ObjectHideFlags: 0
