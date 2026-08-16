@@ -64,11 +64,18 @@ public class MainMenuUI : MonoBehaviour
 
     RectTransform _tabBarRect;
 
-    // InventoryPanel 을 임시로 끌어올리며 우리가 바꾼 것 (닫을 때 전부 되돌린다)
+    // 아이템 탭 왼쪽 기둥 — 전신도 + 장착 슬롯 (F-8-2 / E-38)
+    GameObject    _leftColumn;
+    RectTransform _leftColumnRect;
+    FullBodyView  _fullBody;
+    Image[]       _equipIcons;
+    Button[]      _equipButtons;
+
+    // InventoryPanel 을 임시로 옮기며 우리가 바꾼 것 (닫을 때 전부 되돌린다)
     Canvas           _invCanvas;
     GraphicRaycaster _invRaycaster;
-    Vector2          _invOffsetMax;
-    bool             _invOffsetSaved;
+    Vector2          _invAnchoredPos;
+    bool             _invPosSaved;
 
     // ─── 자동 생성 ────────────────────────────────────────────────────────
     static void CreateInstance()
@@ -217,6 +224,10 @@ public class MainMenuUI : MonoBehaviour
     // ─── 아이템 탭 = 기존 InventoryPanel 재사용 ───────────────────────────
     void SetInventoryShown(bool on)
     {
+        // 전신도·장착 슬롯은 아이템 탭에서만 보인다 (F-8-2 "왼쪽에 상시 표시")
+        if (_leftColumn != null) _leftColumn.SetActive(on);
+        if (on) RefreshEquipSlots();
+
         var inv = InventoryManager.Instance;
         if (inv == null || inv.inventoryPanel == null) return;   // 씬에 없으면 빈 상태가 정상
 
@@ -224,11 +235,11 @@ public class MainMenuUI : MonoBehaviour
         {
             inv.Open();
             inv.UpdateSlotUI();
-            RaiseInventory(inv.inventoryPanel, true);
+            ArrangeInventory(inv.inventoryPanel, true);
         }
         else
         {
-            RaiseInventory(inv.inventoryPanel, false);
+            ArrangeInventory(inv.inventoryPanel, false);
             ItemDetailUI.Instance?.Hide();
             inv.Close();
         }
@@ -236,14 +247,18 @@ public class MainMenuUI : MonoBehaviour
 
     /// <summary>
     /// InventoryPanel 은 씬 캔버스(sortingOrder 0) 소속이라 배경(96)에 가린다.
-    /// 메뉴가 열려 있는 동안만 overrideSorting 으로 97 에 올리고, 탭 바와 겹치지 않게
-    /// 위쪽을 밀어둔다. 닫을 때 붙인 컴포넌트와 여백을 전부 원상복구한다.
+    /// 메뉴가 열려 있는 동안만 overrideSorting 으로 97 에 올리고, 탭 바 아래·전신도 오른쪽으로
+    /// 비켜 놓는다. 닫을 때 붙인 컴포넌트와 위치를 전부 원상복구한다.
+    ///
+    /// 두 캔버스의 단위가 다르다 — 아이템창은 ConstantPixelSize(배율 1), 메뉴는
+    /// ScaleWithScreenSize(1920×1080). 그래서 상수로 옮기지 않고 <b>실제 화면 좌표</b>를 재서
+    /// 필요한 만큼만 민다. Overlay 캔버스라 GetWorldCorners 값이 곧 화면 픽셀이다.
     /// </summary>
-    void RaiseInventory(GameObject panel, bool raise)
+    void ArrangeInventory(GameObject panel, bool on)
     {
         var rt = panel.transform as RectTransform;
 
-        if (raise)
+        if (on)
         {
             if (_invCanvas == null)
             {
@@ -254,23 +269,42 @@ public class MainMenuUI : MonoBehaviour
                 _invCanvas.sortingOrder    = 97;
                 _invRaycaster = panel.AddComponent<GraphicRaycaster>();
             }
+            if (rt == null || _invPosSaved) return;
 
-            // 아이템창 캔버스는 ConstantPixelSize(배율 1)라 단위가 곧 화면 픽셀이다.
-            if (rt != null && !_invOffsetSaved)
-            {
-                _invOffsetMax   = rt.offsetMax;
-                _invOffsetSaved = true;
-                rt.offsetMax    = new Vector2(_invOffsetMax.x, _invOffsetMax.y - TabBarBottomGapPx());
-            }
+            _invAnchoredPos = rt.anchoredPosition;
+            _invPosSaved    = true;
+
+            Canvas.ForceUpdateCanvases();
+            var box = new Vector3[4];
+            rt.GetWorldCorners(box);        // [0]=좌하 [1]=좌상 [2]=우상 [3]=우하
+            float left = box[0].x, top = box[1].y, right = box[2].x;
+
+            // 탭 바와 겹치는 만큼만 아래로
+            float dy = Mathf.Min(0f, TabBarBottomPx() - top);
+
+            // 전신도 기둥과 겹치는 만큼만 오른쪽으로 (화면 밖으로 나가지 않는 선에서)
+            float dx = Mathf.Max(0f, LeftColumnRightPx() + 20f - left);
+            dx = Mathf.Min(dx, Mathf.Max(0f, Screen.width - right));
+
+            rt.anchoredPosition = _invAnchoredPos + new Vector2(dx, dy);
         }
         else
         {
-            if (rt != null && _invOffsetSaved) rt.offsetMax = _invOffsetMax;
-            _invOffsetSaved = false;
+            if (rt != null && _invPosSaved) rt.anchoredPosition = _invAnchoredPos;
+            _invPosSaved = false;
 
             if (_invRaycaster != null) { Destroy(_invRaycaster); _invRaycaster = null; }
             if (_invCanvas    != null) { Destroy(_invCanvas);    _invCanvas    = null; }
         }
+    }
+
+    /// <summary>전신도 기둥 오른쪽 끝의 화면 픽셀 x. 기둥이 없으면 0.</summary>
+    float LeftColumnRightPx()
+    {
+        if (_leftColumnRect == null) return 0f;
+        var c = new Vector3[4];
+        _leftColumnRect.GetWorldCorners(c);
+        return c[2].x;
     }
 
     // ─── 배경 캡처 + 블러 (F-8-3) ─────────────────────────────────────────
@@ -358,7 +392,80 @@ public class MainMenuUI : MonoBehaviour
         _front.AddComponent<GraphicRaycaster>();
 
         BuildTabBar(_front.transform);
+        BuildLeftColumn(_front.transform);
         BuildTabPanels(_front.transform);
+    }
+
+    // ─── 아이템 탭 왼쪽 기둥: 전신도 + 장착 슬롯 (F-8-2 / E-38) ────────────
+    void BuildLeftColumn(Transform parent)
+    {
+        const float colX = -700f, colW = 340f;
+
+        _leftColumn = new GameObject("LeftColumn");
+        _leftColumn.transform.SetParent(parent, false);
+        _leftColumnRect = _leftColumn.AddComponent<RectTransform>();
+        _leftColumnRect.anchorMin = _leftColumnRect.anchorMax = new Vector2(0.5f, 0.5f);
+        _leftColumnRect.anchoredPosition = new Vector2(colX, -20f);
+        _leftColumnRect.sizeDelta = new Vector2(colW, 700f);
+
+        _fullBody = FullBodyView.Create(_leftColumn.transform, new Vector2(0f, 90f), new Vector2(280f, 440f));
+
+        // 장착 슬롯: 의상 1 + 무기 2 (E-38)
+        string[] slotLabels = { "의상", "무기", "무기" };
+        const float sw = 92f, sgap = 12f;
+        float total = slotLabels.Length * sw + (slotLabels.Length - 1) * sgap;
+        float sx0 = -total / 2f + sw / 2f;
+
+        _equipIcons   = new Image[slotLabels.Length];
+        _equipButtons = new Button[slotLabels.Length];
+
+        for (int i = 0; i < slotLabels.Length; i++)
+        {
+            int idx = i;
+            var slot = (EquipmentManager.Slot)i;
+            var pos  = new Vector2(sx0 + i * (sw + sgap), -190f);
+
+            var btn = MakeButton(_leftColumn.transform, slotLabels[i], pos, new Vector2(sw, sw),
+                () => OnEquipSlotClicked(slot), 14);
+            var nav = btn.navigation; nav.mode = Navigation.Mode.Vertical; btn.navigation = nav;
+            _equipButtons[i] = btn;
+
+            // 아이콘은 라벨 위에 겹쳐 둔다. 비어 있으면 라벨만 보인다.
+            var icon = MakeImage(btn.transform, "Icon", Color.white);
+            var ir = icon.rectTransform;
+            ir.anchorMin = new Vector2(0.5f, 0.5f); ir.anchorMax = new Vector2(0.5f, 0.5f);
+            ir.sizeDelta = new Vector2(sw - 18f, sw - 18f);
+            ir.anchoredPosition = Vector2.zero;
+            icon.preserveAspect = true;
+            icon.raycastTarget  = false;
+            icon.enabled = false;
+            _equipIcons[i] = icon;
+        }
+
+        _leftColumn.SetActive(false);
+    }
+
+    void OnEquipSlotClicked(EquipmentManager.Slot slot)
+    {
+        // 지금은 해제만 한다. 아이템창에서 장착하는 경로는 아직 정해지지 않았다.
+        var eq = EquipmentManager.Instance;
+        if (eq == null || eq.Get(slot) == null) return;
+        eq.Unequip(slot);
+        RefreshEquipSlots();
+    }
+
+    void RefreshEquipSlots()
+    {
+        if (_equipIcons == null) return;
+        var eq = EquipmentManager.Instance;
+        for (int i = 0; i < _equipIcons.Length; i++)
+        {
+            var item = eq != null ? eq.Get((EquipmentManager.Slot)i) : null;
+            var icon = item != null ? item.CurrentIcon : null;
+            _equipIcons[i].sprite  = icon;
+            _equipIcons[i].enabled = icon != null;
+        }
+        if (_fullBody != null) _fullBody.Refresh();
     }
 
     void BuildTabBar(Transform parent)
@@ -398,13 +505,13 @@ public class MainMenuUI : MonoBehaviour
         }
     }
 
-    /// <summary>탭 바 아래끝까지의 화면 픽셀 높이. Overlay 캔버스라 월드 좌표가 곧 화면 픽셀이다.</summary>
-    float TabBarBottomGapPx()
+    /// <summary>탭 바 아래끝의 화면 픽셀 y. Overlay 캔버스라 월드 좌표가 곧 화면 픽셀이다.</summary>
+    float TabBarBottomPx()
     {
-        if (_tabBarRect == null) return 0f;
+        if (_tabBarRect == null) return Screen.height;
         var corners = new Vector3[4];
         _tabBarRect.GetWorldCorners(corners);   // [0]=좌하 [1]=좌상 [2]=우상 [3]=우하
-        return Mathf.Max(0f, Screen.height - corners[0].y) + 8f;
+        return corners[0].y - 10f;
     }
 
     void BuildTabPanels(Transform parent)

@@ -29,6 +29,9 @@ public class SettingsPanelUI : MonoBehaviour
     GameObject[] _tabPanels;
     Button[]     _tabButtons;
 
+    /// <summary>설정 패널 전체 배율. 항목 좌표가 전부 상수라 스케일로 크기를 조절한다.</summary>
+    const float PanelScale = 0.78f;
+
     static readonly Color TabActive   = new Color(0.30f, 0.55f, 0.90f, 1f);
     static readonly Color TabInactive = new Color(0.22f, 0.22f, 0.22f, 1f);
     static readonly Color PanelBg     = new Color(0.10f, 0.10f, 0.12f, 1f);
@@ -108,11 +111,14 @@ public class SettingsPanelUI : MonoBehaviour
         bgBtn.onClick.AddListener(Hide);
 
         // 중앙 패널
+        // 내부 항목 위치가 전부 이 패널 중심 기준 상수라, 크기를 줄이려면 sizeDelta 가 아니라
+        // 스케일을 줄여야 한다. sizeDelta 를 건드리면 항목들이 패널 밖으로 밀린다.
         var panel = MakeImage(root, "Panel", PanelBg);
         var pr = panel.rectTransform;
         pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f);
         pr.sizeDelta = new Vector2(680f, 580f);
         pr.anchoredPosition = Vector2.zero;
+        pr.localScale = Vector3.one * PanelScale;
         var pt = panel.transform;
 
         // 제목
