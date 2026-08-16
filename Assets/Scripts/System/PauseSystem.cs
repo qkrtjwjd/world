@@ -41,6 +41,9 @@ public class PauseSystem : MonoBehaviour
         // 솔 거래창이 열려 있으면 취소 키를 거래창이 직접 처리한다 (일시정지 메뉴가 겹쳐 열리지 않게)
         if (SolTradeUI.IsOpen) return;
 
+        // ESC 메뉴(F-8-1)가 열려 있으면 키 입력은 MainMenuUI 가 직접 처리한다
+        if (MainMenuUI.IsOpen) return;
+
         // 리바인딩 가능 키
         KeyCode inventoryKey = SettingsManager.Instance?.keyInventory ?? KeyCode.I;
         KeyCode pauseKey     = SettingsManager.Instance?.keyPause     ?? KeyCode.Escape;
@@ -92,8 +95,10 @@ public class PauseSystem : MonoBehaviour
         }
         else if (Input.GetKeyDown(pauseKey))
         {
-            if (!YarnDialogue.IsRunning && !PlayerInputLock.Instance.IsLocked)
-                PauseGame();
+            // F-8-1: ESC 진입점은 MainMenuUI 로 옮겼다.
+            // 진입 가드(전투·컷씬·대화·90초 압박)는 MainMenuUI.CanOpen() 이 판정한다.
+            // 아래 PauseGame()/OpenMainMenu() 등 기존 API 와 씬 버튼 배선은 그대로 살아 있다.
+            MainMenuUI.Show();
         }
     }
 
