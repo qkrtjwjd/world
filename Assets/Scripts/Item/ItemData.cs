@@ -4,6 +4,13 @@ using UnityEngine.SceneManagement;
 public enum ItemCategory { All = 0, Food = 1, Tool = 2, Weapon = 3 }
 public enum ItemGrade    { Normal = 0, Rare = 1, Hero = 2, Legend = 3 }
 
+/// <summary>
+/// 장착 슬롯 종류 (E-38: 의상 1 + 무기 2).
+/// <see cref="ItemCategory"/> 와 별개 축이다 — 카테고리는 아이템창 필터용이고,
+/// 이쪽은 장착 가능 여부만 정한다. 기존 에셋은 이 값이 없으므로 기본값 None 이 된다.
+/// </summary>
+public enum EquipSlotType { None = 0, Clothing = 1, Weapon = 2 }
+
 [CreateAssetMenu(fileName = "New Item", menuName = "Item Data")]
 public class ItemData : ScriptableObject
 {
@@ -44,6 +51,10 @@ public class ItemData : ScriptableObject
 
     [Tooltip("체크하면 고급 아이템 취급을 받습니다. 연속으로 먹이면 급체합니다.")]
     public bool isHighGrade;
+
+    [Header("■ 장착")]
+    [Tooltip("장착 슬롯 종류. None 이면 장착할 수 없습니다. 카테고리와는 별개 축입니다.")]
+    public EquipSlotType equipSlot;
 
     [Header("■ 버리기 제한")]
     [Tooltip("체크하면 이 아이템은 버릴 수 없습니다.")]

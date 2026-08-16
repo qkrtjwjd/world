@@ -8,6 +8,11 @@ using UnityEngine;
 /// 무기 슬롯에 단검이 들어가 있는지와 무관하게, "루가 단검을 쥐고 있는가"는
 /// <see cref="DaggerSystem.IsEquipped"/> 하나로만 판정한다. 슬롯이 별도 경로를 만들지 않는다.
 ///
+/// ⚠ <b>슬롯에서 <see cref="DaggerSystem"/> 을 호출하지도 않는다.</b> 이 프로젝트에서 파지는
+/// 사실상 '획득'과 같게 쓰이고 있어서 — <c>SaveManager</c> 가 불러오기 때임
+/// <c>GameState.isDaggerAcquired</c> 로 파지 상태를 되돌린다 — 슬롯에서 해제해도
+/// 저장/로드 한 번이면 되살아난다. 파지는 스토리(획득 컷씬)가 정한다.
+///
 /// 씬 배치가 필요 없는 순수 상태 보관소다. 아직 저장 대상이 아니므로
 /// <see cref="SaveData"/> 스키마는 건드리지 않는다(v8 유지).
 /// </summary>
@@ -59,31 +64,34 @@ public class EquipmentManager : MonoBehaviour
     // ── 조작 ──────────────────────────────────────────────────────────────
 
     /// <summary>
-    /// 이 아이템이 해당 슬롯에 들어갈 수 있는지.
-    /// 무기 슬롯은 <see cref="ItemCategory.Weapon"/> 만 받는다.
-    ///
-    /// ⚠ 의상 슬롯에는 판정 근거가 없다 — <see cref="ItemCategory"/> 에 의상 값이 없고,
-    /// 현재 아이템 에셋은 category 가 전부 기본값(All)이다. 임의로 enum 값을 만들지 않는다
-    /// (직렬화된 인스펙터 값이 밀린다). 의상 분류가 정해지기 전까지 이 슬롯은
-    /// <see cref="ForceEquip"/> 로 명시 지정할 때만 채워지고, 평소에는 빈 상태가 정상이다.
+    /// 이 아이템이 해당 슬롯에 들어갈 수 있는지. 판정은 <see cref="ItemData.equipSlot"/> 하나로 한다.
+    /// <see cref="ItemCategory"/>(아이템창 필터)와는 별개 축이라 서로 영향을 주지 않는다.
     /// </summary>
     public bool CanEquip(ItemData item, Slot slot)
     {
         if (item == null) return false;
-        if (slot == Slot.WeaponMain || slot == Slot.WeaponSub)
-            return item.category == ItemCategory.Weapon;
-        return false;
+        if (slot == Slot.Clothing) return item.equipSlot == EquipSlotType.Clothing;
+        return item.equipSlot == EquipSlotType.Weapon;   // WeaponMain / WeaponSub
     }
 
     /// <returns>장착 성공 여부.</returns>
     public bool TryEquip(ItemData item, Slot slot)
     {
         if (!CanEquip(item, slot)) return false;
+
+        // 같은 아이템이 두 무기 슬롯에 동시에 들어가지 않게 한다
+        for (int i = 0; i < _slots.Length; i++)
+            if (i != (int)slot && _slots[i] == item) _slots[i] = null;
+
         ForceEquip(item, slot);
+        OnEquipmentChanged?.Invoke();   // 위에서 비운 슬롯도 반영되게 한 번 더 알린다
         return true;
     }
 
-    /// <summary>분류 판정을 건너뛰고 슬롯에 직접 넣는다. 호출자가 책임진다.</summary>
+    /// <summary>
+    /// 분류 판정을 건너뛰고 슬롯에 직접 넣는다. 호출자가 책임진다.
+    /// 컷씬처럼 스토리가 강제로 입히는 경우에 쓴다.
+    /// </summary>
     public void ForceEquip(ItemData item, Slot slot)
     {
         if (_slots[(int)slot] == item) return;

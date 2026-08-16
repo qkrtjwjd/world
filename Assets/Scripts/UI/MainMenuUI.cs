@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -48,6 +49,10 @@ public class MainMenuUI : MonoBehaviour
     static readonly Color PanelBg     = new Color(0.10f, 0.10f, 0.12f, 1f);
     static readonly Color DimCol      = new Color(0f, 0f, 0f, 0.45f);
     static readonly Color NoteCol     = new Color(0.70f, 0.70f, 0.70f, 1f);
+    static readonly Color SlotFilled  = new Color(0.20f, 0.34f, 0.30f, 1f);
+
+    /// <summary>빈 슬롯에 표시할 이름(의상·무기·무기). 채우면 아이템 이름으로 바뀐다.</summary>
+    string[] _slotNames;
 
     static readonly string[] TabLabels = { "아이템", "쪽지", "설정", "그만두기" };
 
@@ -70,6 +75,12 @@ public class MainMenuUI : MonoBehaviour
     FullBodyView  _fullBody;
     Image[]       _equipIcons;
     Button[]      _equipButtons;
+    TMP_Text[]    _equipLabels;
+    Image[]       _equipBacks;
+
+    // 장착 선택 목록 (빈 슬롯을 눌렀을 때만 뜬다)
+    GameObject             _picker;
+    EquipmentManager.Slot  _pickerSlot;
 
     // InventoryPanel 을 임시로 옮기며 우리가 바꾼 것 (닫을 때 전부 되돌린다)
     Canvas           _invCanvas;
@@ -144,6 +155,7 @@ public class MainMenuUI : MonoBehaviour
         if (!IsOpen || _instance == null) return;
         IsOpen = false;
 
+        _instance.CloseEquipPicker();
         _instance.SetTabContent(_instance._current, false);
         SettingsPanelUI.Hide();
 
@@ -168,7 +180,16 @@ public class MainMenuUI : MonoBehaviour
         }
 
         KeyCode pauseKey = SettingsManager.Instance?.keyPause ?? KeyCode.Escape;
-        if (Input.GetKeyDown(pauseKey) || Input.GetKeyDown(KeyCode.Backspace))
+        bool back = Input.GetKeyDown(pauseKey) || Input.GetKeyDown(KeyCode.Backspace);
+
+        // 장착 목록이 떠 있으면 ESC 는 목록만 닫는다. 탭 이동도 막는다.
+        if (_picker != null)
+        {
+            if (back) CloseEquipPicker();
+            return;
+        }
+
+        if (back)
         {
             Hide();
             return;
@@ -189,6 +210,7 @@ public class MainMenuUI : MonoBehaviour
     {
         if (!force && tab == _current) return;
 
+        CloseEquipPicker();
         SetTabContent(_current, false);
         _current = tab;
         SetTabContent(_current, true);
@@ -226,6 +248,15 @@ public class MainMenuUI : MonoBehaviour
     {
         // 전신도·장착 슬롯은 아이템 탭에서만 보인다 (F-8-2 "왼쪽에 상시 표시")
         if (_leftColumn != null) _leftColumn.SetActive(on);
+
+        // 바깥(컷씬 등)에서 장착이 바뀌어도 슬롯 줄이 따라오게 한다.
+        // FullBodyView 는 자기 OnEnable 에서 따로 구독한다.
+        var eq = EquipmentManager.Instance;
+        if (eq != null)
+        {
+            eq.OnEquipmentChanged -= RefreshEquipSlots;
+            if (on) eq.OnEquipmentChanged += RefreshEquipSlots;
+        }
         if (on) RefreshEquipSlots();
 
         var inv = InventoryManager.Instance;
@@ -418,10 +449,12 @@ public class MainMenuUI : MonoBehaviour
 
         _equipIcons   = new Image[slotLabels.Length];
         _equipButtons = new Button[slotLabels.Length];
+        _equipLabels  = new TMP_Text[slotLabels.Length];
+        _equipBacks   = new Image[slotLabels.Length];
+        _slotNames    = slotLabels;
 
         for (int i = 0; i < slotLabels.Length; i++)
         {
-            int idx = i;
             var slot = (EquipmentManager.Slot)i;
             var pos  = new Vector2(sx0 + i * (sw + sgap), -190f);
 
@@ -429,6 +462,8 @@ public class MainMenuUI : MonoBehaviour
                 () => OnEquipSlotClicked(slot), 14);
             var nav = btn.navigation; nav.mode = Navigation.Mode.Vertical; btn.navigation = nav;
             _equipButtons[i] = btn;
+            _equipBacks[i]   = btn.targetGraphic as Image;
+            _equipLabels[i]  = btn.GetComponentInChildren<TMP_Text>(true);
 
             // 아이콘은 라벨 위에 겹쳐 둔다. 비어 있으면 라벨만 보인다.
             var icon = MakeImage(btn.transform, "Icon", Color.white);
@@ -447,11 +482,91 @@ public class MainMenuUI : MonoBehaviour
 
     void OnEquipSlotClicked(EquipmentManager.Slot slot)
     {
-        // 지금은 해제만 한다. 아이템창에서 장착하는 경로는 아직 정해지지 않았다.
         var eq = EquipmentManager.Instance;
-        if (eq == null || eq.Get(slot) == null) return;
-        eq.Unequip(slot);
+        if (eq == null) return;
+
+        // 차 있으면 해제, 비어 있으면 넣을 것을 고르는 목록을 연다
+        if (eq.Get(slot) != null) { eq.Unequip(slot); RefreshEquipSlots(); return; }
+        OpenEquipPicker(slot);
+    }
+
+    // ─── 장착 선택 목록 ───────────────────────────────────────────────────
+    /// <summary>이 슬롯에 넣을 수 있는 소지품만 골라 보여준다. 없으면 빈 상태가 정상이다.</summary>
+    void OpenEquipPicker(EquipmentManager.Slot slot)
+    {
+        CloseEquipPicker();
+
+        var eq  = EquipmentManager.Instance;
+        var inv = InventoryManager.Instance;
+        if (eq == null) return;
+
+        _pickerSlot = slot;
+        _picker = MakePanel(_front.transform, "EquipPicker", show: true);
+        var prt = (RectTransform)_picker.transform;
+        prt.sizeDelta        = new Vector2(460f, 480f);
+        prt.anchoredPosition = new Vector2(0f, -20f);
+
+        string title = slot == EquipmentManager.Slot.Clothing ? "의상 고르기" : "무기 고르기";
+        MakeText(_picker.transform, title, 26, new Vector2(0f, 200f), new Vector2(400f, 40f))
+            .fontStyle = FontStyles.Bold;
+
+        // 같은 아이템 중복은 한 줄로 묶는다
+        var seen = new List<ItemData>();
+        if (inv != null)
+            foreach (var it in inv.inventoryItems)
+                if (it != null && !seen.Contains(it) && eq.CanEquip(it, slot)) seen.Add(it);
+
+        if (seen.Count == 0)
+        {
+            MakeText(_picker.transform, "장착할 수 있는 것이 없습니다.", 17,
+                new Vector2(0f, 20f), new Vector2(420f, 40f)).color = NoteCol;
+        }
+        else
+        {
+            const float rowH = 58f, gap = 8f;
+            float y = 140f;
+            foreach (var it in seen)
+            {
+                var item = it;
+                var btn = MakeButton(_picker.transform, item.DisplayName,
+                    new Vector2(0f, y), new Vector2(400f, rowH), () => PickEquip(item), 18);
+                var nav = btn.navigation; nav.mode = Navigation.Mode.Vertical; btn.navigation = nav;
+
+                var icon = MakeImage(btn.transform, "Icon", Color.white);
+                var ir = icon.rectTransform;
+                ir.anchorMin = ir.anchorMax = new Vector2(0f, 0.5f);
+                ir.sizeDelta = new Vector2(rowH - 14f, rowH - 14f);
+                ir.anchoredPosition = new Vector2(rowH * 0.6f, 0f);
+                icon.preserveAspect = true;
+                icon.raycastTarget  = false;
+                icon.sprite  = item.CurrentIcon;
+                icon.enabled = item.CurrentIcon != null;
+
+                y -= rowH + gap;
+            }
+        }
+
+        var close = MakeButton(_picker.transform, "취소", new Vector2(0f, -200f),
+            new Vector2(160f, 40f), CloseEquipPicker, 17);
+        var cnav = close.navigation; cnav.mode = Navigation.Mode.Vertical; close.navigation = cnav;
+
+        var first = _picker.GetComponentInChildren<Selectable>(false);
+        if (first != null && EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(first.gameObject);
+    }
+
+    void PickEquip(ItemData item)
+    {
+        EquipmentManager.Instance?.TryEquip(item, _pickerSlot);
+        CloseEquipPicker();
         RefreshEquipSlots();
+    }
+
+    void CloseEquipPicker()
+    {
+        if (_picker == null) return;
+        Destroy(_picker);
+        _picker = null;
     }
 
     void RefreshEquipSlots()
@@ -462,8 +577,16 @@ public class MainMenuUI : MonoBehaviour
         {
             var item = eq != null ? eq.Get((EquipmentManager.Slot)i) : null;
             var icon = item != null ? item.CurrentIcon : null;
+
             _equipIcons[i].sprite  = icon;
             _equipIcons[i].enabled = icon != null;
+
+            // 아이콘 아트가 아직 없는 아이템이 많다. 아이콘만으로는 빈 슬롯과 구분이 안 되므로
+            // 채워진 슬롯은 이름을 띄우고 배경색도 바꾼다.
+            if (_equipLabels[i] != null)
+                _equipLabels[i].text = item != null ? item.DisplayName : _slotNames[i];
+            if (_equipBacks[i] != null)
+                _equipBacks[i].color = item != null ? SlotFilled : TabInactive;
         }
         if (_fullBody != null) _fullBody.Refresh();
     }
