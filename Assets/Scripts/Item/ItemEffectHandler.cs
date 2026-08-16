@@ -63,6 +63,9 @@ public class ItemEffectHandler : MonoBehaviour
             case SpecialEffectType.CaffeineStack:
                 CaffeineManager.Instance?.AddStack();
                 break;
+            case SpecialEffectType.FullHeal:
+                // 시각 효과가 아니라 회복 판정이다. BattleSystem.UseItemInBattle 이 직접 처리한다.
+                break;
             // 새 효과: SpecialEffectType에 값 추가 후 case를 여기에 추가하세요.
         }
     }

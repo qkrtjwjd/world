@@ -41,12 +41,33 @@ public class HackSlashCombatManager : MonoBehaviour
     [Tooltip("전투 시작 시 게이지를 현실 100%로 고정하고, 이 시간(초) 동안 아무 공격이 없으면 이전 값으로 복원합니다.")]
     public float combatRealityIdleTimeout = 60f;
 
+    // ── 숲 2차 전투 마무리 구간 (F-2-6 · 정본 S#19C) ─────────────────────
+    [Header("마무리 구간 (F-2-6)")]
+    [Tooltip("켜면 적 HP 가 임계 이하로 떨어졌을 때 마무리 구간에 들어간다. 숲 전투 전용")]
+    public bool  useFinisherWindow = false;
+    [Tooltip("마무리 구간 진입 HP 비율. 정본 기준 5%")]
+    [Range(0.01f, 0.5f)] public float finisherHealthRatio = 0.05f;
+    [Tooltip("이탈 시간(초). 이 시간 동안 입력이 없으면 적이 도주하고 불살이 성립한다")]
+    public float finisherEscapeSeconds = 2f;
+    [Tooltip("약점 표시가 뜨는 누적 피해 비율. 데미지 배율은 두지 않는다")]
+    [Range(0.05f, 0.95f)] public float weakpointDamageRatio = 0.4f;
+    [Tooltip("마무리 일격 키")]
+    public KeyCode finisherKey = KeyCode.E;
+    [Tooltip("E키 프롬프트 텍스트. 없으면 resultText 를 쓴다")]
+    public TMP_Text finisherPromptText;
+
     // ─────────────────────────────────────────────
     //  내부 상태
     // ─────────────────────────────────────────────
     private bool _isCombatActive = false;
     private bool _isModeTransitioning = false;
     private bool _enemyKilled = false; // NotifyEnemyDead에서 _activeEnemy가 null이 된 뒤에도 처치 사실을 기억
+
+    // 마무리 구간 상태 — 전투 단위
+    private bool  _weakpointShown;
+    private bool  _finisherOpen;
+    private float _finisherOpenedAt;
+    private bool  _enemySpared;      // 이탈 시간 경과로 적이 도주 → 불살 성립
 
     /// <summary>마지막으로 공격이 발생한 Time.time. GaugeManager의 복원 타이머가 감시합니다.</summary>
     public float LastCombatActivityTime { get; private set; } = -999f;
@@ -161,7 +182,19 @@ public class HackSlashCombatManager : MonoBehaviour
             marshmallowButton.gameObject.SetActive(true);
         }
 
-        // 4. 무적 시간 + 폴링 루프 시작
+        // 4. 마무리 구간 상태 초기화 — 전투 단위다
+        _weakpointShown = false;
+        _finisherOpen   = false;
+        _enemySpared    = false;
+        ShowFinisherPrompt("");
+
+        // EnemyHealth 는 기본적으로 HP 10% 미만에서 스스로 도주한다.
+        // 마무리 구간은 5% 에서 열리므로 그대로 두면 창이 열리기 전에 적이 달아난다.
+        // 숲 전투에서는 자동 도주를 끄고 이탈 시간(2초)이 도주를 정하게 한다(F-2-6).
+        if (useFinisherWindow && _activeEnemyHealth != null)
+            _activeEnemyHealth.fleeHealthRatio = 0f;
+
+        // 5. 무적 시간 + 폴링 루프 시작
         StartCoroutine(CombatLoop());
     }
 
@@ -186,7 +219,71 @@ public class HackSlashCombatManager : MonoBehaviour
 
             if (_activeEnemyHealth != null && _activeEnemyHealth.currentHealth <= 0)
             { EndCombat(true); yield break; }
+
+            if (useFinisherWindow) TickFinisherWindow();
         }
+    }
+
+    // ─────────────────────────────────────────────
+    //  마무리 구간 (F-2-6 · 정본 S#19C)
+    //
+    //  판정은 셋이다.
+    //    E키 입력      → 몰살 (전용 연출)
+    //    일반 공격 적중 → 몰살 (연출 없이 사망) — 폴링이 HP 0 을 잡아 EndCombat 으로 간다
+    //    이탈 시간 경과 → 적 도주, 불살 성립
+    //
+    //  ⚠ 이 구간에서 적을 무적으로 만들지 않는다. 무적으로 두면 손을 놓고 있는 것이
+    //     곧 불살이 되어 액션 쪽 불살이 가장 쉬운 행동이 된다(F-2-6 ※ · C-6-3).
+    //  ⚠ 의도하지 않은 몰살이 발생할 수 있다. 막지 않는다. 확인 창을 넣지 않는다.
+    // ─────────────────────────────────────────────
+    void TickFinisherWindow()
+    {
+        if (_activeEnemyHealth == null || _activeEnemyHealth.maxHealth <= 0f) return;
+
+        float ratio = _activeEnemyHealth.currentHealth / _activeEnemyHealth.maxHealth;
+
+        // 약점 표시 — 누적 피해가 임계를 넘으면 1회. 데미지 배율은 두지 않는다.
+        if (!_weakpointShown && ratio <= 1f - weakpointDamageRatio)
+        {
+            _weakpointShown = true;
+            BattleTutorialDirector.Instance?.OnWeakpointRevealed();
+        }
+
+        if (!_finisherOpen)
+        {
+            if (ratio > finisherHealthRatio) return;
+
+            _finisherOpen     = true;
+            _finisherOpenedAt = Time.time;
+            if (_activeEnemyAI != null) _activeEnemyAI.SetChase(false);  // 물러나는 동작만 한다
+            ShowFinisherPrompt($"[{finisherKey}] 숨통을 끊는다");
+            BattleTutorialDirector.Instance?.OnFinisherWindowOpened();
+            return;
+        }
+
+        if (Input.GetKeyDown(finisherKey))
+        {
+            ShowFinisherPrompt("");
+            _enemyKilled = true;
+            _activeEnemyHealth.TakeRealityDamage(_activeEnemyHealth.currentHealth);
+            return;
+        }
+
+        // 이탈 시간 경과 → 적이 도주한다. 불살 성립.
+        if (Time.time - _finisherOpenedAt >= finisherEscapeSeconds)
+        {
+            ShowFinisherPrompt("");
+            _enemySpared = true;
+            EndCombat(true);
+        }
+    }
+
+    void ShowFinisherPrompt(string message)
+    {
+        var target = finisherPromptText != null ? finisherPromptText : resultText;
+        if (target == null) return;
+        target.text = message;
+        target.gameObject.SetActive(!string.IsNullOrEmpty(message));
     }
 
     // ─────────────────────────────────────────────
@@ -234,12 +331,26 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void EndCombat(bool playerWon)
     {
+        // 숲 전투는 보상이 정본 고정값이라 인형화 굴림과 전리품 테이블을 쓰지 않는다 (F-2-6).
+        // 몰살/불살 판정과 지급은 BattleTutorialDirector 가 맡는다.
+        if (useFinisherWindow)
+        {
+            BattleTutorialDirector.Instance?.HandleOutcome(
+                !playerWon      ? BattleOutcome.Lost
+                : _enemySpared  ? BattleOutcome.Spared
+                                : BattleOutcome.Killed);
+        }
+
         // 사망 통보 시점에 _activeEnemy가 이미 null이 되므로 _enemyKilled 플래그로도 판정
+        // 불살(적 도주)은 처치가 아니므로 처치 등록·경험치·전리품을 지급하지 않는다.
         int gainedXp = 0;
-        if (playerWon && (_enemyKilled || _activeEnemy != null))
+        if (playerWon && !_enemySpared && (_enemyKilled || _activeEnemy != null))
         {
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
-            PlayerStats.Instance?.AddPuppetizationOnKill();
+
+            // 숲 전투는 인형화가 데모 고정값(+2)이라 여기서 굴리지 않는다 (F-2-6 ※).
+            if (!useFinisherWindow)
+                PlayerStats.Instance?.AddPuppetizationOnKill();
 
             // 경험치 — 전리품과 동일하게 DB 타입 ID 로 조회
             gainedXp = EncounterManager.Instance?.enemyDatabase
@@ -247,8 +358,11 @@ public class HackSlashCombatManager : MonoBehaviour
             int levelUps = PlayerGrowth.AddExp(gainedXp);
             BattleSystem.ApplyLevelUpToPlayerStats(levelUps);
 
-            var loot = EncounterManager.Instance?.enemyDatabase
-                           ?.GetLootTable(EncounterManager.currentEnemyTypeID);
+            // 숲 전투는 몰살/불살에 따라 떨어지는 것이 정본에 못박혀 있어 테이블을 굴리지 않는다.
+            var loot = useFinisherWindow
+                       ? null
+                       : EncounterManager.Instance?.enemyDatabase
+                             ?.GetLootTable(EncounterManager.currentEnemyTypeID);
             if (loot != null)
             {
                 var drops = loot.RollDrops();

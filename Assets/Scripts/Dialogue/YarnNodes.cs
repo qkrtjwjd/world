@@ -39,6 +39,14 @@ public static class YarnNodes
     public const string Forest_Wolf_KillEnd        = "Forest_Wolf_KillEnd";
     public const string Forest_Wolf_PurifyEnd      = "Forest_Wolf_PurifyEnd";
 
+    // S#19 2차 전투(액션). 2026-08-16 D 개정분.
+    public const string Forest_Wolf2_Encounter     = "Forest_Wolf2_Encounter";
+    public const string Forest_Wolf2_Reveal        = "Forest_Wolf2_Reveal";
+    public const string Forest_Wolf2_Weakpoint     = "Forest_Wolf2_Weakpoint";
+    public const string Forest_Wolf2_Finisher      = "Forest_Wolf2_Finisher";
+    public const string Forest_Wolf2_KillEnd       = "Forest_Wolf2_KillEnd";
+    public const string Forest_Wolf2_SpareEnd      = "Forest_Wolf2_SpareEnd";
+
     // 구 원고(명세서 v7) 잔존분 — 정본에 S#18 이후 원고가 없어 남겨둔 것. 나오면 교체한다.
     public const string Forest_GoldenThorns        = "Forest_GoldenThorns";
     public const string Forest_Camp_Night          = "Forest_Camp_Night";

@@ -37,6 +37,15 @@ public static class BattleEvents
     /// <summary>전투 중 아이템 사용 시. (아이템, 사용자). ItemUseTracker/ItemEffectHandler/BuffManager 가 구독.</summary>
     public static event Action<ItemData, Unit> OnItemUsed;
 
+    /// <summary>
+    /// 플레이어가 턴제 행동을 고른 직후. (행동 종류, 쓰다듬기 누적 횟수).
+    /// 행동이 실행되기 전에 발행되므로 튜토리얼 대사를 앞에 끼워 넣을 수 있다.
+    /// </summary>
+    public static event Action<BattleActionKind, int> OnPlayerAction;
+
+    /// <summary>전투가 어떻게 끝났는지. <see cref="OnBattleEnded"/> 직전에 발행한다.</summary>
+    public static event Action<BattleOutcome> OnBattleFinished;
+
     // ─── 발행 헬퍼 ─────────────────────────────────────────────
     public static void RaiseUnitDamaged(Unit unit, DamageResult result) => OnUnitDamaged?.Invoke(unit, result);
     public static void RaiseUnitDied(Unit unit)                          => OnUnitDied?.Invoke(unit);
@@ -49,6 +58,9 @@ public static class BattleEvents
     public static void RaiseUnitMPChanged(Unit unit)                     => OnUnitMPChanged?.Invoke(unit, unit != null ? unit.currentMP : 0,
                                                                                                               unit != null ? unit.maxMP     : 0);
     public static void RaiseItemUsed(ItemData item, Unit user)           => OnItemUsed?.Invoke(item, user);
+    public static void RaisePlayerAction(BattleActionKind kind, int sootheCount)
+                                                                         => OnPlayerAction?.Invoke(kind, sootheCount);
+    public static void RaiseBattleFinished(BattleOutcome outcome)        => OnBattleFinished?.Invoke(outcome);
 
     /// <summary>
     /// 도메인 리로드 시 정적 이벤트가 이전 씬의 핸들러를 끌고 가는 문제 방지.
@@ -66,5 +78,32 @@ public static class BattleEvents
         OnSkillUsed      = null;
         OnUnitMPChanged  = null;
         OnItemUsed       = null;
+        OnPlayerAction   = null;
+        OnBattleFinished = null;
     }
+}
+
+/// <summary>턴제 행동 종류. 튜토리얼 대사 분기(정본 ▶ 행동별 반응)의 키다.</summary>
+public enum BattleActionKind
+{
+    Attack,
+    Defend,
+    /// <summary>[쓰다듬기]. 데미지·판정 없음. 누적 3회에 정화가 성립한다 (F-2-6).</summary>
+    Soothe,
+}
+
+/// <summary>
+/// 전투 종료 방식. 턴제·액션 공통이며 보상이 여기서 갈린다 (F-2-6).
+/// 불살 → 붉은 결정 · 인형화 -2 · 심리 +5 / 몰살 → 검은 구슬 · 인형화 +2.
+/// </summary>
+public enum BattleOutcome
+{
+    /// <summary>몰살. 적을 쓰러뜨렸다.</summary>
+    Killed,
+    /// <summary>불살. 정화가 성립했거나 적이 물러났다.</summary>
+    Spared,
+    /// <summary>도주. 보상 없음.</summary>
+    Escaped,
+    /// <summary>패배.</summary>
+    Lost,
 }

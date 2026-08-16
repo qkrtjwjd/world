@@ -160,6 +160,38 @@ public class BattleSystem : MonoBehaviour
     // 도망으로 전투를 벗어난 경우 true — 승리 보상(처치 등록·전리품·인형화)을 지급하지 않음
     private bool _escaped = false;
 
+    // ── 숲 전투 규약 (F-2-6) ─────────────────────────────────────────────
+    // 이 셋은 튜토리얼 전투 진입부(EncounterManager.ForceStartTurnBased)에서만 켠다.
+    // 일반 전투는 기본값 그대로이므로 기존 동작이 바뀌지 않는다.
+
+    [Header("숲 전투 규약 (F-2-6)")]
+    [Tooltip("끄면 [도주] 버튼을 숨긴다. 정본 S#17A — 튜토리얼이므로 회피를 열지 않는다")]
+    public bool allowEscape = true;
+    [Tooltip("켜면 [쓰다듬기] 버튼을 띄우고 누적 정화 판정을 건다")]
+    public bool allowSoothe = false;
+    [Tooltip("켜면 처치 시 인형화 랜덤 굴림과 전리품 테이블을 건너뛴다. " +
+             "인형화는 데모 고정값(±2)이라 호출자가 직접 준다 (F-2-6 ※)")]
+    public bool useFixedOutcome = false;
+
+    [Tooltip("정화가 성립하는 [쓰다듬기] 누적 횟수. 1~2회에는 아무 판정도 일어나지 않는다")]
+    public int  soothePurifyCount = 3;
+
+    [Tooltip("[도주] 버튼. allowEscape 가 꺼지면 숨긴다")]
+    public Button escapeButton;
+    [Tooltip("[쓰다듬기] 버튼. allowSoothe 가 켜져야 보인다")]
+    public Button sootheButton;
+    [Tooltip("[특수] 버튼. 숲 전투는 선택지가 셋이라 [쓰다듬기] 가 이 자리를 대신한다")]
+    public Button specialButton;
+
+    /// <summary>[쓰다듬기] 누적 횟수. 전투 단위이며 SetupBattle 에서 0 으로 돌아간다.</summary>
+    public int SootheCount { get; private set; }
+
+    /// <summary>이번 전투가 불살(정화)로 끝났는가. 몰살과 보상이 다르다.</summary>
+    public bool SparedByPurify { get; private set; }
+
+    /// <summary>플레이어 유닛(1인칭이라 하나뿐). 피격 대상 판별용.</summary>
+    public Unit PlayerUnit => _playerParty.Count > 0 ? _playerParty[0] : null;
+
     // EndBattle 중복 실행 방지
     private bool _isBattleEnding = false;
 
@@ -276,6 +308,10 @@ public class BattleSystem : MonoBehaviour
         _isBattleEnding   = false;
         _wonByEmpathy     = false;
         _escaped          = false;
+        // 쓰다듬기 카운터는 전투 단위다 (F-2-6). 전투가 새로 시작할 때 초기화한다.
+        SootheCount       = 0;
+        SparedByPurify    = false;
+        ApplyForestBattleRules();
 
         // 플레이어 — 1인칭: 스프라이트 없이 PlayerStats 데이터로 가상 유닛 생성
         Unit playerUnit = CreateVirtualPlayerUnit();
@@ -749,6 +785,8 @@ public class BattleSystem : MonoBehaviour
 
     public void OnEscapeButton()
     {
+        // 버튼을 숨겨도 키보드 내비게이션으로 닿을 수 있어 여기서도 막는다
+        if (!allowEscape) return;
         if (State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
         _isPlayerActionInProgress = true;
         StartCoroutine(TryEscape());
@@ -762,6 +800,7 @@ public class BattleSystem : MonoBehaviour
         if (!IsPlayerTurn() || _isPlayerActionInProgress) return;
         _isPlayerActionInProgress = true;
         actionMenuPanel?.SetActive(false);
+        BattleEvents.RaisePlayerAction(BattleActionKind.Attack, SootheCount);
         StartCoroutine(PlayerAttack());
     }
 
@@ -770,7 +809,24 @@ public class BattleSystem : MonoBehaviour
         if (!IsPlayerTurn() || _isPlayerActionInProgress) return;
         _isPlayerActionInProgress = true;
         actionMenuPanel?.SetActive(false);
+        BattleEvents.RaisePlayerAction(BattleActionKind.Defend, SootheCount);
         StartCoroutine(PlayerDefend());
+    }
+
+    /// <summary>
+    /// [쓰다듬기] — 데미지도 판정도 없고 턴만 소모한다 (F-2-6).
+    /// 정화는 누적 판정이며 <see cref="soothePurifyCount"/> 회째 선택에서 발동한다.
+    /// 1~2회에는 아무 판정도 일어나지 않는다.
+    /// </summary>
+    public void OnSootheButton()
+    {
+        if (!allowSoothe) return;
+        if (!IsPlayerTurn() || _isPlayerActionInProgress) return;
+        _isPlayerActionInProgress = true;
+        actionMenuPanel?.SetActive(false);
+        SootheCount++;
+        BattleEvents.RaisePlayerAction(BattleActionKind.Soothe, SootheCount);
+        StartCoroutine(PlayerSoothe());
     }
 
     /// <summary>SkillQuickSlotUI 가 호출하는 스킬 사용 진입점.</summary>
@@ -1010,6 +1066,43 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// [쓰다듬기] 실행. 적을 공격하지 않고 턴만 넘긴다.
+    /// 누적이 <see cref="soothePurifyCount"/> 에 닿으면 정화가 성립해 전투가 끝난다.
+    /// 대사(Pet2 / Pet3)는 BattleTutorialDirector 가 행동 이벤트를 받아 재생하며,
+    /// 정본상 3회차 대사를 출력한 "직후" 정화가 발동하므로 대사가 끝날 때까지 기다린다.
+    /// </summary>
+    IEnumerator PlayerSoothe()
+    {
+        try
+        {
+            Unit cur = GetCurrentPartyMember();
+            if (cur == null) { NextPartyMember(); yield break; }
+
+            ShowDialogue("battle.soothe_action", $"{cur.unitName}은(는) 손을 뻗어 쓰다듬었다.", cur.unitName);
+            yield return _wait1_5s;
+
+            // 대사 재생 중에는 턴을 넘기지 않는다
+            while (YarnDialogue.IsRunning)
+                yield return null;
+
+            if (SootheCount >= soothePurifyCount)
+            {
+                SparedByPurify = true;
+                _wonByEmpathy  = true;   // 살해가 아님 — 기존 승리 처리와 같은 취급
+                State = BattleState.WON;
+                EndBattle();
+                yield break;
+            }
+
+            NextPartyMember();
+        }
+        finally
+        {
+            _isPlayerActionInProgress = false;
+        }
+    }
+
     IEnumerator UseItemInBattle(ItemData item)
     {
         try
@@ -1024,7 +1117,16 @@ public class BattleSystem : MonoBehaviour
             float healHP = item.fantasyEffect.healthChange;
             bool  used   = false;
 
-            if (healHP > 0)
+            // 각설탕은 HP 를 전량 회복한다 (F-2-6). 회복량을 에셋에 큰 수로 박아두면
+            // 최대 HP 가 성장으로 바뀔 때 어긋나므로 효과 코드로 처리한다.
+            if (item.fantasyEffect.specialEffectCode == SpecialEffectType.FullHeal)
+            {
+                int missing = Mathf.Max(0, cur.maxHP - cur.currentHP);
+                if (missing > 0) cur.Heal(missing);
+                ShowDialogue("", $"{item.DisplayName} 사용! {cur.unitName}의 상처가 전부 아물었다.");
+                used = true;
+            }
+            else if (healHP > 0)
             {
                 cur.Heal(Mathf.RoundToInt(healHP));
                 ShowDialogue("", $"{item.DisplayName} 사용! {cur.unitName}의 HP가 {healHP}만큼 회복됐다.");
@@ -1158,8 +1260,46 @@ public class BattleSystem : MonoBehaviour
     {
         if (_isBattleEnding) return;
         _isBattleEnding = true;
+        BattleEvents.RaiseBattleFinished(ResolveOutcome());
         BattleEvents.RaiseBattleEnded();
         StartCoroutine(EndBattleCoroutine());
+    }
+
+    /// <summary>
+    /// 선택지 구성을 규약에 맞춘다 (F-2-6).
+    /// 숲 튜토리얼은 [방어] [쓰다듬기] [공격] 셋이고 회피를 열지 않는다 (정본 S#17A ※).
+    /// 일반 전투는 두 플래그가 기본값이라 아무것도 바뀌지 않는다.
+    /// </summary>
+    void ApplyForestBattleRules()
+    {
+        // BattleUI 는 프리팹 Instantiate 로 생기므로 진입부가 정적 플래그로 넘긴다.
+        if (EncounterManager.pendingForestRules)
+        {
+            allowEscape     = false;   // 정본 S#17A ※ 튜토리얼이므로 회피를 열지 않는다
+            allowSoothe     = true;
+            useFixedOutcome = true;
+            EncounterManager.pendingForestRules = false;
+        }
+
+        if (escapeButton != null) escapeButton.gameObject.SetActive(allowEscape);
+
+        // 선택지는 셋이다. [쓰다듬기] 를 열면 [특수] 가 그 자리를 비켜준다.
+        if (specialButton != null) specialButton.gameObject.SetActive(!allowSoothe);
+        if (sootheButton != null)
+        {
+            sootheButton.gameObject.SetActive(allowSoothe);
+            sootheButton.onClick.RemoveListener(OnSootheButton);
+            sootheButton.onClick.AddListener(OnSootheButton);
+        }
+    }
+
+    /// <summary>전투가 어떻게 끝났는지 판정합니다. 보상은 이 값으로 갈립니다 (F-2-6).</summary>
+    BattleOutcome ResolveOutcome()
+    {
+        if (State != BattleState.WON) return BattleOutcome.Lost;
+        if (_escaped)                 return BattleOutcome.Escaped;
+        if (SparedByPurify)           return BattleOutcome.Spared;
+        return BattleOutcome.Killed;
     }
 
     /// <summary>레벨업 시 PlayerStats 최대 HP를 성장 곡선에 맞추고 증가분만큼 회복합니다.</summary>
@@ -1182,8 +1322,14 @@ public class BattleSystem : MonoBehaviour
         else if (State == BattleState.WON)
         {
             GameState.RegisterDefeatedEnemy(EncounterManager.currentEnemyID);
-            // 공감 승리는 살해가 아니므로 인형화 페널티 절반만 적용
-            BattleServices.PlayerStats?.AddPuppetizationOnKill(_wonByEmpathy ? 0.5f : 1f);
+
+            // 숲 전투는 인형화가 데모 고정값(±2)이라 여기서 굴리지 않는다 (F-2-6 ※).
+            // C-3-2 의 범위값을 데모에서 굴리지 말라는 조항이며, 값은 호출자가 준다.
+            if (!useFixedOutcome)
+            {
+                // 공감 승리는 살해가 아니므로 인형화 페널티 절반만 적용
+                BattleServices.PlayerStats?.AddPuppetizationOnKill(_wonByEmpathy ? 0.5f : 1f);
+            }
 
             // 경험치 — 공감 승리는 평화 루트 장려로 +20% 보너스
             int xp = EncounterManager.Instance?.enemyDatabase
@@ -1192,14 +1338,19 @@ public class BattleSystem : MonoBehaviour
             int levelUps = PlayerGrowth.AddExp(xp);
             ApplyLevelUpToPlayerStats(levelUps);
 
-            string winMsg = _wonByEmpathy ? "적이 스스로 물러났다!" : "적을 쓰러뜨렸다!";
+            string winMsg = SparedByPurify ? "늑대가 물러났다."
+                          : _wonByEmpathy  ? "적이 스스로 물러났다!"
+                                           : "적을 쓰러뜨렸다!";
             if (xp > 0)       winMsg += $" 경험치 +{xp}";
             if (levelUps > 0) winMsg += $"\n레벨이 올랐다! (Lv.{PlayerGrowth.Level})";
             ShowDialogue("", winMsg);
 
             // 전리품 — 씬 오브젝트 이름이 아닌 EnemyDatabase 의 타입 ID 로 조회
-            var loot = EncounterManager.Instance?.enemyDatabase
-                           ?.GetLootTable(EncounterManager.currentEnemyTypeID);
+            // 숲 전투는 몰살/불살에 따라 떨어지는 것이 정본에 못박혀 있어 테이블을 굴리지 않는다.
+            var loot = useFixedOutcome
+                       ? null
+                       : EncounterManager.Instance?.enemyDatabase
+                             ?.GetLootTable(EncounterManager.currentEnemyTypeID);
             if (loot != null)
             {
                 var drops = loot.RollDrops();

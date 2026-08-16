@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 5342662801359281536}
   - component: {fileID: 7266801288864060273}
   - component: {fileID: 703270256049734327}
+  - component: {fileID: 350706108863386306}
   m_Layer: 0
   m_Name: BattleManager
   m_TagString: Untagged
@@ -50,6 +51,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EncounterManager
   battleUIPrefab: {fileID: 3378478512333420417, guid: 9b19317bccdf1c447bd840a356cedaa8,
     type: 3}
+  pendingModeUIPrefab: {fileID: 0}
   enemyDatabase: {fileID: 11400000, guid: 44b091752808611479fd5555da47f031, type: 2}
   enemyPrefabToSpawn: {fileID: 0}
 --- !u!114 &2230676544003558898
@@ -83,6 +85,12 @@ MonoBehaviour:
   startInvincibleTime: 1
   _spawnOffset: {x: 2, y: 0, z: 0}
   combatRealityIdleTimeout: 60
+  useFinisherWindow: 0
+  finisherHealthRatio: 0.05
+  finisherEscapeSeconds: 2
+  weakpointDamageRatio: 0.4
+  finisherKey: 101
+  finisherPromptText: {fileID: 0}
 --- !u!114 &7266801288864060273
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -111,9 +119,29 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 36960c24a5d6c7241b26c968deca6542, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TutorialBattleManager
-  preBattle1Dialogue: {fileID: 0}
-  battle1EnemyPrefab: {fileID: 0}
-  postBattle1Dialogue: {fileID: 0}
-  preBattle2Dialogue: {fileID: 0}
-  battle2EnemyPrefab: {fileID: 0}
-  postBattle2Dialogue: {fileID: 0}
+  yarnNode_preBattle1: Forest_Wolf_Encounter
+  battle1EnemyPrefab: {fileID: 3714528590737753559, guid: a902d6af07d9cb74180cabfd24c8305e,
+    type: 3}
+  yarnNode_postBattle1: 
+  yarnNode_preBattle2: Forest_Wolf2_Encounter
+  yarnNode_preBattle2b: Forest_Wolf2_Reveal
+  battle2EnemyPrefab: {fileID: 3714528590737753559, guid: a902d6af07d9cb74180cabfd24c8305e,
+    type: 3}
+  yarnNode_postBattle2: 
+--- !u!114 &350706108863386306
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1975616361025184746}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9c4dd9d6472c42149a14c6333558bebd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleTutorialDirector
+  redCrystalPath: Items/RedCrystal
+  blackOrbPath: Items/BlackOrb
+  corruptionOnKill: 2
+  corruptionOnSpare: -2
+  gaugeOnSpare: 5

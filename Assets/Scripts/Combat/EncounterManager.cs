@@ -225,9 +225,19 @@ public class EncounterManager : MonoBehaviour
     //  튜토리얼 전용 — 게이지 무관 강제 시작
     // ─────────────────────────────────────────────
 
+    /// <summary>
+    /// 다음 턴제 전투에 숲 전투 규약(F-2-6)을 적용할지.
+    /// BattleUI 는 프리팹을 Instantiate 해서 만들어지므로 인스펙터로 넘길 수 없다.
+    /// <see cref="BattleSystem"/> 이 SetupBattle 에서 읽고 소비한다.
+    /// </summary>
+    public static bool pendingForestRules;
+
     /// <summary>게이지 값과 무관하게 턴제 전투를 강제 시작합니다. 튜토리얼 전용.</summary>
-    public void ForceStartTurnBased(GameObject enemyPrefab, string enemyId = "tutorial_battle_1")
+    /// <param name="forestRules">숲 전투 규약(F-2-6) — [쓰다듬기] 개방 · 회피 차단 · 고정 보상</param>
+    public void ForceStartTurnBased(GameObject enemyPrefab, string enemyId = "tutorial_battle_1",
+                                    bool forestRules = false)
     {
+        pendingForestRules = forestRules;
         if (SettingsManager.Instance?.autoSaveEnabled ?? true)
             SaveManager.Instance?.SavePreBattle();
 
