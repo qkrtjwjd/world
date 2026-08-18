@@ -39,34 +39,62 @@ public class BattleCompanionUI : MonoBehaviour
         if (Instance == null) Instance = this;
         else { Destroy(gameObject); return; }
 
-        // 다른 Start()보다 먼저 대화창을 확실히 숨기기
-        if (dialogueArea != null)
-        {
-            dialogueArea.SetActive(false);
-        }
-        else if (companionDialogue != null)
-        {
+        if (dialogueArea == null && companionDialogue != null)
             Debug.LogWarning("[BattleCompanionUI] dialogueArea가 연결되지 않았습니다. 인스펙터에서 연결해주세요.");
-            companionDialogue.gameObject.SetActive(false);
-        }
 
-        // 인스펙터에 기본 텍스트가 남아있을 경우 초기화
-        if (companionDialogue != null) companionDialogue.text = string.Empty;
+        // 다른 Start()보다 먼저 대화창을 확실히 숨기기
+        // (인스펙터에 기본 텍스트가 남아있을 경우도 여기서 지워진다)
+        SetDialogueVisible(false);
+
+        // 전투 UI 가 생긴 바로 이 순간 대사 출력처를 동료 대화창으로 넘긴다.
+        // 프레젠터의 Update 만 믿으면 이 프레임에 시작된 대사가 필드 대화창으로 샌다.
+        BattleCompanionLinePresenter.SyncNow();
     }
 
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        BattleCompanionLinePresenter.SyncNow();
     }
 
     void Start()
     {
         _wait2_5s = new WaitForSecondsRealtime(2.5f);
         // Awake에서 이미 처리했지만 안전을 위해 재확인
-        if (dialogueArea != null) dialogueArea.SetActive(false);
-        if (companionDialogue != null && string.IsNullOrEmpty(companionDialogue.text) == false)
-            companionDialogue.text = string.Empty;
+        SetDialogueVisible(false);
         SnapToIdle();
+    }
+
+    /// <summary>
+    /// 대화창(말풍선 영역 + 텍스트)을 통째로 켜고 끈다.
+    /// 텍스트 오브젝트는 프리팹에서 꺼진 채로 시작하므로 영역만 켜서는 글자가 안 보인다.
+    /// </summary>
+    void SetDialogueVisible(bool visible)
+    {
+        if (dialogueArea != null) dialogueArea.SetActive(visible);
+        if (companionDialogue != null)
+        {
+            companionDialogue.gameObject.SetActive(visible);
+            if (!visible) companionDialogue.text = string.Empty;
+        }
+    }
+
+    /// <summary>
+    /// 대사 한 줄을 대화창에 즉시 반영한다. 이동·대기 없이 글자만 바꾼다.
+    /// 전투 중 Yarn 대사를 여기로 흘리는 <see cref="BattleCompanionLinePresenter"/> 가 쓴다.
+    /// </summary>
+    public void ShowLine(string text)
+    {
+        if (_isDead) return;
+        SetDialogueVisible(true);
+        if (companionDialogue != null) companionDialogue.text = text ?? string.Empty;
+    }
+
+    /// <summary>대사 표시를 끝내고 대화창을 닫는다.</summary>
+    public void HideLine()
+    {
+        if (_isDead) return;
+        SetDialogueVisible(false);
     }
 
     /// <summary>플레이어 HP가 0이 됐을 때 BattleSystem에서 호출.</summary>
@@ -92,15 +120,7 @@ public class BattleCompanionUI : MonoBehaviour
         // 대화창으로 이동 후 마지막 대사
         yield return StartCoroutine(MoveToPosition(dialoguePosition));
 
-        if (dialogueArea != null)
-        {
-            dialogueArea.SetActive(true);
-        }
-        else if (companionDialogue != null)
-        {
-            companionDialogue.gameObject.SetActive(true);
-        }
-
+        SetDialogueVisible(true);
         if (companionDialogue != null) companionDialogue.text = "...미안해. 나 여기까지인 것 같아.";
 
         yield return _wait2_5s;
@@ -109,16 +129,7 @@ public class BattleCompanionUI : MonoBehaviour
         if (portraitImage != null)
             yield return StartCoroutine(FadeOut(portraitImage, 1.5f));
 
-        if (dialogueArea != null)
-        {
-            dialogueArea.SetActive(false);
-        }
-        else if (companionDialogue != null)
-        {
-            companionDialogue.text = string.Empty;
-            companionDialogue.gameObject.SetActive(false);
-        }
-
+        SetDialogueVisible(false);
         gameObject.SetActive(false);
     }
 
@@ -128,28 +139,12 @@ public class BattleCompanionUI : MonoBehaviour
 
         yield return StartCoroutine(MoveToPosition(dialoguePosition));
 
-        if (dialogueArea != null)
-        {
-            dialogueArea.SetActive(true);
-        }
-        else if (companionDialogue != null)
-        {
-            companionDialogue.gameObject.SetActive(true);
-        }
-
+        SetDialogueVisible(true);
         if (companionDialogue != null) companionDialogue.text = text;
 
         yield return new WaitForSecondsRealtime(duration);
 
-        if (dialogueArea != null)
-        {
-            dialogueArea.SetActive(false);
-        }
-        else if (companionDialogue != null)
-        {
-            companionDialogue.text = string.Empty;
-            companionDialogue.gameObject.SetActive(false);
-        }
+        SetDialogueVisible(false);
 
         yield return StartCoroutine(MoveToPosition(idlePosition));
     }

@@ -622,7 +622,7 @@ public class YarnCommandBridge : MonoBehaviour
         }
 
         if (maxDuration > 0f)
-            yield return new WaitForSeconds(maxDuration);
+            yield return new WaitForSecondsRealtime(maxDuration);   // timeScale=0 대응
     }
 
     private void ApplyTriggerInternal(string triggerName)
@@ -680,6 +680,8 @@ public class YarnCommandBridge : MonoBehaviour
     }
 
     // ── 등장 애니메이션 ───────────────────────────────────────────────────
+    // 시간은 unscaled 로 센다. 턴제 전투는 Time.timeScale=0 으로 도는데,
+    // 스케일 시간을 쓰면 이 루프가 끝나지 않고 <<showSprite>> 가 대사를 통째로 붙잡는다.
     IEnumerator EntryRoutine(Image img, EntryMotion motion, bool isRight, float duration)
     {
         RectTransform rt      = img == portraitImageRight ? _portraitRightRT : _portraitRT;
@@ -699,7 +701,7 @@ public class YarnCommandBridge : MonoBehaviour
                     float t = 0f;
                     while (t < duration)
                     {
-                        t += Time.deltaTime;
+                        t += Time.unscaledDeltaTime;
                         if (rt != null)
                             rt.anchoredPosition = Vector2.LerpUnclamped(
                                 from, restPos,
@@ -720,7 +722,7 @@ public class YarnCommandBridge : MonoBehaviour
                     float t = 0f;
                     while (t < duration)
                     {
-                        t += Time.deltaTime;
+                        t += Time.unscaledDeltaTime;
                         c.a = Mathf.Clamp01(t / duration);
                         img.color = c;
                         yield return null;
@@ -736,6 +738,7 @@ public class YarnCommandBridge : MonoBehaviour
     }
 
     // ── 퇴장 애니메이션 ───────────────────────────────────────────────────
+    // EntryRoutine 과 같은 이유로 unscaled 시간을 쓴다.
     IEnumerator ExitRoutine(Image img, ExitMotion motion, bool isRight, float duration)
     {
         RectTransform rt      = img == portraitImageRight ? _portraitRightRT : _portraitRT;
@@ -754,7 +757,7 @@ public class YarnCommandBridge : MonoBehaviour
                     float t = 0f;
                     while (t < duration)
                     {
-                        t += Time.deltaTime;
+                        t += Time.unscaledDeltaTime;
                         if (rt != null)
                             rt.anchoredPosition = Vector2.LerpUnclamped(
                                 from, to,
@@ -776,7 +779,7 @@ public class YarnCommandBridge : MonoBehaviour
                     float t = 0f;
                     while (t < duration)
                     {
-                        t += Time.deltaTime;
+                        t += Time.unscaledDeltaTime;
                         c.a = Mathf.Lerp(start, 0f, Mathf.Clamp01(t / duration));
                         img.color = c;
                         yield return null;

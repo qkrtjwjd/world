@@ -244,6 +244,7 @@ GameObject:
   - component: {fileID: 6899782308067213377}
   - component: {fileID: 4953606985428704562}
   - component: {fileID: 818589987416240995}
+  - component: {fileID: 6012707309618645026}
   m_Layer: 5
   m_Name: Dialogue
   m_TagString: Untagged
@@ -360,6 +361,7 @@ MonoBehaviour:
   - {fileID: 1862077877261583731}
   - {fileID: 7735182946103275641}
   - {fileID: 4953606985428704562}
+  - {fileID: 6012707309618645026}
   verboseLogging: 0
   autoStart: 0
   startNode: Start
@@ -445,6 +447,23 @@ MonoBehaviour:
   portraitImage: {fileID: 8208262555482652456}
   portraitImageRight: {fileID: 9171024164036645450}
   spriteData: {fileID: 11400000, guid: 9d2f4a71c86b4e03ab5719ec3f0d6b84, type: 2}
+  linePresenter: {fileID: 0}
+  dialogueBackground: {fileID: 0}
+--- !u!114 &6012707309618645026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6396925597179916008}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bda91a42c48a544da687ece6b6935a5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BattleCompanionLinePresenter
+  fieldPresenter: {fileID: 1862077877261583731}
+  showCharacterName: 1
+  lettersPerSecond: 40
 --- !u!1 &8498630732531705181
 GameObject:
   m_ObjectHideFlags: 0
@@ -764,20 +783,6 @@ MonoBehaviour:
   customTypewriter:
     targetObject: {fileID: 0}
   eventHandlers: []
---- !u!114 &7735182946103275641
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9035235738118080561}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a57165f36b2df49468250931258071f6, type: 3}
-  m_Name:
-  m_EditorClassIdentifier: Assembly-CSharp::SpeakerStylePresenter
-  linePresenter: {fileID: 1862077877261583731}
-  applyStyles: 1
 --- !u!225 &2305583814545076313
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -790,3 +795,17 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &7735182946103275641
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9035235738118080561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a57165f36b2df49468250931258071f6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpeakerStylePresenter
+  linePresenter: {fileID: 1862077877261583731}
+  applyStyles: 1

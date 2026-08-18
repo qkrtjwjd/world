@@ -79,6 +79,9 @@ public class BattleSystem : MonoBehaviour
     [Header("UI")]
     public TMP_Text dialogueText;
 
+    [Tooltip("전투 중 루 대사의 이름칸. 대사가 뜰 때만 켜지며 PlayerIdentity.Name 을 쓴다")]
+    public TMP_Text playerNameText;
+
     [Header("메뉴 패널")]
     public GameObject mainMenuPanel;
     public GameObject actionMenuPanel;
@@ -760,7 +763,7 @@ public class BattleSystem : MonoBehaviour
 
     void OnItemSelected(ItemData item)
     {
-        if (State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
+        if (InputBlocked || State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
         _isPlayerActionInProgress = true;
         HideBattleItemDesc();
         SetPanelsActive(false, false, false);
@@ -773,13 +776,13 @@ public class BattleSystem : MonoBehaviour
     // ════════════════════════════════════════
     public void OnActionMenuButton()
     {
-        if (State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
+        if (InputBlocked || State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
         ShowActionMenu();
     }
 
     public void OnItemMenuButton()
     {
-        if (State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
+        if (InputBlocked || State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
         ShowItemMenu();
     }
 
@@ -787,7 +790,7 @@ public class BattleSystem : MonoBehaviour
     {
         // 버튼을 숨겨도 키보드 내비게이션으로 닿을 수 있어 여기서도 막는다
         if (!allowEscape) return;
-        if (State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
+        if (InputBlocked || State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
         _isPlayerActionInProgress = true;
         StartCoroutine(TryEscape());
     }
@@ -935,8 +938,15 @@ public class BattleSystem : MonoBehaviour
         StartCoroutine(PlayerSpecialAction());
     }
 
+    /// <summary>
+    /// 대사가 떠 있는 동안은 전투 입력을 받지 않는다.
+    /// 대사를 넘기는 스페이스가 EventSystem Submit 으로 포커스된 전투 버튼까지 같이 누르고,
+    /// 클릭은 위에 있는 BattleUI 로 그대로 레이캐스트되기 때문이다.
+    /// </summary>
+    static bool InputBlocked => YarnDialogue.IsRunning;
+
     bool IsPlayerTurn() =>
-        State == BattleState.PLAYERTURN && _currentUnitIndex < _playerParty.Count;
+        !InputBlocked && State == BattleState.PLAYERTURN && _currentUnitIndex < _playerParty.Count;
 
     /// <summary>현재 행동 중인 파티원을 반환. 인덱스 범위 밖이거나 파티가 비어 있으면 null.</summary>
     Unit GetCurrentPartyMember()
@@ -1568,5 +1578,49 @@ public class BattleSystem : MonoBehaviour
     {
         if (dialogueText != null)
             dialogueText.text = GetText(key, fallback, args);
+    }
+
+    // ════════════════════════════════════════
+    //  전투 중 루 대사 — 전투 로그 상자를 빌려 쓴다
+    // ════════════════════════════════════════
+
+    string _savedLog;
+    bool   _logBorrowed;
+
+    /// <summary>
+    /// 루의 대사 한 줄을 전투 로그 상자에 띄운다. 이름은 <see cref="playerNameText"/> 에 따로 쓴다.
+    /// 로그 상자를 빌려 쓰는 것이므로 원래 내용은 <see cref="HidePlayerLine"/> 에서 되돌린다.
+    /// 동료(쿠루 등) 대사는 좌측 상단 <see cref="BattleCompanionUI"/> 가 맡는다.
+    /// </summary>
+    public void ShowPlayerLine(string body)
+    {
+        if (!_logBorrowed && dialogueText != null)
+        {
+            _savedLog     = dialogueText.text;
+            _logBorrowed  = true;
+        }
+
+        if (playerNameText != null)
+        {
+            playerNameText.gameObject.SetActive(true);
+            playerNameText.text = PlayerIdentity.Name;   // 플레이어가 정한 이름
+        }
+        if (dialogueText != null) dialogueText.text = body ?? string.Empty;
+    }
+
+    /// <summary>루 대사 표시를 끝내고 전투 로그를 원래대로 돌려놓는다.</summary>
+    public void HidePlayerLine()
+    {
+        if (playerNameText != null)
+        {
+            playerNameText.text = string.Empty;
+            playerNameText.gameObject.SetActive(false);
+        }
+
+        if (_logBorrowed)
+        {
+            if (dialogueText != null) dialogueText.text = _savedLog;
+            _logBorrowed = false;
+        }
     }
 }
