@@ -1608,6 +1608,10 @@ public class BattleSystem : MonoBehaviour
 
         if (dialogueText != null)
             dialogueText.text = text;
+
+        // 로그도 혼자 떠야 한다 — 잠깐 버튼·HP 를 감췄다가 표시 시간이 지나면 되돌린다
+        HideBattleHud();
+        RestartHudTimer();
     }
 
     // ════════════════════════════════════════
@@ -1616,6 +1620,71 @@ public class BattleSystem : MonoBehaviour
 
     string _savedLog;
     bool   _logBorrowed;
+
+    // 대사 중에는 대사 상자와 아래 패널 배경만 남기고 나머지를 감춘다.
+    // MainMenuPanel 자체를 끄면 패널 배경까지 사라지므로 그 '자식들'(HP바·행동/아이템/도망 버튼)만 끈다.
+    bool _hudHidden;
+    bool _prevActionMenu, _prevItemMenu, _prevEnemyHud;
+    readonly List<GameObject> _hiddenMenuChildren = new List<GameObject>();
+
+    /// <summary>대사 상자와 패널 배경만 남기고 버튼·양쪽 HP·LV 를 감춘다.</summary>
+    void HideBattleHud()
+    {
+        if (_hudHidden) return;
+        _hudHidden = true;
+
+        _hiddenMenuChildren.Clear();
+        if (mainMenuPanel != null)
+        {
+            foreach (Transform child in mainMenuPanel.transform)
+            {
+                if (!child.gameObject.activeSelf) continue;   // 원래 꺼져 있던 건 건드리지 않는다
+                child.gameObject.SetActive(false);
+                _hiddenMenuChildren.Add(child.gameObject);
+            }
+        }
+
+        if (actionMenuPanel != null) { _prevActionMenu = actionMenuPanel.activeSelf; actionMenuPanel.SetActive(false); }
+        if (itemMenuPanel   != null) { _prevItemMenu   = itemMenuPanel.activeSelf;   itemMenuPanel.SetActive(false); }
+        if (enemyHudGroup   != null) { _prevEnemyHud   = enemyHudGroup.activeSelf;   enemyHudGroup.SetActive(false); }
+    }
+
+    [Header("전투 로그 표시")]
+    [Tooltip("전투 로그 한 줄을 혼자 띄워 두는 시간(초). 이 시간이 지나면 버튼·HP 가 다시 나온다")]
+    public float logHoldTime = 1.2f;
+
+    Coroutine _hudRestoreRoutine;
+
+    /// <summary>로그 표시 시간이 지나면 HUD 를 되돌린다. 루 대사 중에는 걸지 않는다.</summary>
+    void RestartHudTimer()
+    {
+        if (_hudRestoreRoutine != null) { StopCoroutine(_hudRestoreRoutine); _hudRestoreRoutine = null; }
+        if (!isActiveAndEnabled) { RestoreBattleHud(); return; }   // 코루틴을 못 돌리면 즉시 되돌린다
+        _hudRestoreRoutine = StartCoroutine(HudRestoreAfterDelay());
+    }
+
+    IEnumerator HudRestoreAfterDelay()
+    {
+        // 턴제 전투는 Time.timeScale = 0 으로 돈다 — Realtime 이어야 깨어난다
+        yield return new WaitForSecondsRealtime(logHoldTime);
+        _hudRestoreRoutine = null;
+        if (!_logBorrowed) RestoreBattleHud();   // 그 사이 루 대사가 시작됐으면 대사 쪽에 맡긴다
+    }
+
+    /// <summary>감추기 직전 상태로 되돌린다. 감춘 적이 없으면 아무것도 하지 않는다.</summary>
+    void RestoreBattleHud()
+    {
+        if (!_hudHidden) return;
+        _hudHidden = false;
+
+        foreach (var go in _hiddenMenuChildren)
+            if (go != null) go.SetActive(true);
+        _hiddenMenuChildren.Clear();
+
+        if (actionMenuPanel != null) actionMenuPanel.SetActive(_prevActionMenu);
+        if (itemMenuPanel   != null) itemMenuPanel.SetActive(_prevItemMenu);
+        if (enemyHudGroup   != null) enemyHudGroup.SetActive(_prevEnemyHud);
+    }
 
     /// <summary>
     /// 루의 대사 한 줄을 전투 로그 상자에 띄운다. 이름은 <see cref="playerNameText"/> 에 따로 쓴다.
@@ -1630,6 +1699,9 @@ public class BattleSystem : MonoBehaviour
             _logBorrowed  = true;
         }
 
+        // 대사 중에는 상자만 남긴다 — 버튼·양쪽 HP·LV 를 감추고, 되돌리는 건 HidePlayerLine 이 한다
+        if (_hudRestoreRoutine != null) { StopCoroutine(_hudRestoreRoutine); _hudRestoreRoutine = null; }
+        HideBattleHud();
         SyncLogArea();   // 상자가 꺼져 있으면 글자를 넣어도 안 보인다. 한 프레임도 늦추지 않는다.
 
         if (playerNameText != null)
@@ -1655,6 +1727,8 @@ public class BattleSystem : MonoBehaviour
             _logBorrowed = false;
         }
 
+        if (_hudRestoreRoutine != null) { StopCoroutine(_hudRestoreRoutine); _hudRestoreRoutine = null; }
+        RestoreBattleHud();   // 감췄던 버튼·HP·LV 를 감추기 직전 상태로 되돌린다
         SyncLogArea();   // 빌린 것을 돌려줬으니 원래 표시 조건으로 되돌린다
     }
 }

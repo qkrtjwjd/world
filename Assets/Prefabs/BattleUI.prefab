@@ -184,7 +184,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 20, y: 15}
-  m_SizeDelta: {x: 1290, y: 130}
+  m_SizeDelta: {x: 1290, y: 140}
   m_Pivot: {x: 0, y: 0}
 --- !u!222 &346959920022577441
 CanvasRenderer:
@@ -2668,6 +2668,7 @@ MonoBehaviour:
   escapeButton: {fileID: 9041843803321508140}
   sootheButton: {fileID: 606000316034703575}
   specialButton: {fileID: 3706850979224434464}
+  logHoldTime: 1.2
 --- !u!222 &8021763377216450580
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3018,7 +3019,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 20, y: 160}
+  m_AnchoredPosition: {x: 20, y: 165}
   m_SizeDelta: {x: 390, y: 35}
   m_Pivot: {x: 0, y: 0}
 --- !u!222 &4682619730745588673
@@ -4483,7 +4484,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 290, y: 30}
-  m_SizeDelta: {x: 1330, y: 155}
+  m_SizeDelta: {x: 1330, y: 270}
   m_Pivot: {x: 0, y: 0}
 --- !u!1 &5415049518788770685
 GameObject:
