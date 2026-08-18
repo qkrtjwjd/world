@@ -20,6 +20,10 @@ public class BattleModeSwitchDebug : MonoBehaviour
     public KeyCode switchToTurnBasedKey = KeyCode.F9;
     public KeyCode unlockSwitchKey      = KeyCode.F10;
 
+    [Header("화면 표시")]
+    [Tooltip("좌측 상단 디버그 오버레이를 그릴지 여부. 동료 패널 초상화 자리를 덮기 때문에 기본은 꺼 둡니다. 키(F8·F9·F10)는 꺼져 있어도 동작합니다.")]
+    public bool showOverlay = false;
+
     [Header("디버그 테스트 적")]
     [Tooltip("EncounterManager에 적 정보가 없을 때 사용할 폴백 프리팹.\n" +
              "할당하면 실제 인카운터 없이도 F8로 핵앤슬래시를 바로 시작할 수 있습니다.")]
@@ -97,6 +101,7 @@ public class BattleModeSwitchDebug : MonoBehaviour
 
     void OnGUI()
     {
+        if (!showOverlay) return;
         if (!Application.isEditor && !Debug.isDebugBuild) return;
 
         var style    = new GUIStyle(GUI.skin.label) { fontSize = 13 };

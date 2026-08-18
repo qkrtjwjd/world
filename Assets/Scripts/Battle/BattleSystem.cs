@@ -984,7 +984,7 @@ public class BattleSystem : MonoBehaviour
         try
         {
             mainMenuPanel?.SetActive(false);
-            if (dialogueText != null) dialogueText.text = GetText("battle.escape", "도망") + "...";
+            ShowDialogue("", GetText("battle.escape", "도망") + "...");
             yield return _wait1_5s;
 
             if (Random.Range(0, 2) == 0)
@@ -1596,8 +1596,18 @@ public class BattleSystem : MonoBehaviour
 
     void ShowDialogue(string key, string fallback, params object[] args)
     {
+        string text = GetText(key, fallback, args);
+
+        // 루 대사가 로그 상자를 빌려 쓰는 동안에는 덮어쓰지 않는다.
+        // 로그만 따로 담아 뒀다가 HidePlayerLine 에서 되돌린다.
+        if (_logBorrowed)
+        {
+            _savedLog = text;
+            return;
+        }
+
         if (dialogueText != null)
-            dialogueText.text = GetText(key, fallback, args);
+            dialogueText.text = text;
     }
 
     // ════════════════════════════════════════
