@@ -41,10 +41,11 @@ public class TutorialBattleManager : MonoBehaviour
 
     void Awake()
     {
-        if (Instance == null)
-            Instance = this;
-        else
-            Destroy(gameObject);
+        // gameObject 가 아니라 이 컴포넌트만 지운다.
+        // BattleManager 오브젝트에는 EncounterManager · HackSlashCombatManager ·
+        // BattleTutorialDirector 가 함께 붙어 있어서, GameObject 를 지우면 전투 시스템이 통째로 날아간다.
+        if (Instance != null && Instance != this) { Destroy(this); return; }
+        Instance = this;
     }
 
     void OnDestroy()
@@ -190,6 +191,10 @@ public class TutorialBattleManager : MonoBehaviour
         // 전투가 끝날 때까지 폴링
         while (HackSlashCombatManager.IsActive)
             yield return _wait02;
+
+        // 마무리 구간은 숲 전투 전용이다. 켜둔 채로 두면 이후 일반 액션 전투에도 남는다.
+        if (HackSlashCombatManager.Instance != null)
+            HackSlashCombatManager.Instance.useFinisherWindow = false;
 
         // 결과 텍스트 표시 시간 대기
         yield return _wait05;

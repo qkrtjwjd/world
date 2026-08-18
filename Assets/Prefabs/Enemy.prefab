@@ -162,6 +162,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
+  m_UseReflectionProbes: 0
   m_AdditionalShaderChannelsFlag: 0
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
@@ -262,7 +263,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0}
@@ -496,9 +497,7 @@ GameObject:
   m_Component:
   - component: {fileID: 68623997774376366}
   - component: {fileID: 4561095800410700795}
-  - component: {fileID: 7243330915271163892}
   - component: {fileID: 7990830618026590872}
-  - component: {fileID: 1822918006714335607}
   - component: {fileID: 8831597548854534342}
   - component: {fileID: 6282015697243474175}
   - component: {fileID: 4786421705258952684}
@@ -550,20 +549,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &7243330915271163892
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8888639358652514372}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 741f30960d63a984c904285d23069b75, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ClearSky.SimplePlayerController
-  walkSpeed: 0
-  runMultiplier: 1.8
 --- !u!114 &7990830618026590872
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -578,34 +563,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Unit
   unitName: Enemy
   unitLevel: 1
-  damage: 10
   maxHP: 100
   currentHP: 100
-  hpSlider: {fileID: 8346865650141542762}
+  maxMP: 0
+  currentMP: 0
+  equippedSkills: []
+  level: 1
+  attack: 10
+  defense: 5
+  accuracy: 95
+  evasion: 5
+  critRate: 5
+  critMultiplier: 1.5
+  defendDamageReduction: 0.5
   isDefending: 0
---- !u!114 &1822918006714335607
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8888639358652514372}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e17ff36f5c0e7784a95fc8d90a526694, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
-  maxHealth: 100
-  currentHealth: 0
-  allyMaxHP: 100
-  allyCurrentHP: 100
-  maxMental: 100
-  currentMental: 0
-  maxHunger: 100
-  currentHunger: 0
-  maxPuppetization: 100
-  currentPuppetization: 0
-  hungerDecreaseRate: 1
 --- !u!114 &8831597548854534342
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -626,6 +597,13 @@ MonoBehaviour:
   knockbackForce: 4
   knockbackDuration: 0.15
   spriteRenderer: {fileID: 0}
+  fleeSpeed: 4
+  fleeDuration: 3
+  aiProfile: {fileID: 0}
+  attackRangeMovementThreshold: 0.8
+  attackValidationMultiplier: 1.1
+  velocityDampingFactor: 0.3
+  findPlayerInterval: 0.5
 --- !u!114 &6282015697243474175
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -640,7 +618,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 100
   currentHealth: 100
+  level: 1
+  defense: 5
+  evasion: 5
   deathEffect: {fileID: 0}
+  fleeHealthRatio: 0.1
+  respawnDistance: 20
+  respawnCheckInterval: 0.5
+  respawnPlayerSearchTimeout: 30
 --- !u!50 &4786421705258952684
 Rigidbody2D:
   serializedVersion: 5

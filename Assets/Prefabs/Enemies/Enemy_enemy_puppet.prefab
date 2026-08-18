@@ -46,9 +46,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2788574023521797413}
   - component: {fileID: 1736288363591842718}
-  - component: {fileID: 9047427920036107899}
   - component: {fileID: 6068678004297941679}
-  - component: {fileID: 6070274345363714408}
   - component: {fileID: 7678508898069601901}
   - component: {fileID: 3533586653157108846}
   - component: {fileID: 5349610103369855767}
@@ -100,20 +98,6 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
---- !u!114 &9047427920036107899
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1106283794598839287}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 741f30960d63a984c904285d23069b75, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::ClearSky.SimplePlayerController
-  walkSpeed: 0
-  runMultiplier: 1.8
 --- !u!114 &6068678004297941679
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -142,24 +126,6 @@ MonoBehaviour:
   critMultiplier: 1.5
   defendDamageReduction: 0.5
   isDefending: 0
---- !u!114 &6070274345363714408
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1106283794598839287}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e17ff36f5c0e7784a95fc8d90a526694, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::PlayerStats
-  maxHealth: 100
-  currentHealth: 0
-  allyMaxHP: 100
-  allyCurrentHP: 100
-  maxMental: 100
-  currentMental: 0
 --- !u!114 &7678508898069601901
 MonoBehaviour:
   m_ObjectHideFlags: 0
