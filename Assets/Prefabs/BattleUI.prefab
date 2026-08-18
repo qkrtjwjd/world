@@ -2523,6 +2523,7 @@ RectTransform:
   - {fileID: 100557909559656763}
   - {fileID: 3701772978616586476}
   - {fileID: 4967314743380852262}
+  - {fileID: 2855882498028447967}
   - {fileID: 7059414611000423440}
   - {fileID: 467168683102271102}
   - {fileID: 3979290870472405778}
@@ -2638,6 +2639,7 @@ MonoBehaviour:
   maxGauge: 100
   dialogueText: {fileID: 1611859725324855180}
   playerNameText: {fileID: 6948247601002713142}
+  dialogueAreaRoot: {fileID: 5318618355887219768}
   mainMenuPanel: {fileID: 5971705763517400787}
   actionMenuPanel: {fileID: 1130729627160228375}
   itemMenuPanel: {fileID: 4660220433259877615}
@@ -4476,11 +4478,11 @@ RectTransform:
   m_Children:
   - {fileID: 3406751263548115038}
   - {fileID: 4884398389932137718}
-  m_Father: {fileID: 4967314743380852262}
+  m_Father: {fileID: 1346862415246635984}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -583, y: 80}
+  m_AnchoredPosition: {x: -583, y: -195}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &5415049518788770685
@@ -4923,7 +4925,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3679231427746118856}
-  - {fileID: 2855882498028447967}
   - {fileID: 2831886291970801473}
   - {fileID: 4412802632701164122}
   - {fileID: 6319519774680845907}

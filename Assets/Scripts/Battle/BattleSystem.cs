@@ -82,6 +82,9 @@ public class BattleSystem : MonoBehaviour
     [Tooltip("전투 중 루 대사의 이름칸. 대사가 뜰 때만 켜지며 PlayerIdentity.Name 을 쓴다")]
     public TMP_Text playerNameText;
 
+    [Tooltip("전투 로그 상자(DialogueArea). MainMenuPanel 밖으로 뺐기 때문에 표시 여부를 여기서 맞춘다")]
+    public GameObject dialogueAreaRoot;
+
     [Header("메뉴 패널")]
     public GameObject mainMenuPanel;
     public GameObject actionMenuPanel;
@@ -281,6 +284,23 @@ public class BattleSystem : MonoBehaviour
             ShowMainMenu();
         }
 
+        SyncLogArea();
+    }
+
+    /// <summary>
+    /// 전투 로그 상자의 표시 여부를 <see cref="mainMenuPanel"/> 에 맞춘다.
+    ///
+    /// <para>이 상자는 원래 MainMenuPanel 자식이라 메뉴가 꺼질 때 같이 꺼졌다. 그런데 루의 대사가
+    /// 이 상자를 빌려 쓰는데(<see cref="ShowPlayerLine"/>), 대사가 나오는 시점이 하필 메뉴가 꺼져 있는
+    /// 구간(행동 중·적 턴·전투 시작 연출)이라 글자가 화면에 안 보였다. 그래서 상자를 MainMenuPanel
+    /// 밖으로 뺐고, 대신 <b>보이는 조건은 예전 그대로</b> 여기서 재현한다 — 대사를 빌린 동안만 예외다.</para>
+    /// </summary>
+    void SyncLogArea()
+    {
+        if (dialogueAreaRoot == null) return;
+
+        bool visible = _logBorrowed || mainMenuPanel == null || mainMenuPanel.activeSelf;
+        if (dialogueAreaRoot.activeSelf != visible) dialogueAreaRoot.SetActive(visible);
     }
 
     IEnumerator SetupBattle()
@@ -1600,6 +1620,8 @@ public class BattleSystem : MonoBehaviour
             _logBorrowed  = true;
         }
 
+        SyncLogArea();   // 상자가 꺼져 있으면 글자를 넣어도 안 보인다. 한 프레임도 늦추지 않는다.
+
         if (playerNameText != null)
         {
             playerNameText.gameObject.SetActive(true);
@@ -1622,5 +1644,7 @@ public class BattleSystem : MonoBehaviour
             if (dialogueText != null) dialogueText.text = _savedLog;
             _logBorrowed = false;
         }
+
+        SyncLogArea();   // 빌린 것을 돌려줬으니 원래 표시 조건으로 되돌린다
     }
 }
