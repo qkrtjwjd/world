@@ -134,6 +134,10 @@ public class BattleSystem : MonoBehaviour
     [Tooltip("적 스프라이트가 나타날 화면 위치. X: 왼쪽(0)~오른쪽(1), Y: 아래(0)~위(1). 예) (0.7, 0.5) = 화면 오른쪽 중앙.")]
     [SerializeField] private Vector2 _enemyViewportPosition = new Vector2(0.7f, 0.5f);
 
+    [Tooltip("턴제 전투용 적 클론에만 곱하는 배율. 필드 심볼과 액션 전투는 영향받지 않는다. " +
+             "1 = 필드와 같은 크기(화면 높이의 약 10%), 3 = 약 30%로 JRPG 관례의 한가운데.")]
+    [SerializeField] private float _enemyBattleScale = 3f;
+
     [Header("글리치 구간 전환")]
     [Tooltip("글리치 구간(30~69)에서 언제든지 단검을 활성화하여 핵앤슬래시로 전환하는 버튼")]
     public Button daggerActivateButton;
@@ -454,10 +458,21 @@ public class BattleSystem : MonoBehaviour
         unit = null;
         if (prefab == null) return;
 
-        // _enemyViewportPosition (0~1)을 월드 좌표로 변환하여 스폰.
-        // Camera.main이 없으면 원점에 스폰.
         GameObject go = Instantiate(prefab);
-        if (Camera.main != null)
+
+        // 정본 F-2-5: "전투 진입 시점의 좌표를 고정한다. 루·쿠루·적의 위치를 옮기지 않는다."
+        // 필드에 조우 대상이 있으면 그 자리에 세우고, 원본 심볼은 전투 동안 감춘다(둘이 겹쳐 보이지 않게).
+        // 튜토리얼 턴제(ForceStartTurnBased)는 조우 대상이 없으므로 뷰포트 기준으로 세운다.
+        GameObject fieldEnemy = EncounterManager.Instance != null
+            ? EncounterManager.Instance.CurrentEnemyObject
+            : null;
+
+        if (fieldEnemy != null)
+        {
+            go.transform.position = fieldEnemy.transform.position;
+            HideFieldEnemyVisual(fieldEnemy);
+        }
+        else if (Camera.main != null)
         {
             float   depth    = Mathf.Abs(Camera.main.transform.position.z);
             Vector3 worldPos = Camera.main.ViewportToWorldPoint(
@@ -466,8 +481,15 @@ public class BattleSystem : MonoBehaviour
             go.transform.position = worldPos;
         }
         go.transform.rotation = Quaternion.identity;
-        // BattleUI Canvas(scale 0)에 넣으면 월드 스케일 0이 되어 스프라이트 소멸 — 루트에 등록
-        go.transform.SetParent(transform.root, worldPositionStays: true);
+
+        // 씬 루트에 둔다. BattleSystem 은 BattleUI 캔버스 루트에 붙어 있어서 transform.root 가
+        // 곧 그 캔버스이며, 거기에 넣으면 CanvasScaler 배율이 스프라이트 월드 크기에 곱해진다.
+        go.transform.SetParent(null, worldPositionStays: true);
+
+        // 필드 스케일 그대로면 적이 화면 높이의 10% 밖에 안 돼 턴제 화면에서 존재감이 없다.
+        // 전투용 클론에만 배율을 준다 — 필드 심볼과 액션 전투는 건드리지 않는다.
+        if (!Mathf.Approximately(_enemyBattleScale, 1f))
+            go.transform.localScale *= _enemyBattleScale;
 
         // 프리팹 내부 Canvas·Image 컴포넌트 비활성화 (GameObject가 아닌 컴포넌트를 끔)
         // GameObject를 끄면 ShowEnemyWithAppearance()에서 SetActive(true) 시 같이 켜져 흰 네모 재발생
@@ -496,6 +518,38 @@ public class BattleSystem : MonoBehaviour
         }
 
         // HP UI는 호출자(SetupBattle)에서 HPBarController.SetTarget으로 처리합니다.
+    }
+
+    // ── 필드 적 심볼 감추기 ──
+    // 전투용 클론을 필드 적과 같은 자리에 세우므로, 원본을 그대로 두면 둘이 겹쳐 보인다.
+    // GameObject 를 끄지 않고 렌더러·콜라이더만 끈다 — 끄면 EnemySymbol·EnemyHealth 의
+    // 코루틴과 리스폰 감시가 함께 멈춘다.
+    readonly List<SpriteRenderer> _hiddenFieldRenderers = new List<SpriteRenderer>();
+    readonly List<Collider2D>     _hiddenFieldColliders = new List<Collider2D>();
+
+    void HideFieldEnemyVisual(GameObject fieldEnemy)
+    {
+        foreach (var sr in fieldEnemy.GetComponentsInChildren<SpriteRenderer>(true))
+        {
+            if (sr == null || !sr.enabled) continue;   // 원래 꺼져 있던 건 건드리지 않는다
+            sr.enabled = false;
+            _hiddenFieldRenderers.Add(sr);
+        }
+        foreach (var col in fieldEnemy.GetComponentsInChildren<Collider2D>(true))
+        {
+            if (col == null || !col.enabled) continue;
+            col.enabled = false;
+            _hiddenFieldColliders.Add(col);
+        }
+    }
+
+    /// <summary>감추기 직전 상태로 되돌린다. 감춘 적이 없으면 아무것도 하지 않는다.</summary>
+    void RestoreFieldEnemyVisual()
+    {
+        foreach (var sr in _hiddenFieldRenderers) if (sr != null) sr.enabled = true;
+        foreach (var col in _hiddenFieldColliders) if (col != null) col.enabled = true;
+        _hiddenFieldRenderers.Clear();
+        _hiddenFieldColliders.Clear();
     }
 
     /// <summary>
@@ -1446,6 +1500,8 @@ public class BattleSystem : MonoBehaviour
     void OnDisable()
     {
         if (Instance != this) return;
+        // 전투가 어떻게 끝나든(승패·도주·핵앤슬래시 전환·씬 이동) 필드 적을 반드시 되돌린다.
+        RestoreFieldEnemyVisual();
         Instance = null;
         IsActive = false;
         if (GaugeManager.Instance != null)

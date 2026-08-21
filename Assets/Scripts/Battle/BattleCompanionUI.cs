@@ -97,6 +97,24 @@ public class BattleCompanionUI : MonoBehaviour
         SetDialogueVisible(false);
     }
 
+    /// <summary>
+    /// 동료 초상화를 갈아 끼운다. 전투 중 <c>&lt;&lt;showSprite&gt;&gt;</c> 가 여기로 넘어온다
+    /// (<see cref="YarnCommandBridge"/>) — 필드 대화창 캔버스는 BattleUI 뒤에 깔려 안 보이기 때문이다.
+    /// </summary>
+    public void SetPortrait(Sprite sprite)
+    {
+        if (_isDead || portraitImage == null) return;
+
+        portraitImage.sprite  = sprite;
+        portraitImage.enabled = sprite != null;
+        portraitImage.preserveAspect = true;
+
+        // 죽음 이벤트의 FadeOut 이 알파를 0 으로 남겨 둘 수 있다
+        Color c = portraitImage.color;
+        c.a = 1f;
+        portraitImage.color = c;
+    }
+
     /// <summary>플레이어 HP가 0이 됐을 때 BattleSystem에서 호출.</summary>
     public void OnPlayerDied()
     {
@@ -152,6 +170,8 @@ public class BattleCompanionUI : MonoBehaviour
     IEnumerator MoveToPosition(RectTransform target)
     {
         if (companionRoot == null || target == null) yield break;
+        // SnapToIdle 과 같은 이유 — 자기 자신이나 자식 좌표로는 옮기지 않는다
+        if (target == companionRoot || target.IsChildOf(companionRoot)) yield break;
 
         _isMoving = true;
         Vector2 start = companionRoot.anchoredPosition;
@@ -188,7 +208,17 @@ public class BattleCompanionUI : MonoBehaviour
 
     void SnapToIdle()
     {
-        if (companionRoot != null && idlePosition != null)
-            companionRoot.anchoredPosition = idlePosition.anchoredPosition;
+        if (companionRoot == null || idlePosition == null) return;
+
+        // idlePosition 이 companionRoot 자신이거나 그 자식이면 좌표계가 성립하지 않는다.
+        // (부모를 자식의 로컬 좌표로 옮기는 꼴이라 초상화가 화면 밖으로 나간다)
+        if (idlePosition == companionRoot || idlePosition.IsChildOf(companionRoot))
+        {
+            Debug.LogWarning("[BattleCompanionUI] idlePosition 이 companionRoot 안에 있습니다. " +
+                             "SnapToIdle 을 건너뜁니다 — 인스펙터에서 형제 위치 마커로 바꿔주세요.");
+            return;
+        }
+
+        companionRoot.anchoredPosition = idlePosition.anchoredPosition;
     }
 }

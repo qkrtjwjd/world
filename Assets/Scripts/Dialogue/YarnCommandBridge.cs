@@ -547,6 +547,19 @@ public class YarnCommandBridge : MonoBehaviour
                 _spriteCache[key] = sprite;
         }
 
+        // 3-1. 전투 중이면 필드 초상화를 띄우지 않는다.
+        // 필드 대화창은 Dialogue 캔버스(sortingOrder 0)에 있고 BattleUI 는 100 이라
+        // 여기서 켜 봐야 전투 UI 뒤에 깔려 보이지 않고, hideSprite 도 안 불려 켜진 채 남는다.
+        // 동료 초상화는 BattleUI 안 동료 패널로 넘긴다.
+        if (BattleSystem.Instance != null)
+        {
+            bool isLu = string.IsNullOrWhiteSpace(character)
+                     || character == PlayerIdentity.Name
+                     || character == "루" || character == "루독백";
+            if (!isLu) BattleCompanionUI.Instance?.SetPortrait(sprite);
+            yield break;
+        }
+
         // 4. active / inactive 이미지 선택
         Image active   = useRight ? portraitImageRight : portraitImage;
         Image inactive = useRight ? portraitImage      : portraitImageRight;
