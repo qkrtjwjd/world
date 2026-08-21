@@ -1744,27 +1744,18 @@ public class BattleSystem : MonoBehaviour
     bool   _stickyOnScreen;
     string _stickyText;      // 루 대사가 끼어들었다 물러났을 때 되돌릴 프롬프트
 
+    // 로그와 대사는 같은 모양으로 뜬다 — 정렬도 크기도 프리팹 값 그대로 쓰고 건드리지 않는다.
+    // 둘 사이의 차이는 이름칸 하나뿐이다.
+
     void ApplySystemLineStyle()
     {
         _stickyOnScreen = false;
-        if (dialogueText != null)
-        {
-            dialogueText.alignment = TMPro.TextAlignmentOptions.Center;
-            dialogueText.fontSize  = systemLineFontSize;
-        }
         // 시스템 서술에는 화자가 없다
         if (playerNameText != null && playerNameText.gameObject.activeSelf)
         {
             playerNameText.text = string.Empty;
             playerNameText.gameObject.SetActive(false);
         }
-    }
-
-    void ApplyPlayerLineStyle()
-    {
-        if (dialogueText == null) return;
-        dialogueText.alignment = TMPro.TextAlignmentOptions.TopLeft;
-        dialogueText.fontSize  = playerLineFontSize;
     }
 
     /// <summary>큐가 다 흐르고 루 대사도 끝날 때까지 기다린다.</summary>
@@ -1823,11 +1814,6 @@ public class BattleSystem : MonoBehaviour
              "드퀘·포켓몬 계열의 관례값은 1.0~1.5 다")]
     public float logHoldTime = 1.2f;
 
-    [Tooltip("시스템 서술(공격·회복·턴 알림)의 글자 크기. 캐릭터 대사보다 작게 두어 한눈에 구분되게 한다")]
-    public float systemLineFontSize = 28f;
-
-    [Tooltip("루의 대사 글자 크기. 이름칸이 함께 뜨고 왼쪽 정렬로 그려진다")]
-    public float playerLineFontSize = 33f;
 
     /// <summary>감추기 직전 상태로 되돌린다. 감춘 적이 없으면 아무것도 하지 않는다.</summary>
     void RestoreBattleHud()
@@ -1855,7 +1841,6 @@ public class BattleSystem : MonoBehaviour
 
         // 대사 중에는 상자만 남긴다 — 버튼·양쪽 HP·LV 를 감추고, 되돌리는 건 HidePlayerLine 이 한다
         HideBattleHud();
-        ApplyPlayerLineStyle();
         _lineOnScreen = true;
         SyncLogArea();   // 상자가 꺼져 있으면 글자를 넣어도 안 보인다. 한 프레임도 늦추지 않는다.
 
