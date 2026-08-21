@@ -303,7 +303,10 @@ public class BattleSystem : MonoBehaviour
     {
         if (dialogueAreaRoot == null) return;
 
-        bool visible = _logBorrowed || mainMenuPanel == null || mainMenuPanel.activeSelf;
+        // 예전에는 mainMenuPanel.activeSelf 를 따라갔다. 그런데 공격·방어·아이템·적 턴·승패 구간은
+        // 전부 메뉴가 꺼져 있는 상태라, 그 구간의 로그 24종이 한 줄도 화면에 남지 않았다.
+        // 이제는 "지금 보여줄 줄이 있는가" 만 본다.
+        bool visible = _logBorrowed || _lineOnScreen;
         if (dialogueAreaRoot.activeSelf != visible) dialogueAreaRoot.SetActive(visible);
     }
 
@@ -616,8 +619,9 @@ public class BattleSystem : MonoBehaviour
                     return;
                 }
 
-                ShowDialogue("battle.player_turn_prompt",
-                             $"{cur.unitName}의 턴: 무엇을 할까?", cur.unitName);
+                // 프롬프트는 플레이어가 고르는 내내 떠 있어야 한다 — 휘발시키지 않는다
+                ShowPrompt("battle.player_turn_prompt",
+                           $"{cur.unitName}의 턴: 무엇을 할까?", cur.unitName);
                 ShowMainMenu();
                 return;
             }
@@ -1446,6 +1450,8 @@ public class BattleSystem : MonoBehaviour
             ShowDialogue("battle.lose", "패배했다...");
         }
 
+        // 마지막 줄들이 다 흐르기 전에 BattleUI 를 부수면 승패 문구가 통째로 사라진다
+        yield return WaitLogDrain();
         yield return _wait3s;
 
         // 아이템 사용 횟수 초기화 (다음 비전투 구간에서 각 아이템 재사용 가능)
@@ -1502,6 +1508,7 @@ public class BattleSystem : MonoBehaviour
         if (Instance != this) return;
         // 전투가 어떻게 끝나든(승패·도주·핵앤슬래시 전환·씬 이동) 필드 적을 반드시 되돌린다.
         RestoreFieldEnemyVisual();
+        ClearLogQueue();   // 남은 줄이 다음 전투로 새지 않게 한다
         Instance = null;
         IsActive = false;
         if (GaugeManager.Instance != null)
@@ -1650,32 +1657,138 @@ public class BattleSystem : MonoBehaviour
         return result == key ? fallback : result;
     }
 
+    /// <summary>시스템 로그 한 줄. 큐에 쌓였다가 <see cref="logHoldTime"/> 씩 차례로 떴다 사라진다.</summary>
     void ShowDialogue(string key, string fallback, params object[] args)
-    {
-        string text = GetText(key, fallback, args);
+        => EnqueueLog(GetText(key, fallback, args), sticky: false);
 
-        // 루 대사가 로그 상자를 빌려 쓰는 동안에는 덮어쓰지 않는다.
-        // 로그만 따로 담아 뒀다가 HidePlayerLine 에서 되돌린다.
-        if (_logBorrowed)
+    /// <summary>
+    /// 플레이어가 선택하는 동안 계속 떠 있어야 하는 줄(턴 프롬프트).
+    /// 휘발시키면 무엇을 고르는 중인지가 화면에서 사라진다.
+    /// </summary>
+    void ShowPrompt(string key, string fallback, params object[] args)
+        => EnqueueLog(GetText(key, fallback, args), sticky: true);
+
+    // ════════════════════════════════════════
+    //  전투 로그 — 한 줄씩 휘발 (드퀘·포켓몬 방식)
+    // ════════════════════════════════════════
+
+    readonly struct LogLine
+    {
+        public readonly string Text;
+        public readonly bool   Sticky;   // true면 시간이 지나도 지우지 않는다
+        public LogLine(string text, bool sticky) { Text = text; Sticky = sticky; }
+    }
+
+    readonly Queue<LogLine> _logQueue = new Queue<LogLine>();
+    Coroutine _logRoutine;
+
+    /// <summary>지금 상자에 글자가 떠 있는가. <see cref="SyncLogArea"/> 가 이 값으로 상자를 켜고 끈다.</summary>
+    bool _lineOnScreen;
+
+    void EnqueueLog(string text, bool sticky)
+    {
+        _logQueue.Enqueue(new LogLine(text, sticky));
+        if (_logRoutine == null && isActiveAndEnabled)
+            _logRoutine = StartCoroutine(DrainLogQueue());
+    }
+
+    /// <summary>
+    /// 큐를 한 줄씩 흘린다. 턴제 전투는 <c>Time.timeScale = 0</c> 이라 전부 unscaled 로 센다.
+    /// 루 대사가 상자를 빌려 쓰는 동안에는 멈춰 서서 기다린다 — 예전에는 한 칸짜리
+    /// <c>_savedLog</c> 버퍼에 덮어써서 그 사이 들어온 로그가 사라졌다.
+    /// </summary>
+    IEnumerator DrainLogQueue()
+    {
+        while (_logQueue.Count > 0)
         {
-            _savedLog = text;
-            return;
+            while (_logBorrowed) yield return null;   // 루 대사 우선
+
+            LogLine line = _logQueue.Dequeue();
+            ApplySystemLineStyle();
+            if (dialogueText != null) dialogueText.text = line.Text;
+            _lineOnScreen = true;
+            SyncLogArea();
+
+            if (line.Sticky)
+            {
+                // 플레이어가 골라야 하므로 버튼·HP 를 되돌려 준다. 글자는 다음 줄이 올 때까지 남는다.
+                _stickyOnScreen = true;
+                _stickyText     = line.Text;
+                RestoreBattleHud();
+                continue;
+            }
+
+            // 로그는 혼자 뜬다 — 표시 시간 동안 버튼·HP 를 감춘다
+            HideBattleHud();
+
+            float elapsed = 0f;
+            while (elapsed < logHoldTime)
+            {
+                if (!_logBorrowed) elapsed += Time.unscaledDeltaTime;   // 대사 중에는 시간이 안 간다
+                yield return null;
+            }
         }
 
-        if (dialogueText != null)
-            dialogueText.text = text;
+        // 큐가 비면 지운다. 이게 '휘발' 이다 — 예전에는 지우는 코드가 아예 없었다.
+        if (!_logBorrowed && !_stickyOnScreen)
+        {
+            if (dialogueText != null) dialogueText.text = string.Empty;
+            _lineOnScreen = false;
+            SyncLogArea();
+        }
+        if (!_logBorrowed) RestoreBattleHud();
+        _logRoutine = null;
+    }
 
-        // 로그도 혼자 떠야 한다 — 잠깐 버튼·HP 를 감췄다가 표시 시간이 지나면 되돌린다
-        HideBattleHud();
-        RestartHudTimer();
+    /// <summary>마지막으로 흘린 줄이 sticky 였는가 — 큐가 비어도 지우면 안 된다.</summary>
+    bool   _stickyOnScreen;
+    string _stickyText;      // 루 대사가 끼어들었다 물러났을 때 되돌릴 프롬프트
+
+    void ApplySystemLineStyle()
+    {
+        _stickyOnScreen = false;
+        if (dialogueText != null)
+        {
+            dialogueText.alignment = TMPro.TextAlignmentOptions.Center;
+            dialogueText.fontSize  = systemLineFontSize;
+        }
+        // 시스템 서술에는 화자가 없다
+        if (playerNameText != null && playerNameText.gameObject.activeSelf)
+        {
+            playerNameText.text = string.Empty;
+            playerNameText.gameObject.SetActive(false);
+        }
+    }
+
+    void ApplyPlayerLineStyle()
+    {
+        if (dialogueText == null) return;
+        dialogueText.alignment = TMPro.TextAlignmentOptions.TopLeft;
+        dialogueText.fontSize  = playerLineFontSize;
+    }
+
+    /// <summary>큐가 다 흐르고 루 대사도 끝날 때까지 기다린다.</summary>
+    IEnumerator WaitLogDrain()
+    {
+        while (_logQueue.Count > 0 || _logBorrowed) yield return null;
+    }
+
+    /// <summary>전투가 끝나거나 화면을 갈아엎을 때 남은 줄을 버린다.</summary>
+    void ClearLogQueue()
+    {
+        _logQueue.Clear();
+        if (_logRoutine != null) { StopCoroutine(_logRoutine); _logRoutine = null; }
+        _lineOnScreen = false;
+        _stickyOnScreen = false;
+        if (dialogueText != null) dialogueText.text = string.Empty;
+        SyncLogArea();
     }
 
     // ════════════════════════════════════════
     //  전투 중 루 대사 — 전투 로그 상자를 빌려 쓴다
     // ════════════════════════════════════════
 
-    string _savedLog;
-    bool   _logBorrowed;
+    bool _logBorrowed;
 
     // 대사 중에는 대사 상자와 아래 패널 배경만 남기고 나머지를 감춘다.
     // MainMenuPanel 자체를 끄면 패널 배경까지 사라지므로 그 '자식들'(HP바·행동/아이템/도망 버튼)만 끈다.
@@ -1706,26 +1819,15 @@ public class BattleSystem : MonoBehaviour
     }
 
     [Header("전투 로그 표시")]
-    [Tooltip("전투 로그 한 줄을 혼자 띄워 두는 시간(초). 이 시간이 지나면 버튼·HP 가 다시 나온다")]
+    [Tooltip("전투 로그 한 줄이 화면에 떠 있는 시간(초). 이 시간이 지나면 다음 줄로 넘어간다. " +
+             "드퀘·포켓몬 계열의 관례값은 1.0~1.5 다")]
     public float logHoldTime = 1.2f;
 
-    Coroutine _hudRestoreRoutine;
+    [Tooltip("시스템 서술(공격·회복·턴 알림)의 글자 크기. 캐릭터 대사보다 작게 두어 한눈에 구분되게 한다")]
+    public float systemLineFontSize = 28f;
 
-    /// <summary>로그 표시 시간이 지나면 HUD 를 되돌린다. 루 대사 중에는 걸지 않는다.</summary>
-    void RestartHudTimer()
-    {
-        if (_hudRestoreRoutine != null) { StopCoroutine(_hudRestoreRoutine); _hudRestoreRoutine = null; }
-        if (!isActiveAndEnabled) { RestoreBattleHud(); return; }   // 코루틴을 못 돌리면 즉시 되돌린다
-        _hudRestoreRoutine = StartCoroutine(HudRestoreAfterDelay());
-    }
-
-    IEnumerator HudRestoreAfterDelay()
-    {
-        // 턴제 전투는 Time.timeScale = 0 으로 돈다 — Realtime 이어야 깨어난다
-        yield return new WaitForSecondsRealtime(logHoldTime);
-        _hudRestoreRoutine = null;
-        if (!_logBorrowed) RestoreBattleHud();   // 그 사이 루 대사가 시작됐으면 대사 쪽에 맡긴다
-    }
+    [Tooltip("루의 대사 글자 크기. 이름칸이 함께 뜨고 왼쪽 정렬로 그려진다")]
+    public float playerLineFontSize = 33f;
 
     /// <summary>감추기 직전 상태로 되돌린다. 감춘 적이 없으면 아무것도 하지 않는다.</summary>
     void RestoreBattleHud()
@@ -1744,20 +1846,17 @@ public class BattleSystem : MonoBehaviour
 
     /// <summary>
     /// 루의 대사 한 줄을 전투 로그 상자에 띄운다. 이름은 <see cref="playerNameText"/> 에 따로 쓴다.
-    /// 로그 상자를 빌려 쓰는 것이므로 원래 내용은 <see cref="HidePlayerLine"/> 에서 되돌린다.
+    /// 대사가 뜨는 동안 로그 큐는 멈춰 서서 기다렸다가, 대사가 끝나면 남은 줄부터 이어서 흐른다.
     /// 동료(쿠루 등) 대사는 좌측 상단 <see cref="BattleCompanionUI"/> 가 맡는다.
     /// </summary>
     public void ShowPlayerLine(string body)
     {
-        if (!_logBorrowed && dialogueText != null)
-        {
-            _savedLog     = dialogueText.text;
-            _logBorrowed  = true;
-        }
+        _logBorrowed = true;
 
         // 대사 중에는 상자만 남긴다 — 버튼·양쪽 HP·LV 를 감추고, 되돌리는 건 HidePlayerLine 이 한다
-        if (_hudRestoreRoutine != null) { StopCoroutine(_hudRestoreRoutine); _hudRestoreRoutine = null; }
         HideBattleHud();
+        ApplyPlayerLineStyle();
+        _lineOnScreen = true;
         SyncLogArea();   // 상자가 꺼져 있으면 글자를 넣어도 안 보인다. 한 프레임도 늦추지 않는다.
 
         if (playerNameText != null)
@@ -1768,7 +1867,7 @@ public class BattleSystem : MonoBehaviour
         if (dialogueText != null) dialogueText.text = body ?? string.Empty;
     }
 
-    /// <summary>루 대사 표시를 끝내고 전투 로그를 원래대로 돌려놓는다.</summary>
+    /// <summary>루 대사 표시를 끝낸다. 큐에 남은 로그가 있으면 그쪽이 이어받는다.</summary>
     public void HidePlayerLine()
     {
         if (playerNameText != null)
@@ -1777,14 +1876,30 @@ public class BattleSystem : MonoBehaviour
             playerNameText.gameObject.SetActive(false);
         }
 
-        if (_logBorrowed)
+        _logBorrowed = false;
+
+        // 대사가 물러난 자리를 큐가 이어받는다. 큐가 비어 있으면 상자를 닫는다.
+        if (_logQueue.Count > 0)
         {
-            if (dialogueText != null) dialogueText.text = _savedLog;
-            _logBorrowed = false;
+            if (_logRoutine == null && isActiveAndEnabled)
+                _logRoutine = StartCoroutine(DrainLogQueue());
+        }
+        else if (!_stickyOnScreen)
+        {
+            if (dialogueText != null) dialogueText.text = string.Empty;
+            _lineOnScreen = false;
+            RestoreBattleHud();
+        }
+        else
+        {
+            // 대사가 덮기 전에 떠 있던 프롬프트를 되돌린다
+            ApplySystemLineStyle();
+            if (dialogueText != null) dialogueText.text = _stickyText ?? string.Empty;
+            _stickyOnScreen = true;
+            _lineOnScreen   = true;
+            RestoreBattleHud();
         }
 
-        if (_hudRestoreRoutine != null) { StopCoroutine(_hudRestoreRoutine); _hudRestoreRoutine = null; }
-        RestoreBattleHud();   // 감췄던 버튼·HP·LV 를 감추기 직전 상태로 되돌린다
-        SyncLogArea();   // 빌린 것을 돌려줬으니 원래 표시 조건으로 되돌린다
+        SyncLogArea();
     }
 }
