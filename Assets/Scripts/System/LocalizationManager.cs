@@ -140,14 +140,18 @@ public class LocalizationManager : PersistentSingleton<LocalizationManager>
     /// <summary>키에 해당하는 번역 문자열을 반환합니다. 없으면 키 자체를 반환합니다.</summary>
     public string GetText(string key)
     {
-        return _table.TryGetValue(key, out string val) ? val : key;
+        if (!_table.TryGetValue(key, out string val)) return key;
+        return KoreanParticle.Resolve(val);
     }
 
-    /// <summary>string.Format 과 동일하게 {0}, {1} 을 치환합니다.</summary>
+    /// <summary>
+    /// string.Format 과 동일하게 {0}, {1} 을 치환합니다.
+    /// 치환한 <b>뒤에</b> 조사를 고릅니다 — 앞 글자가 정해져야 받침을 볼 수 있기 때문입니다.
+    /// </summary>
     public string GetText(string key, params object[] args)
     {
-        string text = GetText(key);
-        try { return string.Format(text, args); }
-        catch { return text; }
+        string text = _table.TryGetValue(key, out string val) ? val : key;
+        try { return KoreanParticle.Resolve(string.Format(text, args)); }
+        catch { return KoreanParticle.Resolve(text); }
     }
 }

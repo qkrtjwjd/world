@@ -1,3 +1,5 @@
+using System.Text;
+
 /// <summary>
 /// 한국어 조사 자동 선택 유틸.
 /// 앞 단어의 받침 유무에 따라 이/가, 은/는, 을/를, 과/와, 아/야, 으로/로, 이라/라 를 고른다.
@@ -96,4 +98,93 @@ public static class KoreanParticle
 
     static bool IsLatinLetter(char c)
         => (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
+
+    // ─────────────────────────────────────────────
+    //  문장 안의 "이(가)" 표기를 한쪽으로 고른다
+    // ─────────────────────────────────────────────
+
+    /// <summary>같은 뜻의 두 형태. 어느 쪽을 먼저 적었든 받아들인다.</summary>
+    static readonly string[][] Groups =
+    {
+        new[] { "이", "가" },   new[] { "은", "는" },   new[] { "을", "를" },
+        new[] { "과", "와" },   new[] { "아", "야" },   new[] { "으로", "로" },
+        new[] { "이라", "라" }, new[] { "이랑", "랑" }, new[] { "이에요", "예요" },
+    };
+
+    /// <summary>
+    /// 문장에 적힌 <c>"이(가)"</c> 같은 표기를 앞 글자에 맞는 한쪽으로 바꾼다.
+    ///
+    /// <para>대사·로그가 이름을 변수로 받다 보니 조사를 미리 정할 수 없어 두 형태를 나란히
+    /// 적어 두었는데, 그대로 화면에 나가서 <c>"먹빛 사냥개이(가) 나타났다"</c> 처럼 보였다.
+    /// 판정은 <see cref="Select"/> 에 맡기므로 숫자·영문 이름도 같은 규칙을 탄다.</para>
+    ///
+    /// <para>조사 표기가 아닌 괄호(예: <c>"(Lv.3)"</c>)는 건드리지 않는다.
+    /// 한국어가 아닌 문자열에는 이 패턴이 없으므로 그대로 통과한다.</para>
+    /// </summary>
+    public static string Resolve(string text)
+    {
+        if (string.IsNullOrEmpty(text) || text.IndexOf('(') < 0) return text;
+
+        var sb = new StringBuilder(text.Length);
+        int i = 0;
+
+        while (i < text.Length)
+        {
+            int open = text.IndexOf('(', i);
+            if (open < 0) { sb.Append(text, i, text.Length - i); break; }
+
+            int close = text.IndexOf(')', open + 1);
+            if (close < 0) { sb.Append(text, i, text.Length - i); break; }
+
+            string inner = text.Substring(open + 1, close - open - 1);
+            string first = FormEndingAt(text, open);
+
+            // 조사 표기가 아니면 괄호째 그대로 둔다
+            if (first == null || !SameGroup(first, inner))
+            {
+                sb.Append(text, i, close - i + 1);
+                i = close + 1;
+                continue;
+            }
+
+            // 첫 형태를 뺀 앞부분까지 옮기고, 그 뒤에 고른 조사를 붙인다.
+            // 앞 글자 판정은 지금까지 만들어진 문자열로 한다 — 그래야 치환된 결과가 반영된다.
+            sb.Append(text, i, open - first.Length - i);
+            sb.Append(Select(sb.ToString(), first));
+            i = close + 1;
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>text 의 end 직전에 붙어 있는 조사 형태를 찾는다. 긴 것부터 본다.</summary>
+    static string FormEndingAt(string text, int end)
+    {
+        string best = null;
+        for (int g = 0; g < Groups.Length; g++)
+        for (int f = 0; f < Groups[g].Length; f++)
+        {
+            string form = Groups[g][f];
+            if (form.Length > end) continue;
+            if (string.CompareOrdinal(text, end - form.Length, form, 0, form.Length) != 0) continue;
+            if (best == null || form.Length > best.Length) best = form;
+        }
+        return best;
+    }
+
+    static bool SameGroup(string a, string b)
+    {
+        if (a == b) return false;
+        for (int g = 0; g < Groups.Length; g++)
+        {
+            bool ha = false, hb = false;
+            for (int f = 0; f < Groups[g].Length; f++)
+            {
+                if (Groups[g][f] == a) ha = true;
+                if (Groups[g][f] == b) hb = true;
+            }
+            if (ha && hb) return true;
+        }
+        return false;
+    }
 }

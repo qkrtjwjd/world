@@ -352,6 +352,42 @@ public class BattleSystem : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 커맨드 버튼 글자를 로컬라이제이션에서 가져온다.
+    ///
+    /// <para>버튼 글자가 프리팹에 한국어로 박혀 있어서, ko.json 의 attack·defend·item 키가
+    /// 아무도 읽지 않는 채로 남아 있었다. en.json·jp.json 도 같은 키를 들고 있으므로
+    /// 그대로 두면 다른 언어에서 버튼만 한국어로 남는다.</para>
+    ///
+    /// <para>키가 없거나 LocalizationManager 가 없으면 <see cref="GetText"/> 가 fallback 을
+    /// 돌려주므로 프리팹에 적힌 글자와 같아진다 — 즉 실패해도 지금 화면 그대로다.</para>
+    /// </summary>
+    void ApplyCommandLabels()
+    {
+        Label(mainMenuPanel,   "ActionButton",  "battle.menu_action", "행동");
+        Label(mainMenuPanel,   "ItemButton",    "battle.item",        "아이템");
+        Label(mainMenuPanel,   "EscapeButton",  "battle.escape",      "도망");
+
+        Label(actionMenuPanel, "ActionButton",  "battle.attack",      "공격");
+        Label(actionMenuPanel, "DefendButton",  "battle.defend",      "방어");
+        Label(actionMenuPanel, "SpecialButton", "battle.special",     "특수");
+        Label(actionMenuPanel, "SootheButton",  "battle.soothe",      "쓰다듬기");
+    }
+
+    /// <summary>패널 아래(Commands 컨테이너 포함)에서 버튼을 찾아 글자를 갈아 끼운다.</summary>
+    void Label(GameObject panel, string buttonName, string key, string fallback)
+    {
+        if (panel == null) return;
+
+        Transform t = panel.transform.Find("Commands/" + buttonName);
+        if (t == null) t = panel.transform.Find(buttonName);
+        if (t == null) return;
+
+        string text = GetText(key, fallback);
+        foreach (var tmp in t.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true))
+            tmp.text = text;
+    }
+
     void RestoreFieldCanvases()
     {
         foreach (Canvas c in _hiddenFieldCanvases)
@@ -373,6 +409,7 @@ public class BattleSystem : MonoBehaviour
         // 그래서 바닥판만 월드에 세운다. 자세한 이유는 BattleBackdrop 주석 참조.
         if (_backdrop == null) _backdrop = Battle.BattleBackdrop.Create(StageColor, backdropSprite);
         HideFieldCanvases();
+        ApplyCommandLabels();
 
         // 단검 버튼 초기화
         if (daggerActivateButton != null)
@@ -1155,7 +1192,9 @@ public class BattleSystem : MonoBehaviour
             else if (result.isCrit)
                 ShowDialogue("", $"{cur.unitName}의 공격! 크리티컬! {_enemyUnit.LastDamageResult.amount}의 데미지를 입혔다.");
             else
-                ShowDialogue("", $"{cur.unitName}의 공격! {_enemyUnit.LastDamageResult.amount}의 데미지를 입혔다.");
+                ShowDialogue("battle.damage_dealt",
+                    $"{cur.unitName}의 공격! {_enemyUnit.LastDamageResult.amount}의 데미지를 입혔다.",
+                    cur.unitName, _enemyUnit.LastDamageResult.amount);
 
             yield return _wait2s;
 
@@ -1276,7 +1315,9 @@ public class BattleSystem : MonoBehaviour
             else if (healHP > 0)
             {
                 cur.Heal(Mathf.RoundToInt(healHP));
-                ShowDialogue("", $"{item.DisplayName} 사용! {cur.unitName}의 HP가 {healHP}만큼 회복됐다.");
+                ShowDialogue("battle.heal",
+                    $"{item.DisplayName} 사용! {cur.unitName}의 HP가 {healHP}만큼 회복됐다.",
+                    item.DisplayName, cur.unitName, healHP);
                 used = true;
             }
             else if (healHP < 0)
@@ -1344,7 +1385,7 @@ public class BattleSystem : MonoBehaviour
             yield break;
         }
 
-        ShowDialogue("", $"{_enemyUnit.unitName}의 턴!");
+        ShowDialogue("battle.enemy_turn_action", $"{_enemyUnit.unitName}의 턴!", _enemyUnit.unitName);
         yield return _wait1s;
 
         // 라운드 틱 — 턴제 전투 중 Time.timeScale=0 이라 BuffManager.Update()가 정지하므로
@@ -1380,7 +1421,9 @@ public class BattleSystem : MonoBehaviour
             else if (result.isCrit)
                 ShowDialogue("", $"{_enemyUnit.unitName}의 크리티컬! {target.unitName}에게 {target.LastDamageResult.amount}의 데미지!");
             else
-                ShowDialogue("", $"{_enemyUnit.unitName}가 {target.unitName}를 공격하여 {target.LastDamageResult.amount}의 데미지를 주었다!");
+                ShowDialogue("battle.damage_taken",
+                    $"{_enemyUnit.unitName}이(가) {target.unitName}을(를) 공격하여 {target.LastDamageResult.amount}의 데미지를 주었다!",
+                    _enemyUnit.unitName, target.unitName, target.LastDamageResult.amount);
 
             yield return _wait2s;
         }
@@ -1485,11 +1528,13 @@ public class BattleSystem : MonoBehaviour
             int levelUps = PlayerGrowth.AddExp(xp);
             ApplyLevelUpToPlayerStats(levelUps);
 
-            string winMsg = SparedByPurify ? "늑대가 물러났다."
-                          : _wonByEmpathy  ? "적이 스스로 물러났다!"
-                                           : "적을 쓰러뜨렸다!";
-            if (xp > 0)       winMsg += $" 경험치 +{xp}";
-            if (levelUps > 0) winMsg += $"\n레벨이 올랐다! (Lv.{PlayerGrowth.Level})";
+            string winMsg = SparedByPurify ? GetText("battle.win_purified", "늑대가 물러났다.")
+                          : _wonByEmpathy  ? GetText("battle.win_empathy",  "적이 스스로 물러났다!")
+                                           : GetText("battle.win",          "적을 쓰러뜨렸다!");
+            if (xp > 0)       winMsg += GetText("battle.win_exp", $" 경험치 +{xp}", xp);
+            if (levelUps > 0) winMsg += GetText("battle.win_levelup",
+                                                $"\n레벨이 올랐다! (Lv.{PlayerGrowth.Level})",
+                                                PlayerGrowth.Level);
             ShowDialogue("", winMsg);
 
             // 전리품 — 씬 오브젝트 이름이 아닌 EnemyDatabase 의 타입 ID 로 조회

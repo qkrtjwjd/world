@@ -12,7 +12,7 @@ public class SmoothHPBar : MonoBehaviour
 {
     [Header("UI 연결")]
     public Slider   hpSlider;
-    public TMP_Text hpText;       // "HP 00000" 형식
+    public TMP_Text hpText;       // "HP 80 / 120" 형식
     public TMP_Text lvText;       // "LV 00" 형식
 
     [Header("애니메이션")]
@@ -58,8 +58,10 @@ public class SmoothHPBar : MonoBehaviour
 
     void UpdateText(float currentHP, int level)
     {
+        // 0 을 다섯 자리로 채우던 시절에는 "HP 00080" 처럼 보였다.
+        // 남은 양을 읽으려면 최대치가 같이 있어야 한다.
         if (hpText != null)
-            hpText.text = $"HP {Mathf.CeilToInt(currentHP):D5}";
+            hpText.text = $"HP {Mathf.CeilToInt(currentHP)} / {Mathf.CeilToInt(_maxHP)}";
         if (lvText != null)
             lvText.text = $"LV {level:D2}";
     }
