@@ -64,7 +64,17 @@ namespace Battle.UI
             RectTransformUtility.ScreenPointToLocalPointInRectangle(
                 _parent, RectTransformUtility.WorldToScreenPoint(null, leftMid), null, out local);
 
-            _rt.anchoredPosition = new Vector2(local.x - gap, local.y);
+            // local 은 부모 피벗을 원점으로 한 좌표이고, anchoredPosition 은 앵커를 원점으로 한다.
+            // 둘이 같다고 가정하면 안 된다 — Canvas 는 런타임에 루트 RectTransform 의 피벗을
+            // 프리팹에 저장된 값과 다르게 잡는다(프리팹은 (0,0) 인데 런타임은 (0.5,0.5) 였다).
+            // 그래서 앵커가 피벗에서 얼마나 떨어져 있는지를 매번 빼 준다.
+            Rect    pr     = _parent.rect;
+            Vector2 anchor = (_rt.anchorMin + _rt.anchorMax) * 0.5f;
+            Vector2 anchorInLocal = new Vector2(
+                (anchor.x - _parent.pivot.x) * pr.width,
+                (anchor.y - _parent.pivot.y) * pr.height);
+
+            _rt.anchoredPosition = new Vector2(local.x - gap, local.y) - anchorInLocal;
             Show();
         }
 

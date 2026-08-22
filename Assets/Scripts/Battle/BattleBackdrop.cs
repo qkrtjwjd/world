@@ -26,27 +26,42 @@ namespace Battle
         SpriteRenderer _sr;
         Camera         _cam;
 
-        /// <summary>카메라 앞에 바닥판을 세운다. 이미 있으면 그것을 돌려준다.</summary>
-        public static BattleBackdrop Create(Color color)
+        /// <summary>
+        /// 카메라 앞에 바닥판을 세운다.
+        /// <paramref name="sprite"/> 는 반드시 에셋 스프라이트여야 한다 —
+        /// Sprite.Create(Texture2D.whiteTexture, ...) 로 만든 것은 bounds 가 (0,0) 이라
+        /// 프러스텀 컬링에 걸려 아예 그려지지 않는다(isVisible=false 로 확인).
+        /// </summary>
+        public static BattleBackdrop Create(Color color, Sprite sprite)
         {
+            if (sprite == null)
+            {
+                Debug.LogWarning("[BattleBackdrop] 바닥판 스프라이트가 비어 있어 무대를 못 만든다. "
+                                 + "BattleUI 프리팹의 backdropSprite 를 확인할 것.");
+                return null;
+            }
+
             Camera cam = Camera.main;
             if (cam == null) return null;
 
+            // 카메라의 자식으로 붙이지 않는다 — 카메라 스케일을 그대로 물려받아
+            // lossyScale 이 0 이 되면 bounds 가 (0,0) 이 되고 컬링돼 아예 안 그려진다.
+            // 대신 매 프레임 카메라 앞으로 옮긴다.
             var go = new GameObject("BattleBackdrop");
-            go.transform.SetParent(cam.transform, worldPositionStays: false);
-            // 카메라 앞 — 직교 카메라라 z 값은 정렬에 영향을 주지 않지만, 클리핑 안쪽에 둔다.
-            go.transform.localPosition = new Vector3(0f, 0f, Mathf.Max(1f, cam.nearClipPlane + 1f));
-            go.transform.localRotation = Quaternion.identity;
 
             var bd = go.AddComponent<BattleBackdrop>();
             bd._cam = cam;
             bd._sr  = go.AddComponent<SpriteRenderer>();
 
-            // 1x1 흰 스프라이트를 코드로 만든다 — 에셋 참조 없이 어느 씬에서나 뜬다.
-            bd._sr.sprite = Sprite.Create(
-                Texture2D.whiteTexture, new Rect(0f, 0f, 1f, 1f), new Vector2(0.5f, 0.5f), 1f);
+            bd._sr.sprite       = sprite;
             bd._sr.color        = color;
             bd._sr.sortingOrder = SortingOrder;
+
+            // 기본 재질은 Sprite-Lit-Default 라 2D 라이트가 팔레트 색을 들어올린다.
+            // 무대 바닥은 조명을 받으면 안 된다 — 정확히 #14110F 로 깔려야 한다.
+            Shader unlit = Shader.Find("Universal Render Pipeline/2D/Sprite-Unlit-Default");
+            if (unlit == null) unlit = Shader.Find("Sprites/Default");
+            if (unlit != null) bd._sr.material = new Material(unlit);
 
             bd.Fit();
             return bd;
@@ -60,9 +75,18 @@ namespace Battle
             if (_cam == null || _sr == null) return;
             if (!_cam.orthographic) return;   // 원근 카메라는 이 방식이 성립하지 않는다
 
+            // 카메라 앞 한 칸. 직교라 z 는 정렬에 영향을 주지 않지만 클리핑 안쪽에 둔다.
+            transform.position = _cam.transform.position
+                               + _cam.transform.forward * Mathf.Max(1f, _cam.nearClipPlane + 1f);
+            transform.rotation = _cam.transform.rotation;
+
+            // 스프라이트의 월드 크기로 나눠야 한다 — 8x8 짜리를 그대로 늘리면 배율이 어긋난다.
+            Vector2 unit = _sr.sprite != null ? _sr.sprite.bounds.size : Vector2.one;
+            if (unit.x < 0.0001f || unit.y < 0.0001f) return;
+
             float h = _cam.orthographicSize * 2f * Margin;
             float w = h * _cam.aspect;
-            transform.localScale = new Vector3(w, h, 1f);
+            transform.localScale = new Vector3(w / unit.x, h / unit.y, 1f);
         }
     }
 }

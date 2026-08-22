@@ -314,8 +314,50 @@ public class BattleSystem : MonoBehaviour
     /// <summary>무대 바닥 색 #14110F. 전투 화면 팔레트의 가장 어두운 값.</summary>
     static readonly Color StageColor = new Color(0.078f, 0.067f, 0.059f, 1f);
 
+    [Header("무대")]
+    [SerializeField, Tooltip("무대 바닥판에 쓸 단색 스프라이트 (Assets/Images/UI/bar_fill.png)")]
+    private Sprite backdropSprite;
+
     /// <summary>월드에 세운 무대 바닥판. 카메라의 자식이라 BattleUI 와 함께 파괴되지 않는다.</summary>
     Battle.BattleBackdrop _backdrop;
+
+    /// <summary>전투 동안 꺼 둔 필드 UI 캔버스. 끈 것만 그대로 되돌린다.</summary>
+    readonly List<Canvas> _hiddenFieldCanvases = new List<Canvas>();
+
+    /// <summary>
+    /// 전투 중에는 BattleUI 만 남긴다.
+    ///
+    /// <para>필드 UI(대화창·목표창·핵앤슬래시 HUD)는 자기 캔버스에 그려지는데,
+    /// 전투가 시작돼도 아무도 끄지 않아 전투 화면 위에 밝은 사각형으로 남아 있었다.
+    /// 바닥판(<see cref="Battle.BattleBackdrop"/>)은 월드만 가리므로 캔버스는 그대로 뚫고 나온다.</para>
+    ///
+    /// <para>BattleUI 보다 정렬 순서가 낮은 루트 캔버스만 끄고, <b>실제로 끈 것만</b> 목록에 담아
+    /// 전투가 끝날 때 되돌린다 — <see cref="HideBattleHud"/> 와 같은 방식이다.
+    /// 전투 중 대사는 BattleCompanionLinePresenter 가 BattleUI 안으로 돌리므로 필드 대화창은 필요 없다.</para>
+    /// </summary>
+    void HideFieldCanvases()
+    {
+        var mine = GetComponentInParent<Canvas>();
+        int myOrder = mine != null ? mine.sortingOrder : int.MaxValue;
+
+        foreach (Canvas c in FindObjectsByType<Canvas>(FindObjectsSortMode.None))
+        {
+            if (c == null || !c.isRootCanvas) continue;
+            if (mine != null && c == mine) continue;
+            if (!c.enabled || !c.gameObject.activeInHierarchy) continue;
+            if (c.sortingOrder >= myOrder) continue;
+
+            c.enabled = false;
+            _hiddenFieldCanvases.Add(c);
+        }
+    }
+
+    void RestoreFieldCanvases()
+    {
+        foreach (Canvas c in _hiddenFieldCanvases)
+            if (c != null) c.enabled = true;
+        _hiddenFieldCanvases.Clear();
+    }
 
     IEnumerator SetupBattle()
     {
@@ -329,7 +371,8 @@ public class BattleSystem : MonoBehaviour
         // 무대 바닥판 — 뒤의 필드를 가린다.
         // BattleUI 는 Overlay 캔버스라 여기서 배경을 깔면 월드에 서는 적까지 덮어 버린다.
         // 그래서 바닥판만 월드에 세운다. 자세한 이유는 BattleBackdrop 주석 참조.
-        if (_backdrop == null) _backdrop = Battle.BattleBackdrop.Create(StageColor);
+        if (_backdrop == null) _backdrop = Battle.BattleBackdrop.Create(StageColor, backdropSprite);
+        HideFieldCanvases();
 
         // 단검 버튼 초기화
         if (daggerActivateButton != null)
@@ -1527,6 +1570,7 @@ public class BattleSystem : MonoBehaviour
         ClearLogQueue();   // 남은 줄이 다음 전투로 새지 않게 한다
         // 바닥판은 카메라의 자식이라 BattleUI 를 파괴해도 남는다. 여기서 직접 치운다.
         if (_backdrop != null) { Destroy(_backdrop.gameObject); _backdrop = null; }
+        RestoreFieldCanvases();
         Instance = null;
         IsActive = false;
         if (GaugeManager.Instance != null)

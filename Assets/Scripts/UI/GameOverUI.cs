@@ -38,8 +38,10 @@ public class GameOverUI : MonoBehaviour
         _instance._cg.blocksRaycasts = false;
         root.SetActive(false);
 
-        // 반투명 배경
-        AddImage(root.transform, "BG", new Color(0f, 0f, 0f, 0.88f),
+        // 무대 바닥과 같은 불투명 배경.
+        // 알파 0.88 이던 시절에는 그 아래 반투명 패널들이 겹쳐 비쳐서
+        // "게임 오버" 흰 글자가 밝은 회색에 묻혀 거의 안 보였다.
+        AddImage(root.transform, "BG", new Color(0.078f, 0.067f, 0.059f, 1f),
             Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
 
         // 제목 텍스트
@@ -75,7 +77,7 @@ public class GameOverUI : MonoBehaviour
         var txt = go.AddComponent<TextMeshProUGUI>();
         txt.text      = text;
         txt.fontSize  = fontSize;
-        txt.color     = Color.white;
+        txt.color     = new Color(0.949f, 0.937f, 0.941f, 1f);   // #F2EFF0
         txt.alignment = TextAlignmentOptions.Center;
         var rect = go.GetComponent<RectTransform>();
         rect.anchoredPosition = anchoredPos;
@@ -88,7 +90,7 @@ public class GameOverUI : MonoBehaviour
         var go  = new GameObject(name);
         go.transform.SetParent(parent, false);
         var img = go.AddComponent<Image>();
-        img.color = new Color(0.18f, 0.18f, 0.18f, 1f);
+        img.color = new Color(0.118f, 0.102f, 0.110f, 1f);   // #1E1A1C
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
         btn.onClick.AddListener(() => onClick());
