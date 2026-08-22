@@ -70,23 +70,38 @@ public class CameraFollow : MonoBehaviour
     /// 이름으로 다시 찾는 이유는 씬에 샷 전용 가상 카메라가 여럿 있을 수 있어서다.
     /// 아무거나 잡으면 컷씬용 카메라에 플레이어를 붙여 버린다.
     /// </remarks>
+    void Bind(CinemachineCamera vcam)
+    {
+        followVCam      = vcam;
+        _follow         = vcam.GetComponent<CinemachineFollow>();
+        _followVCamName = vcam.name;
+    }
+
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        if (followVCam == null && !string.IsNullOrEmpty(_followVCamName))
+        if (followVCam == null)
         {
-            foreach (var vcam in FindObjectsByType<CinemachineCamera>(
-                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            var candidates = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Include);
+
+            // 1) 이전 씬에서 쓰던 이름과 같은 것을 먼저 찾는다.
+            foreach (var vcam in candidates)
             {
                 if (vcam.name != _followVCamName) continue;
-                followVCam = vcam;
-                _follow    = vcam.GetComponent<CinemachineFollow>();
+                Bind(vcam);
                 break;
             }
+
+            // 2) 이름을 모르거나(이전 씬에 가상 카메라가 아예 없었던 경우) 못 찾았으면,
+            //    씬에 가상 카메라가 딱 하나일 때만 그것을 쓴다.
+            //    여럿이면 어느 것이 추적용인지 알 수 없으므로 건드리지 않는다 —
+            //    잘못 잡으면 컷씬용 카메라에 플레이어를 붙여 버린다.
+            if (followVCam == null && candidates.Length == 1)
+                Bind(candidates[0]);
         }
 
         if (followVCam == null)
         {
-            Debug.LogWarning($"[CameraFollow] '{_followVCamName}' 가상 카메라를 다시 찾지 못했습니다.");
+            // 가상 카메라가 없는 씬도 있다(MapScene). 그 씬에서는 원래 따라가지 않으므로 정상이다.
             return;
         }
 

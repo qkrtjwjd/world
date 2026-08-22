@@ -37,6 +37,8 @@ public class VillagePatrolController : MonoBehaviour
     public string sfxHandTakenName = "";
     [Tooltip("세라가 뒤에서 다가오는 데 걸리는 시간(초). 루는 굳어서 움직이지 못한다.")]
     public float approachSeconds = 1.6f;
+    [Tooltip("대사가 끝나고 집으로 넘기기 전 여백(초). 0 으로 두지 말 것 — 아래 주석 참조.")]
+    public float postCaptureSeconds = 0.6f;
 
     [Header("1회차 종료 예고")]
     [Tooltip("예고 연출 시간(초). 세라가 멈추고 손끝이 결계 쪽으로 당겨지는 구간.")]
@@ -134,6 +136,14 @@ public class VillagePatrolController : MonoBehaviour
         yield return FlashCloseup(handTakenCloseup);
 
         yield return YarnDialogue.PlayIfExists(yarnNode_captured, false);
+
+        // ⚠ 대사가 끝난 '직후' 에 씬을 넘기면 안 된다.
+        //    DialogueRunner 는 줄이 끝나면 IsDialogueRunning 을 내리지만, 대사창을 지우는
+        //    페이드는 아직 돌고 있다(Yarn 의 LinePresenter → Effects.FadeAlphaAsync).
+        //    그 상태로 씬을 넘기면 CanvasGroup 이 파괴돼 MissingReferenceException 이 난다
+        //    (2026-08-23 실측). 한 박자 두면 페이드가 끝난다.
+        //    연출로도 이쪽이 맞다 — 손을 잡히고 나서 컷이 넘어가는 사이의 정적이다.
+        yield return new WaitForSeconds(postCaptureSeconds);
 
         // 인형화 페널티 없음 (CLAUDE.md §2 · C-14-3-4).
         // 정본 문단 636 — 마을에서 집까지의 이동은 컷 하나로 넘긴다. 걸어가는 과정을 보여주지 않는다.

@@ -199,10 +199,15 @@ public class BadEndingDirector : MonoBehaviour
     {
         BeginPlayback();
 
+        Dbg.Log("[배드엔딩] BE#01-a 시작");
         yield return RunBE01a_SealedDoor();
+        Dbg.Log("[배드엔딩] BE#01-b 시작");
         yield return RunBE01b_LivingWait();
+        Dbg.Log("[배드엔딩] BE#01-c 시작");
         yield return RunBE01c_SeraReturn();
+        Dbg.Log("[배드엔딩] BE#01-d 시작");
         yield return RunBE01d_ThreePlates();
+        Dbg.Log("[배드엔딩] BE#01 종료 — 엔딩 화면으로");
 
         EndPlayback();
         EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
@@ -248,7 +253,7 @@ public class BadEndingDirector : MonoBehaviour
         if (livingLight == null || livingLightIntensities == null || livingLightIntensities.Length == 0)
         {
             // 조명이 배선돼 있지 않아도 시간의 경과는 흘러야 한다.
-            yield return new WaitForSeconds(livingLightStageSeconds * 3f);
+            yield return new WaitForSecondsRealtime(livingLightStageSeconds * 3f);
             yield break;
         }
 
@@ -258,7 +263,7 @@ public class BadEndingDirector : MonoBehaviour
             livingLight.intensity = livingLightIntensities[i];
             livingLight.transform.rotation =
                 Quaternion.Euler(0f, 0f, baseAngle + livingLightAngleStep * i);
-            yield return new WaitForSeconds(livingLightStageSeconds);
+            yield return new WaitForSecondsRealtime(livingLightStageSeconds);
         }
     }
 
@@ -270,7 +275,7 @@ public class BadEndingDirector : MonoBehaviour
     IEnumerator RunBE01c_SeraReturn()
     {
         PlaySfxIfNamed(sfxDoorOpenName);
-        yield return new WaitForSeconds(0.6f);
+        yield return new WaitForSecondsRealtime(0.6f);
         PlaySfxIfNamed(sfxBasketDownName);
 
         ShowSera(seraLivingSpawn);
@@ -306,8 +311,11 @@ public class BadEndingDirector : MonoBehaviour
     {
         BeginPlayback();
 
+        Dbg.Log("[배드엔딩] BE#02-b 시작");
         yield return RunBE02b_LockedRoom();
+        Dbg.Log("[배드엔딩] BE#02-c 시작");
         yield return RunBE02c_TwoPlates();
+        Dbg.Log("[배드엔딩] BE#02 종료 — 엔딩 화면으로");
 
         EndPlayback();
         EndingManager.TriggerBadEnding(BadEndingType.Captured);
@@ -325,7 +333,7 @@ public class BadEndingDirector : MonoBehaviour
         TeleportPlayer(luRoomSpawn);
 
         PlaySfxIfNamed(sfxDistantCookingName);
-        yield return new WaitForSeconds(beatSeconds * 2f);
+        yield return new WaitForSecondsRealtime(beatSeconds * 2f);
 
         yield return FlashCloseup(backlitSeraCloseup);
         yield return WaitBeat();
@@ -347,13 +355,22 @@ public class BadEndingDirector : MonoBehaviour
         yield return FadeIn();
 
         PlaySfxIfNamed(sfxTablewareName);
-        yield return new WaitForSeconds(beatSeconds * 3f);
+        yield return new WaitForSecondsRealtime(beatSeconds * 3f);
     }
 
     // ─── 재생 전후 ──────────────────────────────────────────────────────────
     void BeginPlayback()
     {
         IsPlaying   = true;
+
+        // ⚠ 배드 엔딩은 어떤 상태에서 불려도 끝까지 재생돼야 한다.
+        //    턴제 전투가 걸려 있으면 Time.timeScale 이 0 이라(EncounterManager.StartTurnBased)
+        //    스케일 시간 대기가 영영 안 끝난다 — 2026-08-23 에 BE#02 가 실제로 여기서 멈췄다.
+        //    EndingManager.TriggerBadEnding 도 같은 이유로 timeScale 을 되돌린다.
+        //    아래 대기는 전부 Realtime 이지만, 화면(플레이어·애니메이션)도 멈춰 있으면
+        //    컷씬이 정지 화면이 되므로 여기서 함께 풀어 준다.
+        Time.timeScale = 1f;
+
         _lockedCtrl = YarnDialogue.LockPlayer();
 
         // 정본 문단 456 · 627 — [UI] 없음. HideHUD 는 HUD 줄만 감추므로,
@@ -385,6 +402,11 @@ public class BadEndingDirector : MonoBehaviour
 
     void EndPlayback()
     {
+        // ⚠ 남아 있는 대사를 먼저 끊는다. 배드 엔딩은 화면을 통째로 가져가는 자리라
+        //    다른 대사가 떠 있으면 안 되고, 무엇보다 줄이 페이드 중인 채로 씬을 넘기면
+        //    Yarn 의 LinePresenter 가 파괴된 CanvasGroup 을 만져 예외를 던진다(2026-08-23 실측).
+        if (YarnDialogue.IsRunning) YarnDialogue.Runner.Stop();
+
         // 씬을 넘기기 전에 되돌려 둔다. 되감기 복귀 후 같은 씬을 다시 쓰기 때문이다.
         RestoreCamera();
 
@@ -444,7 +466,7 @@ public class BadEndingDirector : MonoBehaviour
         CameraFollow.Instance?.ZoomTo(_origOrthoSize, 0.05f);
     }
 
-    WaitForSeconds WaitBeat() => new WaitForSeconds(beatSeconds);
+    WaitForSecondsRealtime WaitBeat() => new WaitForSecondsRealtime(beatSeconds);
 
     void TeleportPlayer(Transform spawn)
     {
@@ -464,7 +486,7 @@ public class BadEndingDirector : MonoBehaviour
     {
         if (image == null) yield break;
         image.gameObject.SetActive(true);
-        yield return new WaitForSeconds(closeupHoldSeconds);
+        yield return new WaitForSecondsRealtime(closeupHoldSeconds);
         image.gameObject.SetActive(false);
     }
 
@@ -484,7 +506,7 @@ public class BadEndingDirector : MonoBehaviour
         foreach (float size in doorZoomStages)
         {
             cam.ZoomTo(size, doorZoomDuration);
-            yield return new WaitForSeconds(doorZoomDuration);
+            yield return new WaitForSecondsRealtime(doorZoomDuration);
         }
     }
 
