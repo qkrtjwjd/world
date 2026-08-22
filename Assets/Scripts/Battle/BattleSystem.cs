@@ -279,9 +279,11 @@ public class BattleSystem : MonoBehaviour
 
     void Update()
     {
-        // 아이템 메뉴가 열려 있을 때 일시정지 키 → 메인 메뉴로 복귀
+        // 아이템 메뉴가 열려 있을 때 일시정지 키 → 메인 메뉴로 복귀.
+        // 대사 중에는 받지 않는다 — 대사를 넘기려던 입력이 메뉴를 닫아 버린다.
         KeyCode pauseKey = SettingsManager.Instance?.keyPause ?? KeyCode.Escape;
         if (Input.GetKeyDown(pauseKey)
+            && !InputBlocked
             && State == BattleState.PLAYERTURN
             && itemMenuPanel != null && itemMenuPanel.activeSelf)
         {
@@ -1622,10 +1624,19 @@ public class BattleSystem : MonoBehaviour
             GaugeManager.Instance.OnGaugeChanged -= UpdateDaggerButtonVisibility;
     }
 
-    /// <summary>글리치 구간 단검 활성화 버튼 클릭 시 호출됩니다 (언제든지 전환 가능).</summary>
+    /// <summary>
+    /// 글리치 구간 단검 활성화 버튼 클릭 시 호출됩니다 (턴에 상관없이 언제든지 전환 가능).
+    ///
+    /// <para>다만 <b>대사 중에는 받지 않는다.</b> 대사를 넘기는 스페이스가 EventSystem Submit 으로
+    /// 포커스된 버튼까지 같이 누르기 때문에(<see cref="InputBlocked"/> 주석 참조), 가드가 없으면
+    /// 대사를 넘기다가 핵앤슬래시로 전환돼 버린다. 다른 전투 버튼과 같은 조건을 쓴다.</para>
+    ///
+    /// <para>게이지 경계에서 시스템이 부르는 <see cref="ForceSwitchToHackSlash"/> 는 막지 않는다 —
+    /// 그건 플레이어 입력이 아니다.</para>
+    /// </summary>
     public void OnDaggerActivateButton()
     {
-        if (_isBattleEnding) return;
+        if (InputBlocked || _isBattleEnding) return;
         ForceSwitchToHackSlash();
     }
 
@@ -1661,10 +1672,12 @@ public class BattleSystem : MonoBehaviour
         if (_playerParty.Count > 0 && PlayerStats.Instance != null)
             PlayerStats.Instance.currentHealth = _playerParty[0].currentHP;
 
+        // 전환 문구도 다른 줄과 같은 경로로 보낸다. 상자에 직접 쓰면 큐가 한 프레임 뒤에
+        // 덮어쓰거나, 루의 대사가 상자를 빌린 사이에 끼어들어 서로 지운다.
+        ShowPrompt("battle.reality_floods", "현실이 밀려온다...");
+
         GameObject[] panels = { mainMenuPanel, actionMenuPanel, itemMenuPanel };
-        _glitchTransition.StartGlitchSwitch(
-            "현실이 밀려온다...",
-            panels, dialogueText);
+        _glitchTransition.StartGlitchSwitch(panels, dialogueText);
     }
 
     // ════════════════════════════════════════

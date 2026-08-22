@@ -47,7 +47,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7338865650537663559}
   m_Layer: 5
-  m_Name: CompanionDialoguseArea
+  m_Name: CompanionDialogueArea
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4506,7 +4506,7 @@ GameObject:
   - component: {fileID: 4954977277018560917}
   - component: {fileID: 4709782885755916384}
   m_Layer: 5
-  m_Name: CompanionDialoguseBox
+  m_Name: CompanionDialogueBox
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -5426,7 +5426,7 @@ GameObject:
   - component: {fileID: 2383997832526092088}
   - component: {fileID: 666234168611018284}
   m_Layer: 5
-  m_Name: CompanionDialoguse
+  m_Name: CompanionDialogue
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

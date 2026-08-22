@@ -46,6 +46,7 @@
     "win_purified": "狼は退いた。",
     "win_empathy": "敵は自ら退いた！",
     "win_exp": " 経験値 +{0}",
-    "win_levelup": "\nレベルが上がった！（Lv.{0}）"
+    "win_levelup": "\nレベルが上がった！（Lv.{0}）",
+    "reality_floods": "現実が押し寄せる..."
   }
 }

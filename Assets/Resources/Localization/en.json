@@ -46,6 +46,7 @@
     "win_purified": "The wolf backed away.",
     "win_empathy": "The enemy withdrew on its own!",
     "win_exp": " EXP +{0}",
-    "win_levelup": "\nLevel up! (Lv.{0})"
+    "win_levelup": "\nLevel up! (Lv.{0})",
+    "reality_floods": "Reality floods in..."
   }
 }

@@ -22,21 +22,20 @@ public class BattleGlitchTransition : MonoBehaviour
     /// <summary>
     /// 글리치 전환을 시작합니다. BattleSystem.ForceSwitchToHackSlash() 에서 호출합니다.
     /// </summary>
-    public Coroutine StartGlitchSwitch(
-        string       triggerMessage,
-        GameObject[] panels,
-        TMP_Text     dialogueText)
+    /// <summary>
+    /// 전환 연출을 시작한다.
+    ///
+    /// <para><paramref name="dialogueText"/> 는 <see cref="ExplodePanels"/> 가 상자를 함께
+    /// 터뜨리는 데 쓴다. <b>글자는 여기서 쓰지 않는다</b> — 전환 문구는 호출자가
+    /// BattleSystem 의 로그 큐로 보낸다. 상자에 직접 쓰면 큐와 서로 덮어쓴다.</para>
+    /// </summary>
+    public Coroutine StartGlitchSwitch(GameObject[] panels, TMP_Text dialogueText)
     {
-        return StartCoroutine(GlitchAndSwitch(triggerMessage, panels, dialogueText));
+        return StartCoroutine(GlitchAndSwitch(panels, dialogueText));
     }
 
-    IEnumerator GlitchAndSwitch(
-        string       triggerMessage,
-        GameObject[] panels,
-        TMP_Text     dialogueText)
+    IEnumerator GlitchAndSwitch(GameObject[] panels, TMP_Text dialogueText)
     {
-        if (dialogueText != null) dialogueText.text = triggerMessage;
-
         PlayerInputLock.Instance?.Lock();
         Time.timeScale = 0.3f;
         var vfx = TransitionVFXController.Instance;

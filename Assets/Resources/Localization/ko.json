@@ -46,6 +46,7 @@
     "win_purified": "늑대가 물러났다.",
     "win_empathy": "적이 스스로 물러났다!",
     "win_exp": " 경험치 +{0}",
-    "win_levelup": "\n레벨이 올랐다! (Lv.{0})"
+    "win_levelup": "\n레벨이 올랐다! (Lv.{0})",
+    "reality_floods": "현실이 밀려온다..."
   }
 }
