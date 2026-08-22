@@ -78,3 +78,7 @@ crashlytics-build.properties
 /csc-args.rsp
 /csc-output.txt
 /AssemblyCSharp-check.dll
+
+# 파이썬 바이트코드 캐시 (tools/ · .claude/skills/ 의 스크립트가 실행될 때마다 새로 써진다)
+__pycache__/
+*.py[cod]
