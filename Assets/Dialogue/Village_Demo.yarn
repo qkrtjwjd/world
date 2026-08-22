@@ -36,6 +36,8 @@
 //        Village_Sol_Trade_Sugar   각설탕 — 루가 스스로 거둔다
 //        Sol_BreadDoughReject      거래 거절 — 빵 반죽
 //        Village_Sol_Radio         솔 · 라디오
+//   BE#02-a Village_Sera_Captured   순찰 2회차 발각 → 감금 엔딩
+//        (이후 BE#02-b · c 는 Assets/Dialogue/House_BadEnding.yarn)
 // ============================================================
 
 title: Village_Sol_Square
@@ -122,6 +124,23 @@ tags: ingame
 <<showSprite "세라" "neutral_cold">>
 세라: …{$이름}?
 <<hideSprite>>
+===
+
+title: Village_Sera_Captured
+tags: ingame
+---
+// BE#02-a — 순찰 2회차 이후 발각. VillagePatrolController.CaptureRoutine 이 호출한다.
+//
+// 세라가 뒤에서 천천히 걸어와 루의 손을 잡는다. 목소리가 너무나도 부드러워서 역으로 소름이 돋는다.
+// 루는 저항 한 번 못하고 이끌려서 집으로 가고, 세라는 루를 방에 넣고 밖에서 문을 잠근다.
+//
+// ⚠ 세라는 화내지 않는다. 두 배드 엔딩 모두 같은 규칙이다(정본 문단 491).
+// ⚠ 이 씬은 속도로 무섭다. 저항할 틈이 없는 것이 기능이다(문단 638).
+//    마을 BGM 정지 · 손 클로즈업 · 환상 강제 · 집으로 넘기는 컷은 전부
+//    VillagePatrolController 와 BadEndingDirector 가 코드로 처리한다.
+<<showSprite "세라" "warm_smile" "left" "fixed">>
+세라: 집에 가자.
+<<hideSprite "left">>
 ===
 
 title: Village_Bakery

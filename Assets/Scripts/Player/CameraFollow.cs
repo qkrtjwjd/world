@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Unity.Cinemachine;
 using UnityEngine.Rendering.Universal;
 
@@ -33,6 +34,9 @@ public class CameraFollow : MonoBehaviour
     private CinemachineFollow _follow;
     private Coroutine _zoomCoroutine;
 
+    // 씬을 넘어 살아남은 뒤 followVCam 을 다시 찾을 때 쓰는 이름. 아래 OnSceneLoaded 참조.
+    private string _followVCamName;
+
     void Awake()
     {
         if (Instance == null) Instance = this;
@@ -42,9 +46,70 @@ public class CameraFollow : MonoBehaviour
         if (_cam == null) Debug.LogError("[CameraFollow] Camera 컴포넌트가 없습니다!");
 
         if (followVCam != null)
-            _follow = followVCam.GetComponent<CinemachineFollow>();
+        {
+            _follow         = followVCam.GetComponent<CinemachineFollow>();
+            _followVCamName = followVCam.name;
+        }
 
         SetupBackgroundCamera();
+    }
+
+    void OnEnable()  => SceneManager.sceneLoaded += OnSceneLoaded;
+    void OnDisable() => SceneManager.sceneLoaded -= OnSceneLoaded;
+
+    /// <summary>
+    /// 씬이 바뀐 뒤 가상 카메라와 추적 대상을 다시 붙입니다.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ 이게 없으면 씬을 런타임에 다시 부를 때 카메라가 원점 (0,0) 에 얼어붙는다(2026-08-23 실측).
+    /// 이 GameObject 는 <see cref="CameraDirector"/> 가 <c>DontDestroyOnLoad</c> 로 만들기 때문에
+    /// 씬을 넘어 살아남는데, <c>followVCam</c> 이 가리키던 가상 카메라는 이전 씬과 함께
+    /// 파괴돼 가짜 null 이 된다. 그러면 <see cref="Start"/> 는 이미 지나갔으므로 아무도 다시 붙이지 않는다.
+    /// Home → Home 되감기 복귀 · 배드 엔딩 복귀가 전부 이 경로를 지난다.
+    ///
+    /// 이름으로 다시 찾는 이유는 씬에 샷 전용 가상 카메라가 여럿 있을 수 있어서다.
+    /// 아무거나 잡으면 컷씬용 카메라에 플레이어를 붙여 버린다.
+    /// </remarks>
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (followVCam == null && !string.IsNullOrEmpty(_followVCamName))
+        {
+            foreach (var vcam in FindObjectsByType<CinemachineCamera>(
+                         FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (vcam.name != _followVCamName) continue;
+                followVCam = vcam;
+                _follow    = vcam.GetComponent<CinemachineFollow>();
+                break;
+            }
+        }
+
+        if (followVCam == null)
+        {
+            Debug.LogWarning($"[CameraFollow] '{_followVCamName}' 가상 카메라를 다시 찾지 못했습니다.");
+            return;
+        }
+
+        if (followVCam.Follow == null)
+        {
+            var player = GameObject.FindWithTag("Player");
+            if (player != null) followVCam.Follow = player.transform;
+            else { StartCoroutine(RetryFindPlayer()); return; }
+        }
+
+        SnapCameraToFollow();
+    }
+
+    /// <remarks>
+    /// ⚠ 이걸 빼면 씬을 런타임에 다시 부를 때 카메라가 영영 안 따라온다(2026-08-23 실측).
+    /// 가드가 <c>Destroy(gameObject)</c> 라서 파괴된 카메라의 관리 래퍼가 <see cref="Instance"/> 에
+    /// 그대로 남고, 새 카메라는 자기를 Instance 로 잡지 못한다. 그러면 <see cref="Start"/> 의
+    /// <c>followVCam</c> 배선도 새 카메라 쪽에 걸리지 않아 원점 (0,0) 에 얼어붙는다.
+    /// Home → Home 되감기 복귀 · 배드 엔딩 복귀가 전부 이 경로를 지난다.
+    /// </remarks>
+    void OnDestroy()
+    {
+        if (Instance == this) Instance = null;
     }
 
     void Start()

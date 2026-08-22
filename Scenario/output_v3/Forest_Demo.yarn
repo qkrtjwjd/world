@@ -179,11 +179,11 @@ title: Forest_Wolf2_SpareEnd
 ===
 
 // ── 판정 실패 (UNCLASSIFIED) — 사람이 확인할 것 ──
-// UNCLASSIFIED [문단722 S#17C] [조건]  루가 오염 늑대에게 피해를 입은 직후 1회만 출력한다.
-// UNCLASSIFIED [문단736 S#17D] [조건]  [공격]으로 전투를 종료한 경우.
-// UNCLASSIFIED [문단760 S#17E] [조건]  [쓰다듬기] 3회 누적으로 전투를 종료한 경우.
-// UNCLASSIFIED [문단846 S#19C] [조건]  전투 중 루가 일정 이상 데미지를 입힌 경우.
-// UNCLASSIFIED [문단850 S#19C] S#19C-2  숲 · 낮  [Battle · 조건 분기]
-// UNCLASSIFIED [문단851 S#19C] [조건]  적의 HP가 5% 이하로 떨어질 경우.
-// UNCLASSIFIED [문단857 S#19D] [조건]  E키로 숨통을 끊은 경우.
-// UNCLASSIFIED [문단880 S#19E] [조건]  E키를 누르지 않고 늦춰 숨통을 끊지 않고 놓아준 경우.
+// UNCLASSIFIED [문단835 S#17C] [조건]  루가 오염 늑대에게 피해를 입은 직후 1회만 출력한다.
+// UNCLASSIFIED [문단849 S#17D] [조건]  [공격]으로 전투를 종료한 경우.
+// UNCLASSIFIED [문단873 S#17E] [조건]  [쓰다듬기] 3회 누적으로 전투를 종료한 경우.
+// UNCLASSIFIED [문단959 S#19C] [조건]  전투 중 루가 일정 이상 데미지를 입힌 경우.
+// UNCLASSIFIED [문단963 S#19C] S#19C-2  숲 · 낮  [Battle · 조건 분기]
+// UNCLASSIFIED [문단964 S#19C] [조건]  적의 HP가 5% 이하로 떨어질 경우.
+// UNCLASSIFIED [문단970 S#19D] [조건]  E키로 숨통을 끊은 경우.
+// UNCLASSIFIED [문단993 S#19E] [조건]  E키를 누르지 않고 늦춰 숨통을 끊지 않고 놓아준 경우.

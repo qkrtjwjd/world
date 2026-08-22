@@ -66,12 +66,19 @@
       "   / S#19D 7(루3·쿠루4) / S#19E 6(루3·쿠루3). 총계 133→169.",
       "   S#19C-2 는 SCENE_HEADER_PLAIN 이 '-2' 를 못 받아 별도 씬이 되지 않는다.",
       "   원고상 하위 씬이지만 카운트는 S#19C 에 합산되며, 노드만 둘로 나눠 뒀다.",
-      "S#18 · S#20 · S#21 은 여전히 비트 뼈대만이고 대사가 없다. 원고가 오면 등재한다."
+      "S#18 · S#20 · S#21 은 여전히 비트 뼈대만이고 대사가 없다. 원고가 오면 등재한다.",
+      "2026-08-22 — D 에 배드 엔딩 원고 BE#01-a~d · BE#02-a~c 가 들어와 등재했다(대사 7 · 7노드).",
+      "   D 실측 근거: BE#01-a 1(루1) / BE#01-b 0 / BE#01-c 3(세라2·루1) / BE#01-d 2(세라1·루1)",
+      "   / BE#02-a 1(세라1) / BE#02-b 0 / BE#02-c 0.",
+      "2026-08-23 — 정본에서 S#15 15-F(솔 · 라디오) 가 사라져 S#15 기대값을 8→7 로 내렸다.",
+      "   총계는 169 +7(BE) −1(15-F) = 175 다. yarn 쪽 대사는 지우지 않았다(S#15 _note 참조).",
+      "   씬 ID 계열이 둘로 늘었다 — scenario_parser.py 의 SCENE_KEY 가 S#xx 와 BE#01-a 를 함께 받는다.",
+      "   ⚠ 하이픈은 BE 쪽에만 열려 있다. S# 에 열면 S#19C-2 가 쪼개져 위 S#19C 합산이 깨진다."
     ],
-    "dialogue": 166,
+    "dialogue": 172,
     "note": 2,
     "narration": 1,
-    "all": 169
+    "all": 175
   },
 
   "scenes": [
@@ -229,6 +236,41 @@
         { "node": "House_FrontDoor_Depart", "count": 0, "anchor": null }
       ]
     },
+    {
+      "scene": "BE#01-a", "expected": 1, "file": "House_BadEnding",
+      "by_speaker": { "루": 1 },
+      "nodes": [
+        { "node": "House_BadEnd_Sealed_Door", "count": 1, "anchor": "…안 되는 거였구나." }
+      ]
+    },
+    {
+      "scene": "BE#01-b", "expected": 0, "file": "House_BadEnding",
+      "by_speaker": {},
+      "nodes": []
+    },
+    {
+      "scene": "BE#01-c", "expected": 3, "file": "House_BadEnding",
+      "by_speaker": { "세라": 2, "루": 1 },
+      "nodes": [
+        { "node": "House_BadEnd_Sera_Return", "count": 3, "anchor": "루. 아가, 혼자 잘 있었어?" }
+      ]
+    },
+    {
+      "scene": "BE#01-d", "expected": 2, "file": "House_BadEnding",
+      "by_speaker": { "세라": 1, "루": 1 },
+      "nodes": [
+        { "node": "House_BadEnd_ThreePlates", "count": 2, "anchor": "저녁 먹게 나오렴." }
+      ],
+      "_note": [
+        "집 구간 배드 엔딩 BE#01 — 2026-08-22 정본에 원고가 들어와 등재했다 (정본 문단 447~517).",
+        "발동은 S#11 '데리러 갈게요' 로 시작된 90초 제한(C-14-2 · F-6)이 끝났을 때다.",
+        "대사가 있는 씬만 노드를 둔다. 연출은 BadEndingDirector 소관이다.",
+        "⚠ BE#01-b 는 nodes 가 비어 있다. 대사 0줄인데 Yarn 이 본문 없는 노드를 컴파일에서",
+        "  떨어뜨려(2026-08-23 실측) 빈 노드를 두면 '있는 척하는 없는 노드'가 되기 때문이다.",
+        "  씬 항목은 남긴다 — 정본에 씬이 존재한다는 기록이고 expected 0 대조에도 쓰인다.",
+        "복귀 지점은 S#11 직후(SaveManager 되감기 저장). 인형화 페널티 없음."
+      ]
+    },
 
     {
       "scene": "S#14", "expected": 13, "file": "Village_Demo",
@@ -247,30 +289,59 @@
       ]
     },
     {
-      "scene": "S#15", "expected": 8, "file": "Village_Demo",
-      "by_speaker": { "세라": 1, "미루": 2, "아모": 1, "루": 1, "솔": 2, "루독백": 1 },
-      "anchors": { "first": "…루?", "last": "…누구랑 얘기해?" },
+      "scene": "S#15", "expected": 7, "file": "Village_Demo",
+      "by_speaker": { "세라": 1, "미루": 2, "아모": 1, "루": 1, "솔": 1, "루독백": 1 },
+      "anchors": { "first": "…루?", "last": "비어 있는건 안 받아." },
       "nodes": [
         { "node": "Village_Sera_Spotted",     "count": 1, "anchor": "…루?" },
         { "node": "Village_Bakery",           "count": 3, "anchor": "어서 오세요! 갓 구운 빵이 있어요" },
         { "node": "Village_FlowerShop",       "count": 1, "anchor": "어서오세요. 오늘도 꽃들이 예쁘게 피었답니다." },
         { "node": "Village_Square_Children",  "count": 0, "anchor": null },
         { "node": "Village_Sol_Trade_Sugar",  "count": 1, "anchor": "이건… 아직 쓸 수 없어." },
-        { "node": "Sol_BreadDoughReject",     "count": 1, "anchor": "비어 있는건 안 받아." },
-        { "node": "Village_Sol_Radio",        "count": 1, "anchor": "…누구랑 얘기해?" }
+        { "node": "Sol_BreadDoughReject",     "count": 1, "anchor": "비어 있는건 안 받아." }
       ],
       "_note": [
-        "정본 15-A ~ 15-F 를 노드로 그대로 옮겼다. 15-E(거래창 자체)는 트리거뿐이라 노드가 없다.",
+        "정본 15-A ~ 15-E 를 노드로 그대로 옮겼다. 15-E(거래창 자체)는 트리거뿐이라 노드가 없다.",
+        "⚠ 2026-08-23 — 정본에서 15-F(솔 · 라디오, 「…누구랑 얘기해?」) 절이 통째로 사라졌다.",
+        "  2026-08-16 등재 시점에는 D 에 있었고 그 뒤 개정에서 빠졌다. 기대값을 정본 실측에",
+        "  맞춰 8→7 (솔 2→1) 로 내리고 Village_Sol_Radio 를 이 표에서 뺐다.",
+        "  ⚠ 다만 Village_Demo.yarn 의 Village_Sol_Radio 노드와 대사는 그대로 두었다 —",
+        "  CLAUDE.md §6 '차단된 대사 처리' 대로 삭제 여부는 사람이 정한다. 사용자 판단 대기 중.",
         "기존 이름 유지(재배선 불필요): Village_Bakery(BakeryNPC.storyNode) ·",
         "  Village_FlowerShop · Sol_BreadDoughReject(SolNPC.breadRejectNode).",
         "신규 배선 필요: Village_Sera_Spotted · Village_Square_Children(대사 0, 연출 전용) ·",
-        "  Village_Sol_Trade_Sugar · Village_Sol_Radio.",
+        "  Village_Sol_Trade_Sugar.",
         "Village_Sol_Trade_Sugar 는 루 (속으로) 독백 1줄이다.",
         "⚠ 현행 Village_Demo.yarn 의 남은 본문은 아직 옛 원고(명세서 v7, S#13~S#18) 기준이다.",
         "2026-08-14 — 정본에 대응 항목이 없는 노드 4개는 사용자 지시로 삭제됐다",
         "  (Village_Entrance · Village_DaggerDistortion · Village_Exit_Sol · Village_Exit_KuruMeet).",
         "BakeryNPC_Loop_Normal/Dagger 는 존치한다. 정본 15-B 가 반복을 명시하므로 남겼고,",
         "  루프는 Village_Bakery 대사의 재생 방식이지 별도 대사가 아니라서 여기 매핑하지 않는다."
+      ]
+    },
+    {
+      "scene": "BE#02-a", "expected": 1, "file": "Village_Demo",
+      "by_speaker": { "세라": 1 },
+      "nodes": [
+        { "node": "Village_Sera_Captured", "count": 1, "anchor": "집에 가자." }
+      ]
+    },
+    {
+      "scene": "BE#02-b", "expected": 0, "file": "House_BadEnding",
+      "by_speaker": {},
+      "nodes": []
+    },
+    {
+      "scene": "BE#02-c", "expected": 0, "file": "House_BadEnding",
+      "by_speaker": {},
+      "nodes": [],
+      "_note": [
+        "마을 구간 배드 엔딩 BE#02 — 2026-08-22 정본에 원고가 들어와 등재했다 (정본 문단 619~678).",
+        "발동은 순찰 2회차 이후 발각(C-14-3-4).",
+        "Village_Sera_Captured 는 VillagePatrolController.yarnNode_captured 기본값이라 이름을 유지했다 (재배선 불필요).",
+        "BE#02-b · c 는 대사 0 — 세라가 한 마디도 하지 않는 것이 정본 요구다(문단 648 · 651).",
+        "  그래서 BE#01-b 와 같은 이유로 nodes 가 비어 있다.",
+        "복귀 지점은 마을 진입 지점. 인형화 페널티 없음."
       ]
     },
     {

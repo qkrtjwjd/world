@@ -77,8 +77,13 @@ STAGING_TAGS = ("[FILTER]", "[BGM]", "[SFX]", "[UI]", "[CAM]", "[TRIGGER]",
                 "[목표]", "[상호작용]", "[힌트]", "[튜토리얼]")
 
 SCENE_ID = re.compile(r"S#\d+[A-Z]?")
-SCENE_HEADER_BRACKET = re.compile(r"^【\s*(S#\d+[A-Z]?)\s*】")
-SCENE_HEADER_PLAIN = re.compile(r"^(S#\d+[A-Z]?)(?:\s|$)")
+
+# 씬 ID 는 두 계열이다 — 본편 S#xx 와 배드 엔딩 BE#01-a (2026-08-22 정본에 추가).
+# ⚠ 하이픈은 BE 쪽에만 연다. S# 패턴에 하이픈을 허용하면 S#19C-2 가 별도 씬으로 쪼개지고,
+#   node_map 이 그것을 S#19C 에 합산해 둔 기대값(expected_totals 주석)이 깨진다.
+SCENE_KEY = r"(?:S#\d+[A-Z]?|BE#\d+-[a-z])"
+SCENE_HEADER_BRACKET = re.compile(r"^【\s*(" + SCENE_KEY + r")\s*】")
+SCENE_HEADER_PLAIN = re.compile(r"^(" + SCENE_KEY + r")(?:\s|$)")
 
 # 구간 표제 — "D-1.  집 구간" / "D-2.  마을 구간" / "D-3.  숲 구간".
 # 번호를 하드코딩하지 않는다. 숲 원고가 들어오면서 늘어날 수 있다.

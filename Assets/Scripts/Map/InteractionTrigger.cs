@@ -105,7 +105,7 @@ public class InteractionTrigger : MonoBehaviour
         else if (!inRange && _canInteract)
         {
             _canInteract = false;
-            InteractionManager.Instance?.UnregisterTrigger(this);
+            InteractionManager.InstanceIfExists?.UnregisterTrigger(this);
             RefreshRadioButton(false);
         }
     }
@@ -231,14 +231,20 @@ public class InteractionTrigger : MonoBehaviour
         if (useDistanceDetection || !other.CompareTag("Player") || other.isTrigger) return;
         _canInteract = false;
         StopAllCoroutines();
-        InteractionManager.Instance?.UnregisterTrigger(this);
+        InteractionManager.InstanceIfExists?.UnregisterTrigger(this);
         RefreshRadioButton(false);
     }
 
+    /// <remarks>
+    /// ⚠ 여기서 <c>InteractionManager.Instance</c> 를 부르면 안 된다. 씬이 닫힐 때도 이 경로가 도는데,
+    /// 그 게터는 매니저가 없으면 새로 만들기 때문에 <b>죽어가는 씬 안에</b> 오브젝트가 생긴다
+    /// ("Some objects were not cleaned up when closing the scene", 2026-08-23 실측).
+    /// 등록 취소는 매니저가 없으면 할 일도 없다.
+    /// </remarks>
     private void OnDisable()
     {
         _canInteract = false;
-        InteractionManager.Instance?.UnregisterTrigger(this);
+        InteractionManager.InstanceIfExists?.UnregisterTrigger(this);
         RefreshRadioButton(false);
     }
 

@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 /// <summary>
 /// 마을 발각 규칙 — 순찰 라운드 기준 (C-14-3-4 / E-34-1).
@@ -24,6 +25,18 @@ public class VillagePatrolController : MonoBehaviour
     public string yarnNode_firstSighting = "Village_Sera_Spotted";
     [Tooltip("감금 엔딩 직전 대사. 원고 미작성이라 비워둬도 된다.")]
     public string yarnNode_captured = "Village_Sera_Captured";
+
+    [Header("BE#02-a — 발각 컷 (정본 문단 622~638)")]
+    [Tooltip("손을 잡는 순간의 클로즈업. 세라의 손과 루의 도자기 손가락이 한 화면에 들어오는 컷. 아트가 아직 없으므로 비워 두면 조용히 건너뛴다.")]
+    public Image handTakenCloseup;
+    [Tooltip("클로즈업을 띄워 두는 시간(초).")]
+    public float closeupHoldSeconds = 1.4f;
+    [Tooltip("뒤에서 다가오는 발소리(AudioManager 등록 이름. 비우면 무음).")]
+    public string sfxApproachStepsName = "";
+    [Tooltip("손을 잡는 아주 작은 소리(AudioManager 등록 이름. 비우면 무음).")]
+    public string sfxHandTakenName = "";
+    [Tooltip("세라가 뒤에서 다가오는 데 걸리는 시간(초). 루는 굳어서 움직이지 못한다.")]
+    public float approachSeconds = 1.6f;
 
     [Header("1회차 종료 예고")]
     [Tooltip("예고 연출 시간(초). 세라가 멈추고 손끝이 결계 쪽으로 당겨지는 구간.")]
@@ -100,10 +113,53 @@ public class VillagePatrolController : MonoBehaviour
         _captured = true;
         _handlingSighting = true;
 
-        yield return YarnDialogue.PlayIfExists(yarnNode_captured);
+        // 정본 문단 625 — 마을 BGM 이 뚝 끊긴다. 페이드아웃하지 않는다.
+        AudioManager.Instance?.StopAllBGM();
+
+        // 정본 문단 624 — 단검을 파지한 상태에서 발각되었더라도 발동과 동시에 환상으로 되돌린다.
+        DaggerFilterController.Instance?.SwitchToFantasyForced();
+        FilterManager.Instance?.SetFilter(FilterType.Fantasy);
+
+        // 정본 문단 620 — 발각 판정이 성립한 순간부터 엔딩이 끝날 때까지 조작권을 돌려주지 않는다.
+        // 정본 문단 627 — 발각 알림을 띄우지 않는다. 그래서 HUD 를 내리기만 한다.
+        var ctrl = YarnDialogue.LockPlayer();
+        ObjectiveManager.Instance?.HideHUD();
+
+        // 루의 뒤쪽에서 세라가 천천히 걸어온다. 루는 굳어서 움직이지 못한다(문단 629).
+        PlaySfxIfNamed(sfxApproachStepsName);
+        yield return new WaitForSeconds(approachSeconds);
+
+        // [CAM] 손을 잡는 순간 손 클로즈업 — 세라의 손과 루의 도자기 손가락이 한 화면에(문단 628).
+        PlaySfxIfNamed(sfxHandTakenName);
+        yield return FlashCloseup(handTakenCloseup);
+
+        yield return YarnDialogue.PlayIfExists(yarnNode_captured, false);
 
         // 인형화 페널티 없음 (CLAUDE.md §2 · C-14-3-4).
-        EndingManager.TriggerBadEnding(BadEndingType.Captured);
+        // 정본 문단 636 — 마을에서 집까지의 이동은 컷 하나로 넘긴다. 걸어가는 과정을 보여주지 않는다.
+        // 집에 도착한 뒤의 BE#02-b · c 는 Home 씬의 BadEndingDirector 가 이어 재생한다.
+        BadEndingDirector.QueueCapturedHousePart();
+        YarnDialogue.UnlockPlayer(ctrl);
+
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(SceneNames.Home);
+        else
+            SceneManager.LoadScene(SceneNames.Home);
+    }
+
+    /// <summary>클로즈업 Image 를 잠깐 띄웠다 끈다. 비어 있으면 조용히 건너뛴다.</summary>
+    IEnumerator FlashCloseup(Image image)
+    {
+        if (image == null) yield break;
+        image.gameObject.SetActive(true);
+        yield return new WaitForSeconds(closeupHoldSeconds);
+        image.gameObject.SetActive(false);
+    }
+
+    void PlaySfxIfNamed(string soundName)
+    {
+        if (string.IsNullOrEmpty(soundName)) return;
+        AudioManager.Instance?.Play(soundName);
     }
 
     // ── 1회차 종료 예고 ──────────────────────────────────────────────────────

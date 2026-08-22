@@ -17,6 +17,21 @@ public class InteractionManager : MonoBehaviour
             return _instance;
         }
     }
+    /// <summary>
+    /// 이미 있을 때만 돌려줍니다. 없으면 <b>만들지 않습니다</b> — 정리 경로 전용.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ <see cref="Instance"/> 는 없으면 그 자리에서 GameObject 를 만든다.
+    /// 그래서 씬이 닫히는 중에 부르면 <b>죽어가는 씬 안에</b> 새 오브젝트가 생기고,
+    /// 유니티가 "Some objects were not cleaned up when closing the scene" 으로 잡는다
+    /// (2026-08-23 실측 — <see cref="InteractionTrigger"/> 의 OnDisable 이 그 경로였다).
+    /// 등록 취소는 매니저가 없으면 할 일도 없으므로 이쪽을 쓴다.
+    ///
+    /// <c>_instance != null</c> 은 유니티의 == 오버로드를 타므로 파괴된 객체(가짜 null)를
+    /// 진짜 null 로 바꿔 준다. <c>?.</c> 는 이 변환을 하지 않으므로 이 한 겹이 반드시 필요하다.
+    /// </remarks>
+    public static InteractionManager InstanceIfExists => _instance != null ? _instance : null;
+
     private static InteractionManager _instance;
     private static bool _isQuitting = false;
 

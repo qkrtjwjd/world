@@ -1,0 +1,33 @@
+// ─────────────────────────────────────────────────────────────
+// 무채색 낙원 — House_BadEnding (화이트리스트 변환 v3 자동 생성)
+// 정본: D_무채색_낙원_시나리오_정본.docx
+// 매핑: Scenario/node_map.json
+//
+// ⚠ 이 파일은 '표시 텍스트 레이어'만 담는다.
+//   연출 커맨드(<<set_filter>> <<play_sfx>> <<camera_*>> 등)는 들어 있지 않다.
+//   연출은 House_BadEnding_staging.json 에 분리돼 있다.
+// ⚠ Assets/Dialogue 에 그대로 덮어쓰지 말 것 — 수동 보정 레이어가 날아간다.
+// ─────────────────────────────────────────────────────────────
+
+title: House_BadEnd_Sealed_Door
+---
+{$이름}: …안 되는 거였구나.
+===
+
+title: House_BadEnd_Sera_Return
+---
+세라: {$이름}. 아가, 혼자 잘 있었어?
+{$이름}: 다녀오셨어요?
+세라: 응. 오늘 저녁 거리를 챙겨가지고 왔단다. 저녁 준비되면 부를 테니 방에서 쉬고 있으렴.
+===
+
+title: House_BadEnd_ThreePlates
+---
+세라: 저녁 먹게 나오렴.
+{$이름}: 잘 먹겠습니다.
+===
+
+// ── 판정 실패 (UNCLASSIFIED) — 사람이 확인할 것 ──
+// UNCLASSIFIED [문단512 BE#01-d] BE#01 신규 필요 에셋
+// UNCLASSIFIED [문단519 BE#01-d] 마을 구간 — 광장과 상시 상호작용
+// UNCLASSIFIED [문단670 BE#02-c] BE#02 신규 필요 에셋

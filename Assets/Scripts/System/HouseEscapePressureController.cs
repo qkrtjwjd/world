@@ -107,6 +107,11 @@ public class HouseEscapePressureController : MonoBehaviour
             return;
         }
 
+        // ⚠ 배드 엔딩 연출이 도는 중이면 재개하지 않는다. BE#02 는 마을에서 발각된 뒤
+        //    집으로 넘어와 BE#02-b·c 를 재생하는데, 그때도 이 핸들러가 돈다.
+        //    막지 않으면 엔딩을 보는 동안 90초 타이머가 다시 시작된다.
+        if (BadEndingDirector.IsPlaying) return;
+
         // 집으로 돌아왔다 — 배드 엔딩 후 되감기 복귀이거나, S#11 이후 지점을 불러온 경우다.
         // 컷씬은 이미 지나갔으므로 OnResolved 가 다시 발행되지 않는다. 여기서 다시 걸지 않으면
         // 실패한 플레이어가 제한 시간 없이 걸어 나가게 된다.
@@ -128,6 +133,8 @@ public class HouseEscapePressureController : MonoBehaviour
             yield return null;
         }
         yield return null;
+
+        if (BadEndingDirector.IsPlaying) yield break;
 
         if (!_active && GameState.isResolved)
             Begin(anchorRewindPoint: false);
@@ -236,13 +243,18 @@ public class HouseEscapePressureController : MonoBehaviour
         yield return new WaitForSeconds(failLingerDuration);
 
         StopDrone();
-        ScreenEdgeEffectController.ClearSustained();
         OnLevelChanged?.Invoke(0f);
         _lastLevel = -1f;
         YarnDialogue.UnlockPlayer(ctrl);
 
+        // ⚠ ClearSustained 를 여기서 부르지 않는다. 정본 문단 460 이
+        //   「가장자리 어두워짐 · 복도 축소 · 문틀 좁아짐이 끝까지 갔다가 암전으로 닫힌다」로 못박았다.
+        //   조임이 걷힌 뒤 암전이 오면 그 연결이 끊긴다. 지우는 것은 BE#01-a 의 암전 안에서
+        //   BadEndingDirector 가 한다.
+
         // 인형화 페널티 없음 (CLAUDE.md §2).
-        EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
+        // 정본 BE#01-a~d 컷씬을 재생한 뒤 디렉터가 TriggerBadEnding 까지 처리한다.
+        yield return BadEndingDirector.PlayHouseSealed();
     }
 
     // ── 저음 드론 ────────────────────────────────────────────────────────────
