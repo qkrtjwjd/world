@@ -303,7 +303,9 @@ public class BattleSystem : MonoBehaviour
     {
         if (dialogueAreaRoot == null) return;
 
-        // 이 상자는 이제 하단 패널의 배경 노릇을 한다(패널 자체의 Image 는 꺼져 있다).
+        // 이 상자는 이제 하단 패널의 배경 노릇을 한다.
+        // 패널 쪽 Image 는 알파가 아니라 Image.enabled = false 로 꺼 두어야 한다 —
+        // EnsurePanelBackground() 가 Awake 에서 알파 0.05 미만을 0.75 로 되살리기 때문이다.
         // 껐다 켜면 화면 하단이 통째로 사라졌다 돌아오므로, 전투 중에는 항상 켜 둔다.
         // 글자만 바뀌고 상자는 가만히 있는 것이 드퀘·포켓몬의 메시지 창이다.
         if (!dialogueAreaRoot.activeSelf) dialogueAreaRoot.SetActive(true);
@@ -1867,8 +1869,12 @@ public class BattleSystem : MonoBehaviour
             if (dialogueText != null) dialogueText.text = back ?? string.Empty;
             _stickyOnScreen = sticky;
             _lineOnScreen   = true;
-            RestoreBattleHud();
         }
+
+        // 대사가 물러났으면 큐가 남았든 비었든 HUD 는 돌아와야 한다.
+        // 되돌리는 곳이 여기 하나뿐이라, 큐가 남은 분기에서 건너뛰면 _hudHidden 이
+        // 전투가 끝날 때까지 true 로 굳어 버튼·HP 가 영영 안 돌아온다.
+        RestoreBattleHud();
 
         SyncLogArea();
     }
