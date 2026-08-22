@@ -303,11 +303,10 @@ public class BattleSystem : MonoBehaviour
     {
         if (dialogueAreaRoot == null) return;
 
-        // 예전에는 mainMenuPanel.activeSelf 를 따라갔다. 그런데 공격·방어·아이템·적 턴·승패 구간은
-        // 전부 메뉴가 꺼져 있는 상태라, 그 구간의 로그 24종이 한 줄도 화면에 남지 않았다.
-        // 이제는 "지금 보여줄 줄이 있는가" 만 본다.
-        bool visible = _logBorrowed || _lineOnScreen;
-        if (dialogueAreaRoot.activeSelf != visible) dialogueAreaRoot.SetActive(visible);
+        // 이 상자는 이제 하단 패널의 배경 노릇을 한다(패널 자체의 Image 는 꺼져 있다).
+        // 껐다 켜면 화면 하단이 통째로 사라졌다 돌아오므로, 전투 중에는 항상 켜 둔다.
+        // 글자만 바뀌고 상자는 가만히 있는 것이 드퀘·포켓몬의 메시지 창이다.
+        if (!dialogueAreaRoot.activeSelf) dialogueAreaRoot.SetActive(true);
     }
 
     IEnumerator SetupBattle()
@@ -1694,8 +1693,13 @@ public class BattleSystem : MonoBehaviour
 
     /// <summary>
     /// 큐를 한 줄씩 흘린다. 턴제 전투는 <c>Time.timeScale = 0</c> 이라 전부 unscaled 로 센다.
-    /// 루 대사가 상자를 빌려 쓰는 동안에는 멈춰 서서 기다린다 — 예전에는 한 칸짜리
-    /// <c>_savedLog</c> 버퍼에 덮어써서 그 사이 들어온 로그가 사라졌다.
+    ///
+    /// <para><b>휘발은 시간이 아니라 교체다.</b> 예전에는 <see cref="logHoldTime"/> 이 지나면 글자를 지우고
+    /// 상자를 닫았는데, 전투 코루틴의 대기는 1~3초로 제각각이라 그 차이만큼(예: 2초 대기 − 1.2초 표시 =
+    /// 0.8초) 하단 띠가 통째로 사라졌다 돌아왔다. 이제 마지막 줄은 <b>다음 줄이 올 때까지</b> 그대로 있고,
+    /// <see cref="logHoldTime"/> 은 연달아 들어온 줄 사이의 간격으로만 쓰인다.</para>
+    ///
+    /// <para>루 대사가 상자를 빌려 쓰는 동안에는 멈춰 서서 기다린다.</para>
     /// </summary>
     IEnumerator DrainLogQueue()
     {
@@ -1707,42 +1711,26 @@ public class BattleSystem : MonoBehaviour
             ApplySystemLineStyle();
             if (dialogueText != null) dialogueText.text = line.Text;
             _lineOnScreen = true;
+            _lastLineText = line.Text;
+            if (line.Sticky) { _stickyOnScreen = true; _stickyText = line.Text; }
             SyncLogArea();
 
-            if (line.Sticky)
-            {
-                // 플레이어가 골라야 하므로 버튼·HP 를 되돌려 준다. 글자는 다음 줄이 올 때까지 남는다.
-                _stickyOnScreen = true;
-                _stickyText     = line.Text;
-                RestoreBattleHud();
-                continue;
-            }
-
-            // 로그는 혼자 뜬다 — 표시 시간 동안 버튼·HP 를 감춘다
-            HideBattleHud();
-
+            // 뒤에 줄이 더 있을 때만 간격을 둔다. 마지막 줄이면 그대로 남긴다.
             float elapsed = 0f;
-            while (elapsed < logHoldTime)
+            while (_logQueue.Count > 0 && elapsed < logHoldTime)
             {
                 if (!_logBorrowed) elapsed += Time.unscaledDeltaTime;   // 대사 중에는 시간이 안 간다
                 yield return null;
             }
         }
 
-        // 큐가 비면 지운다. 이게 '휘발' 이다 — 예전에는 지우는 코드가 아예 없었다.
-        if (!_logBorrowed && !_stickyOnScreen)
-        {
-            if (dialogueText != null) dialogueText.text = string.Empty;
-            _lineOnScreen = false;
-            SyncLogArea();
-        }
-        if (!_logBorrowed) RestoreBattleHud();
         _logRoutine = null;
     }
 
     /// <summary>마지막으로 흘린 줄이 sticky 였는가 — 큐가 비어도 지우면 안 된다.</summary>
     bool   _stickyOnScreen;
     string _stickyText;      // 루 대사가 끼어들었다 물러났을 때 되돌릴 프롬프트
+    string _lastLineText;    // 마지막으로 띄운 시스템 줄. 대사가 물러나면 이걸 되돌린다
 
     // 로그와 대사는 같은 모양으로 뜬다 — 정렬도 크기도 프리팹 값 그대로 쓰고 건드리지 않는다.
     // 둘 사이의 차이는 이름칸 하나뿐이다.
@@ -1863,24 +1851,21 @@ public class BattleSystem : MonoBehaviour
 
         _logBorrowed = false;
 
-        // 대사가 물러난 자리를 큐가 이어받는다. 큐가 비어 있으면 상자를 닫는다.
+        // 대사가 물러난 자리를 큐가 이어받는다.
         if (_logQueue.Count > 0)
         {
             if (_logRoutine == null && isActiveAndEnabled)
                 _logRoutine = StartCoroutine(DrainLogQueue());
         }
-        else if (!_stickyOnScreen)
-        {
-            if (dialogueText != null) dialogueText.text = string.Empty;
-            _lineOnScreen = false;
-            RestoreBattleHud();
-        }
         else
         {
-            // 대사가 덮기 전에 떠 있던 프롬프트를 되돌린다
-            ApplySystemLineStyle();
-            if (dialogueText != null) dialogueText.text = _stickyText ?? string.Empty;
-            _stickyOnScreen = true;
+            // 큐가 비었으면 대사가 덮기 전에 떠 있던 줄을 되돌린다.
+            // 상자를 비우면 하단이 빈 채로 남아 다음 줄까지 어색하게 비어 있다.
+            bool sticky = _stickyOnScreen;
+            ApplySystemLineStyle();                      // 이름칸을 내린다 (_stickyOnScreen 을 지운다)
+            string back = sticky ? _stickyText : _lastLineText;
+            if (dialogueText != null) dialogueText.text = back ?? string.Empty;
+            _stickyOnScreen = sticky;
             _lineOnScreen   = true;
             RestoreBattleHud();
         }
