@@ -311,6 +311,12 @@ public class BattleSystem : MonoBehaviour
         if (!dialogueAreaRoot.activeSelf) dialogueAreaRoot.SetActive(true);
     }
 
+    /// <summary>무대 바닥 색 #14110F. 전투 화면 팔레트의 가장 어두운 값.</summary>
+    static readonly Color StageColor = new Color(0.078f, 0.067f, 0.059f, 1f);
+
+    /// <summary>월드에 세운 무대 바닥판. 카메라의 자식이라 BattleUI 와 함께 파괴되지 않는다.</summary>
+    Battle.BattleBackdrop _backdrop;
+
     IEnumerator SetupBattle()
     {
         // PendingModeUI 파괴가 완료될 때까지 1프레임 대기 (동시 표시 방지)
@@ -319,6 +325,11 @@ public class BattleSystem : MonoBehaviour
         // 모드 컨트롤러에 전환 완료 통보 (race condition 가드 해제)
         if (BattleModeController.Instance != null)
             BattleModeController.Instance.NotifyTurnBasedStarted();
+
+        // 무대 바닥판 — 뒤의 필드를 가린다.
+        // BattleUI 는 Overlay 캔버스라 여기서 배경을 깔면 월드에 서는 적까지 덮어 버린다.
+        // 그래서 바닥판만 월드에 세운다. 자세한 이유는 BattleBackdrop 주석 참조.
+        if (_backdrop == null) _backdrop = Battle.BattleBackdrop.Create(StageColor);
 
         // 단검 버튼 초기화
         if (daggerActivateButton != null)
@@ -494,6 +505,10 @@ public class BattleSystem : MonoBehaviour
         // 전투용 클론에만 배율을 준다 — 필드 심볼과 액션 전투는 건드리지 않는다.
         if (!Mathf.Approximately(_enemyBattleScale, 1f))
             go.transform.localScale *= _enemyBattleScale;
+
+        // 무대 바닥판(정렬 500)보다 앞에 세운다. 프리팹 기본값은 0 이라 그대로 두면 가려진다.
+        foreach (SpriteRenderer sr in go.GetComponentsInChildren<SpriteRenderer>(true))
+            sr.sortingOrder = Battle.BattleBackdrop.EnemySortingOrder;
 
         // 프리팹 내부 Canvas·Image 컴포넌트 비활성화 (GameObject가 아닌 컴포넌트를 끔)
         // GameObject를 끄면 ShowEnemyWithAppearance()에서 SetActive(true) 시 같이 켜져 흰 네모 재발생
@@ -1510,6 +1525,8 @@ public class BattleSystem : MonoBehaviour
         // 전투가 어떻게 끝나든(승패·도주·핵앤슬래시 전환·씬 이동) 필드 적을 반드시 되돌린다.
         RestoreFieldEnemyVisual();
         ClearLogQueue();   // 남은 줄이 다음 전투로 새지 않게 한다
+        // 바닥판은 카메라의 자식이라 BattleUI 를 파괴해도 남는다. 여기서 직접 치운다.
+        if (_backdrop != null) { Destroy(_backdrop.gameObject); _backdrop = null; }
         Instance = null;
         IsActive = false;
         if (GaugeManager.Instance != null)
