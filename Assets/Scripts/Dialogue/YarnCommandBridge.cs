@@ -38,6 +38,22 @@ public class YarnCommandBridge : MonoBehaviour
     [Tooltip("텍스트 배경 불투명도 제어용. 비워두면 대화 패널 루트의 Image를 사용합니다.")]
     [SerializeField] private Image dialogueBackground;
 
+    [Tooltip("LinePresenter 가 페이드에 쓰는 CanvasGroup. 비워두면 이 오브젝트(Dialogue 루트)에서 찾습니다.")]
+    [SerializeField] private CanvasGroup dialogueCanvasGroup;
+
+    /// <summary>
+    /// 대화창 전체의 CanvasGroup. 배경뿐 아니라 글자·초상화까지 덮도록 <b>Dialogue 루트</b>에 있다.
+    /// 대사 시작 지점이 Start() 보다 앞설 수 있어 여기서 늦게 찾는다.
+    /// </summary>
+    private CanvasGroup DialogueGroup
+    {
+        get
+        {
+            if (dialogueCanvasGroup == null) dialogueCanvasGroup = GetComponent<CanvasGroup>();
+            return dialogueCanvasGroup;
+        }
+    }
+
     // 설정 적용 기준값 (프리팹 기본값을 배율/역수의 기준으로 캐시)
     private float _baseFontSize;
     private int   _baseLettersPerSecond = 60;
@@ -228,12 +244,12 @@ public class YarnCommandBridge : MonoBehaviour
         if (lineBodyText != null)        lineBodyText.text = "";
         if (characterNameContainer != null) characterNameContainer.SetActive(false);
 
-        if (dialoguePanel != null)
-        {
-            dialoguePanel.SetActive(true);
-            var cg = dialoguePanel.GetComponent<CanvasGroup>();
-            if (cg != null) cg.alpha = 0f;
-        }
+        if (dialoguePanel != null) dialoguePanel.SetActive(true);
+
+        // 알파 0 에서 출발해 LinePresenter 가 첫 줄에서 올린다.
+        // CanvasGroup 은 Dialogue 루트에 있어 배경·글자·초상화가 함께 페이드한다.
+        var cg = DialogueGroup;
+        if (cg != null) cg.alpha = 0f;
         DialogueEvents.RaiseStarted();
 
         // 플레이어가 정한 주인공 이름. 대사에서는 {$이름} 으로 참조한다.

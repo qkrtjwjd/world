@@ -18,7 +18,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &5421278568567800296
 RectTransform:
   m_ObjectHideFlags: 0
@@ -245,6 +245,7 @@ GameObject:
   - component: {fileID: 4953606985428704562}
   - component: {fileID: 818589987416240995}
   - component: {fileID: 6012707309618645026}
+  - component: {fileID: 5968402303104086870}
   m_Layer: 5
   m_Name: Dialogue
   m_TagString: Untagged
@@ -449,6 +450,7 @@ MonoBehaviour:
   spriteData: {fileID: 11400000, guid: 9d2f4a71c86b4e03ab5719ec3f0d6b84, type: 2}
   linePresenter: {fileID: 0}
   dialogueBackground: {fileID: 0}
+  dialogueCanvasGroup: {fileID: 0}
 --- !u!114 &6012707309618645026
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -462,8 +464,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleCompanionLinePresenter
   fieldPresenter: {fileID: 1862077877261583731}
-  showCharacterName: 1
   lettersPerSecond: 40
+--- !u!225 &5968402303104086870
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6396925597179916008}
+  m_Enabled: 1
+  m_Alpha: 0
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &8498630732531705181
 GameObject:
   m_ObjectHideFlags: 0
@@ -689,7 +702,6 @@ GameObject:
   - component: {fileID: 963020633709455219}
   - component: {fileID: 5247022120648049866}
   - component: {fileID: 1862077877261583731}
-  - component: {fileID: 2305583814545076313}
   - component: {fileID: 7735182946103275641}
   m_Layer: 5
   m_Name: DialoguePanel
@@ -767,7 +779,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7dd50f871a60b4bbe88a71d308b2613f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: YarnSpinner.Unity::Yarn.Unity.LinePresenter
-  canvasGroup: {fileID: 2305583814545076313}
+  canvasGroup: {fileID: 5968402303104086870}
   lineText: {fileID: 5033381814586809858}
   showCharacterNameInLine: 1
   characterNameText: {fileID: 6396952347121042388}
@@ -783,18 +795,6 @@ MonoBehaviour:
   customTypewriter:
     targetObject: {fileID: 0}
   eventHandlers: []
---- !u!225 &2305583814545076313
-CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 9035235738118080561}
-  m_Enabled: 1
-  m_Alpha: 0
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!114 &7735182946103275641
 MonoBehaviour:
   m_ObjectHideFlags: 0

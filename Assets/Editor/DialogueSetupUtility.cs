@@ -88,20 +88,49 @@ public static class DialogueSetupUtility
             if (nameTextGO != null)
                 linePresenter.characterNameContainer = nameTextGO;
 
+            // canvasGroup 은 배경뿐 아니라 글자·초상화까지 덮도록 Dialogue 루트에 있다.
+            // 비어 있을 때만 채운다 — 이미 배선된 값은 절대 덮어쓰지 않는다.
+            // (비워두면 페이드도 숨김도 없이 로그조차 안 남는다. 패키지 LinePresenter 가 전부 null 가드라서다)
+            if (linePresenter.canvasGroup == null)
+            {
+                var rootGroup = root.GetComponent<CanvasGroup>();
+                if (rootGroup == null) rootGroup = root.AddComponent<CanvasGroup>();
+                linePresenter.canvasGroup = rootGroup;
+            }
+
             // 7. LineAdvancer 추가 (입력으로 대사 진행)
             var lineAdvancer = root.GetComponentInChildren<LineAdvancer>(true);
             if (lineAdvancer == null)
                 lineAdvancer = root.AddComponent<LineAdvancer>();
 
-            // 8. DialogueRunner.dialoguePresenters 에 추가
+            // 8. DialogueRunner.dialoguePresenters — 지우지 말고 병합한다.
+            //    예전에는 ClearArray() 후 2개로 다시 채웠는데, 이 프리팹의 실제 목록은 4개다
+            //    (LinePresenter → SpeakerStylePresenter → LineAdvancer → BattleCompanionLinePresenter).
+            //    그래서 메뉴를 다시 돌릴 때마다 뒤 2개가 조용히 사라져 화자 스타일 매핑과
+            //    전투 대사 라우팅이 끊겼다. 이제는 있는 것을 순서대로 두고 없는 것만 채운다.
             var presentersProp = runnerSO.FindProperty("dialoguePresenters");
             if (presentersProp != null)
             {
-                presentersProp.ClearArray();
-                presentersProp.arraySize = 2;
-                presentersProp.GetArrayElementAtIndex(0).objectReferenceValue = linePresenter;
-                presentersProp.GetArrayElementAtIndex(1).objectReferenceValue = lineAdvancer;
+                var kept = new System.Collections.Generic.List<Object>();
+                for (int i = 0; i < presentersProp.arraySize; i++)
+                {
+                    var v = presentersProp.GetArrayElementAtIndex(i).objectReferenceValue;
+                    if (v != null && !kept.Contains(v)) kept.Add(v);   // null·유실 참조·중복 제거
+                }
+
+                // SpeakerStylePresenter 는 LinePresenter 보다 뒤여야 한다
+                // (SpeakerStylePresenter 가 그 순서를 스스로 검사하고 경고한다).
+                // 그래서 LinePresenter 가 빠져 있으면 맨 앞에 넣는다.
+                if (linePresenter != null && !kept.Contains(linePresenter)) kept.Insert(0, linePresenter);
+                if (lineAdvancer  != null && !kept.Contains(lineAdvancer))  kept.Add(lineAdvancer);
+
+                presentersProp.arraySize = kept.Count;
+                for (int i = 0; i < kept.Count; i++)
+                    presentersProp.GetArrayElementAtIndex(i).objectReferenceValue = kept[i];
                 runnerSO.ApplyModifiedPropertiesWithoutUndo();
+
+                Debug.Log($"[DialogueSetup] dialoguePresenters {kept.Count}개 유지: " +
+                          string.Join(", ", kept.ConvertAll(o => o.GetType().Name)));
             }
 
             // 9. YarnCommandBridge 추가 (없으면)

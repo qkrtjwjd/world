@@ -186,6 +186,12 @@ public class BattleSystem : MonoBehaviour
     [Tooltip("정화가 성립하는 [쓰다듬기] 누적 횟수. 1~2회에는 아무 판정도 일어나지 않는다")]
     public int  soothePurifyCount = 3;
 
+    // 위 세 플래그의 저작값(프리팹·인스펙터가 정한 값). Awake 에서 한 번 잡는다.
+    // 숲 전투가 플래그를 덮어쓴 것이 다음 전투로 새지 않게 하는 단일 출처다.
+    bool _defaultAllowEscape;
+    bool _defaultAllowSoothe;
+    bool _defaultUseFixedOutcome;
+
     [Tooltip("[도주] 버튼. allowEscape 가 꺼지면 숨긴다")]
     public Button escapeButton;
     [Tooltip("[쓰다듬기] 버튼. allowSoothe 가 켜져야 보인다")]
@@ -223,6 +229,11 @@ public class BattleSystem : MonoBehaviour
             return;
         }
         Instance = this;
+
+        // 규약 플래그의 저작값을 잡아둔다. ApplyForestBattleRules 가 전투마다 여기서 다시 출발한다.
+        _defaultAllowEscape     = allowEscape;
+        _defaultAllowSoothe     = allowSoothe;
+        _defaultUseFixedOutcome = useFixedOutcome;
 
         _glitchTransition = GetComponent<BattleGlitchTransition>();
         if (_glitchTransition == null)
@@ -1464,6 +1475,12 @@ public class BattleSystem : MonoBehaviour
     /// </summary>
     void ApplyForestBattleRules()
     {
+        // 전투마다 저작값에서 다시 출발한다. 지금은 BattleUI 가 매 전투 새로 생겨 무해하지만,
+        // 인스턴스를 재사용하도록 바뀌면 숲 전투 한 번이 이후 모든 전투의 회피를 영구히 막는다.
+        allowEscape     = _defaultAllowEscape;
+        allowSoothe     = _defaultAllowSoothe;
+        useFixedOutcome = _defaultUseFixedOutcome;
+
         // BattleUI 는 프리팹 Instantiate 로 생기므로 진입부가 정적 플래그로 넘긴다.
         if (EncounterManager.pendingForestRules)
         {

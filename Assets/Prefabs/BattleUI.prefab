@@ -29,7 +29,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1728881725731703088}
-  - {fileID: 7484693264645523928}
   m_Father: {fileID: 1048316714712456122}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
@@ -2956,7 +2955,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a9bdca42d83d2924fb617a1c1f700dde, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BattleSystem
-  companionPrefab: {fileID: 8098974414319967036}
+  companionPrefab: {fileID: 0}
   enemyPrefab: {fileID: 8888639358652514372, guid: 6bc6192f203b65647aa90c0bbeab17a2,
     type: 3}
   playerUnitName: "\uB8E8"
@@ -6878,41 +6877,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!1 &8098974414319967036
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 7484693264645523928}
-  m_Layer: 5
-  m_Name: RectTransform
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &7484693264645523928
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8098974414319967036}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 4170021624922583402}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -50, y: 50.000008}
-  m_SizeDelta: {x: 100, y: 100}
-  m_Pivot: {x: 0, y: 1}
 --- !u!1 &8128920283588557828
 GameObject:
   m_ObjectHideFlags: 0
@@ -7390,7 +7354,7 @@ MonoBehaviour:
   dialogueArea: {fileID: 142297873417043217}
   companionDialogue: {fileID: 666234168611018284}
   companionRoot: {fileID: 4170021624922583402}
-  idlePosition: {fileID: 7484693264645523928}
+  idlePosition: {fileID: 0}
   dialoguePosition: {fileID: 7338865650537663559}
   deathChance: 0.15
   moveSpeed: 3
