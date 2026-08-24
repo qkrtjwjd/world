@@ -356,8 +356,9 @@ public class SolTradeUI : MonoBehaviour
 
             var btn = go.GetComponent<Button>();
             var captured = offer;
+            var capturedSlot = go;   // A안 트윈이 이 칸의 아이콘을 움직인다
             if (btn != null)
-                btn.onClick.AddListener(() => OnOfferSelected(captured));
+                btn.onClick.AddListener(() => OnOfferSelected(captured, capturedSlot));
         }
     }
 
@@ -387,16 +388,22 @@ public class SolTradeUI : MonoBehaviour
     //  거래 시도
     // ─────────────────────────────────────────────
 
-    void OnOfferSelected(TradeItem offer)
+    void OnOfferSelected(TradeItem offer, GameObject slot = null)
     {
         if (_state != State.ItemFocus) return;
         // 패널을 끄면 이 컴포넌트도 함께 꺼질 수 있으므로 상주 호스트에서 돌린다
-        YarnDialogue.StartCoroutine(TryTrade(offer, _selectedWant, _session));
+        YarnDialogue.StartCoroutine(TryTrade(offer, _selectedWant, _session, slot));
     }
 
-    IEnumerator TryTrade(TradeItem offer, TradeItem want, int session)
+    IEnumerator TryTrade(TradeItem offer, TradeItem want, int session, GameObject slot = null)
     {
         var outcome = SolTradeRules.Resolve(_mode, offer, want);
+
+        // ── 침묵 (C-15-4 마시멜로 · D-2 15-E-3 · F-7-2) ────────────────────
+        // 솔은 아무 말도 하지 않는다. 대사도 효과음도 아이콘 움직임도 없고
+        // 창 상태도 바뀌지 않는다. 다시 눌러도 같다. "입력은 정상 수신하되 아무 일도 없다" 가 전부다.
+        if (!outcome.accepted && outcome.reason == RejectReason.Silence)
+            yield break;
 
         // 성립 판정이 났어도 실제로 내밀 수량이 모자라면 성립하지 않는다
         if (outcome.accepted)
@@ -415,16 +422,80 @@ public class SolTradeUI : MonoBehaviour
 
         PlaySfx(outcome.accepted ? sfxTradeSuccess : sfxTradeReject);
 
+        // ── 루가 스스로 거둔다 (C-15-4 각설탕 · D-2 15-E-1 · F-7-2 A안) ─────
+        // 솔이 거절하는 것이 아니라 루가 내밀다 만 것이다. 그래서 아이콘만 짧게
+        // 떠올랐다 제자리로 돌아오고, 창은 닫지도 어둡게 덮지도 않는다.
+        bool withdraws = !outcome.accepted && outcome.reason == RejectReason.PlayerWithdraws;
+        if (withdraws) yield return WithdrawTween(slot);
+
         // 대사 재생 동안만 패널을 감춘다. 창 자체는 닫히지 않는다.
-        if (panel != null) panel.SetActive(false);
+        // ⚠ 루가 거두는 경우에는 감추지 않는다 — 정본이 "창은 닫지 않고 어둡게 덮지도 않으며"
+        //   를 못박고 있다(F-7-2). 대화창과 겹쳐 보이면 거래창 프리팹 쪽에서 자리를 조정할 것.
+        bool hidePanel = panel != null && !withdraws;
+        if (hidePanel) panel.SetActive(false);
         yield return YarnDialogue.PlayIfExists(outcome.yarnNode, false);
 
         if (session != _session) yield break;   // 대사 도중 닫혔다면 여기서 끝
-        if (panel != null) panel.SetActive(true);
+        if (hidePanel) panel.SetActive(true);
 
         if (outcome.accepted) EnterTrade();        // 성립하면 목록을 다시 그린다
         else                  BuildOfferList();    // 미성립이면 그 자리에 머무른다
     }
+
+    /// <summary>
+    /// A안 — 칸의 아이콘을 위로 짧게 띄웠다가 원위치로 되돌린다 (F-7-2 · D-2 15-E-1).
+    ///
+    /// <para>손 스프라이트나 클로즈업 컷을 만들지 않는다는 것이 A안의 요지다. 기존 아이콘에
+    /// 트윈만 건다. <b>아이콘이 칸 밖으로 나가지 않아야</b> 하므로 이동량을 칸 높이에 비례해 잡는다.</para>
+    ///
+    /// <para><c>unscaledDeltaTime</c> 을 쓴다 — 거래창은 대화·일시정지와 겹칠 수 있어
+    /// <c>Time.timeScale</c> 이 0 일 때도 움직여야 한다.</para>
+    /// </summary>
+    IEnumerator WithdrawTween(GameObject slot)
+    {
+        if (slot == null) yield break;
+
+        var icon = FindIconRect(slot);
+        if (icon == null) yield break;
+
+        Vector2 home = icon.anchoredPosition;
+        float   rise = Mathf.Max(4f, GetSlotHeight(slot) * WithdrawRiseRatio);
+
+        yield return MoveIcon(icon, home, home + Vector2.up * rise, WithdrawRiseSeconds);
+        yield return MoveIcon(icon, home + Vector2.up * rise, home, WithdrawFallSeconds);
+        icon.anchoredPosition = home;   // 오차 보정 — 반드시 제자리로 돌아온다
+    }
+
+    IEnumerator MoveIcon(RectTransform icon, Vector2 from, Vector2 to, float seconds)
+    {
+        float t = 0f;
+        while (t < seconds)
+        {
+            if (icon == null) yield break;   // 창이 닫혀 칸이 파괴된 경우
+            t += Time.unscaledDeltaTime;
+            icon.anchoredPosition = Vector2.Lerp(from, to, Mathf.Clamp01(t / seconds));
+            yield return null;
+        }
+    }
+
+    /// <summary>칸 자신이 아니라 그 안의 아이콘을 움직인다. SetIcon 과 같은 규칙으로 찾는다.</summary>
+    static RectTransform FindIconRect(GameObject slot)
+    {
+        var images = slot.GetComponentsInChildren<Image>(true);
+        foreach (var img in images)
+            if (img.transform != slot.transform) return img.rectTransform;
+        return images.Length > 0 ? images[0].rectTransform : null;
+    }
+
+    static float GetSlotHeight(GameObject slot)
+    {
+        var rt = slot.transform as RectTransform;
+        return rt != null ? rt.rect.height : 0f;
+    }
+
+    const float WithdrawRiseRatio   = 0.18f;  // 칸 높이의 18% 만 뜬다 — 칸 밖으로 안 나간다
+    const float WithdrawRiseSeconds = 0.12f;
+    const float WithdrawFallSeconds = 0.10f;
 
     void ExecuteExchange(TradeItem offer, TradeItem want)
     {

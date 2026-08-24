@@ -4,8 +4,17 @@ using UnityEngine;
 /// <summary>거래 모드. 마을에서는 이름·설명이 감춰지고 어떤 거래도 성립하지 않는다.</summary>
 public enum TradeMode { VillageBrowse, ForestTrade }
 
-/// <summary>거절 사유. 사유 텍스트는 전부 Yarn 노드에 있고 C# 에는 노드 이름만 있다.</summary>
-public enum RejectReason { GradeMismatch, Contaminated, Empty, PlayerWithdraws }
+/// <summary>
+/// 거절 사유. 사유 텍스트는 전부 Yarn 노드에 있고 C# 에는 노드 이름만 있다.
+///
+/// <para><b>Silence</b> 는 "솔이 아무 말도 하지 않는다" 다 — 대사도 효과음도 연출도 없다.
+/// 정본 C-15-4 의 마시멜로가 여기 해당한다. 다른 세 종이 모두 반응을 주기 때문에
+/// 이 한 종만 아무것도 없는 것이 연출의 전부다(D-2 15-E-3 · F-7-2).</para>
+///
+/// <para><b>PlayerWithdraws</b> 는 솔이 거절하는 것이 아니라 <b>루가 스스로 거두는 것</b>이다.
+/// 각설탕이 여기 해당하며, 아이콘을 짧게 띄웠다 되돌리고 독백을 부른다(F-7-2 A안).</para>
+/// </summary>
+public enum RejectReason { GradeMismatch, Contaminated, Empty, PlayerWithdraws, Silence }
 
 /// <summary>거래 판정 결과. 실패해도 에러가 아니라 재생할 Yarn 노드 이름을 돌려준다.</summary>
 public struct TradeOutcome
@@ -83,6 +92,11 @@ public static class SolTradeRules
 
     static TradeOutcome Reject(TradeMode mode, TradeItem offer, RejectReason reason)
     {
+        // 침묵은 노드 배선과 무관하게 무조건 비어 있어야 한다.
+        // 에셋에 실수로 노드가 꽂혀 있어도 대사가 새어 나오면 안 된다(C-15-4 · D-2 15-E-3).
+        if (reason == RejectReason.Silence)
+            return new TradeOutcome { accepted = false, reason = reason, yarnNode = string.Empty };
+
         string overrideNode = offer == null
             ? null
             : (mode == TradeMode.VillageBrowse ? offer.rejectNodeVillage : offer.rejectNodeForest);
@@ -101,6 +115,8 @@ public static class SolTradeRules
         RejectReason.Contaminated    => YarnNodes.Sol_Trade_Reject_Contaminated,
         RejectReason.Empty           => YarnNodes.Sol_Trade_Reject_Empty,
         RejectReason.PlayerWithdraws => YarnNodes.Sol_Trade_Reject_PlayerWithdraws,
+        // 침묵은 부를 노드가 없다. 빈 문자열이면 PlayIfExists 가 건너뛴다.
+        RejectReason.Silence         => string.Empty,
         _                            => YarnNodes.Sol_Trade_Reject_GradeMismatch,
     };
 
