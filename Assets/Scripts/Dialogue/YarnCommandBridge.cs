@@ -272,6 +272,55 @@ public class YarnCommandBridge : MonoBehaviour
         }
     }
 
+    // ── 포트레이트 누락 경고 ──────────────────────────────────────────────
+
+    private bool _warnedNoArtAtAll;
+
+    /// <summary>
+    /// 포트레이트가 비었을 때 알린다. 조용히 넘어가면 왜 인물이 안 뜨는지 알 방법이 없다.
+    /// <para><b>아트가 한 장도 없으면 한 줄로 끝낸다.</b> 지금처럼 <c>CharacterSpriteData</c> 의
+    /// 스프라이트가 전부 비어 있으면 쓰는 감정마다 한 줄씩 쌓이는데, 그 줄들은 새 정보를 주지 않는다.
+    /// 일부라도 채워진 뒤에는 예전처럼 <b>빠진 것만 키당 1회</b> 알린다 — 그때는 어느 감정이
+    /// 빠졌는지가 실제 정보다.</para>
+    /// </summary>
+    private void WarnMissingSprite(string key)
+    {
+        if (HasNoPortraitArtAtAll())
+        {
+            if (_warnedNoArtAtAll) return;
+            _warnedNoArtAtAll = true;
+            Debug.LogWarning(
+                "[YarnCommandBridge] 포트레이트 아트가 아직 0장입니다 — 인물 그림 없이 대사만 나옵니다. " +
+                "감정 ID 매핑은 정상이니 CharacterSpriteData 의 sprite 슬롯만 채우면 됩니다. " +
+                "추가 방법: Assets/Docs/포트레이트_추가방법.md");
+            return;
+        }
+
+        if (_missingSpriteWarned.Add(key))
+            Debug.LogWarning(
+                $"[YarnCommandBridge] 스프라이트 없음: {key} — " +
+                $"Resources/Sprites/{key} 도 CharacterSpriteData 도 비어 있습니다. " +
+                $"추가 방법: Assets/Docs/포트레이트_추가방법.md");
+    }
+
+    /// <summary>등록된 스프라이트 슬롯이 하나도 안 채워졌는가. 첫 호출에만 실제로 센다.</summary>
+    private int _portraitArtCount = -1;
+    private bool HasNoPortraitArtAtAll()
+    {
+        if (_portraitArtCount < 0)
+        {
+            _portraitArtCount = 0;
+            if (spriteData != null && spriteData.characters != null)
+                foreach (var c in spriteData.characters)
+                {
+                    if (c?.sprites == null) continue;
+                    foreach (var s in c.sprites)
+                        if (s != null && s.sprite != null) _portraitArtCount++;
+                }
+        }
+        return _portraitArtCount == 0;
+    }
+
     // ── 대화 종료: Yarn 변수 → C# 반영 ──────────────────────────────────
     private void OnDialogueComplete()
     {
@@ -592,14 +641,7 @@ public class YarnCommandBridge : MonoBehaviour
 
         if (sprite == null)
         {
-            // 여기서 조용히 넘어가면 포트레이트가 왜 안 뜨는지 알 방법이 없다.
-            // 어느 캐릭터의 어느 감정이 비었는지 키당 1회만 남긴다.
-            if (_missingSpriteWarned.Add(key))
-                Debug.LogWarning(
-                    $"[YarnCommandBridge] 스프라이트 없음: {key} — " +
-                    $"Resources/Sprites/{key} 도 CharacterSpriteData 도 비어 있습니다. " +
-                    $"추가 방법: Assets/Docs/포트레이트_추가방법.md");
-
+            WarnMissingSprite(key);
             active.gameObject.SetActive(false);
             yield break;
         }

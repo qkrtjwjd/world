@@ -87,25 +87,56 @@ public class GlitchManager : MonoBehaviour
     {
         // URP 렌더러 초기화(Create) 가 Start 보다 늦게 완료될 수 있으므로 한 프레임 대기
         yield return null;
+        TryBind();   // 여기서 못 잡아도 괜찮다. IsReady() 가 필요할 때마다 다시 시도한다.
+    }
 
+    /// <summary>
+    /// 렌더 피처를 잡는다. <b>한 번 실패해도 포기하지 않는다.</b>
+    /// <c>GlitchRenderFeature.Instance</c> 는 URP 가 렌더러를 실제로 만들 때 대입되므로
+    /// <c>Start</c> 시점엔 아직 없을 수 있다. 예전에는 여기서 한 번 놓치면
+    /// <c>IsReady()</c> 가 영영 false 라 <b>그 세션 내내 글리치가 죽었다</b>(배치모드에서 실측).
+    /// </summary>
+    void TryBind()
+    {
         _feature = GlitchRenderFeature.Instance;
-        if (_feature == null)
-        {
-            Debug.LogWarning("[GlitchManager] GlitchRenderFeature 를 찾을 수 없습니다. " +
-                             "URP Renderer Asset 에 GlitchRenderFeature 를 추가했는지 확인하세요.");
-            yield break;
-        }
+        if (_feature == null) { WarnIfStillMissing(); return; }
 
         _glitchMat = _feature.Material;
         if (_glitchMat == null)
         {
-            Debug.LogWarning("[GlitchManager] GlitchRenderFeature 의 Material 슬롯이 비어 있습니다.");
-            yield break;
+            if (!_warnedMaterial)
+            {
+                _warnedMaterial = true;
+                Debug.LogWarning("[GlitchManager] GlitchRenderFeature 의 Material 슬롯이 비어 있습니다.");
+            }
+            return;
         }
 
+        if (_bound) return;
+        _bound = true;
         ResetShader();
         _feature.SetActive(false);
     }
+
+    /// <summary>
+    /// 첫 렌더 전에는 피처가 없는 것이 정상이라 바로 경고하지 않는다.
+    /// 유예 시간이 지나도 없으면 그때 한 번만 남긴다(배선이 진짜 빠진 경우).
+    /// <para><b>배치모드에서는 아예 경고하지 않는다.</b> 게임 뷰가 없어 아무것도 안 그리므로
+    /// 피처가 만들어지지 않는 것이 정상이고, 여기서 나오는 경고는 배선과 무관한 잡음이다.</para>
+    /// </summary>
+    void WarnIfStillMissing()
+    {
+        if (_warnedMissing || Application.isBatchMode) return;
+        if (Time.realtimeSinceStartup < WarnGraceSeconds) return;
+        _warnedMissing = true;
+        Debug.LogWarning("[GlitchManager] GlitchRenderFeature 를 찾을 수 없습니다. " +
+                         "URP Renderer Asset 에 GlitchRenderFeature 를 추가했는지 확인하세요.");
+    }
+
+    const float WarnGraceSeconds = 5f;
+    private bool _bound;
+    private bool _warnedMissing;
+    private bool _warnedMaterial;
 
     // ── 퍼블릭 API ────────────────────────────────────────────────────────
 
@@ -162,7 +193,12 @@ public class GlitchManager : MonoBehaviour
 
     // ── 내부 ──────────────────────────────────────────────────────────────
 
-    bool IsReady() => _feature != null && _glitchMat != null;
+    // 아직 못 잡았으면 여기서 다시 시도한다 — 피처가 늦게 생겨도 살아난다.
+    bool IsReady()
+    {
+        if (_feature == null || _glitchMat == null) TryBind();
+        return _feature != null && _glitchMat != null;
+    }
 
     void TurnOffLoop()
     {
