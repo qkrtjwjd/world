@@ -10,7 +10,7 @@ title: House_lu_star
 {$이름}: 야광별 스티커다
 {$이름}: 벽을 볼수 없는 날이면 아빠랑 같이 붙였었는데, 별자리도 알려주셨었지
 <<showSprite "루" "eyes_closed" "right">>
-{$이름}: <i>지금은 다 까먹었지만</i>
+루독백: 지금은 다 까먹었지만
 ===
 title: House_lu_star1
 ---
@@ -25,7 +25,7 @@ title: House_lu_star1
 ===
 title: House_lu_star_r
 ---
-유(라디오): <i><color=\#d4c97a>야광별이 아직도 있어? 비오는 날이면 별보고 싶다고 펑펑 울었었지~</color></i>
+radio_yu: 야광별이 아직도 있어? 비오는 날이면 별보고 싶다고 펑펑 울었었지~
 <<showSprite "루" "flustered" "right">>
 {$이름}: 안.. 울었었거든요!
 ===
@@ -46,5 +46,5 @@ title: House_lu_sofa
 title: House_lu_toybox1
 ---
 <<showSprite "루" "neutral" "right">>
-{$이름}: <i>여전히 혼자 앉긴 크다</i>
+루독백: 여전히 혼자 앉긴 크다
 ===

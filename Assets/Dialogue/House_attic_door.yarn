@@ -16,5 +16,5 @@
 title: House_attic_door
 ---
 <<showSprite "루" "neutral" "right">>
-{$이름}: <i>잠겨서 열리지 않는다</i>
+루독백: 잠겨서 열리지 않는다
 ===
