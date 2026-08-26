@@ -42,7 +42,7 @@ title: House_Owl_Wake
 // [지문 제거] 달빛이 은은하게 방 안을 비추고, 창틀에 부엉이가 앉아서 {이름조사("를")} 바라본다. 마치 무언가를 전하려고 하는 듯이.
 
 <<showSprite "루" "neutral" "right" "fixed">>
-루독백: ...뭐지, 저거.
+루독백: …뭐지, 저거.
 
 <<hideSprite "both">>
 // 이후 부엉이 울음 반복 + 창문 도달 대기는 NightSequenceManager 가 처리한다.

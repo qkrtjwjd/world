@@ -1,12 +1,9 @@
 === 현행 Assets/Dialogue 대비 표시 텍스트 diff ===
 '-' 현행에만 있음 (반영하면 사라짐)   '+' 이번 산출물에만 있음
 커맨드·주석은 비교 대상이 아니다 (이번 산출물에는 애초에 없다).
-삭제 49 줄 / 추가 1 줄
+삭제 48 줄 / 추가 0 줄
 
 ### House_Opening
-  [House_Owl_Wake]
-    -루독백: ...뭐지, 저거.
-    +루독백: …뭐지, 저거.
 
 ### House_Attic
   [House_Search_Drawer]
