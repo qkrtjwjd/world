@@ -246,3 +246,25 @@ tags: ingame
 솔: …누구랑 얘기해?
 <<showSprite "솔" "neutral_flat">>
 ===
+
+title: Village_Sol_TalkMenu
+tags: ingame
+---
+// S#14 상시 대화 — 항목 목록 (C-15-1 · F-7-1)
+//   "대화를 고르면 선택창이 닫히고 가능한 대화 항목이 뜬다.
+//    대화가 끝나면 다시 선택창으로 돌아온다."
+//
+// SolStock_Village.talkNode 가 이 노드를 가리킨다.
+// 한 항목이 끝나면 대화가 종료되고 SolTradeUI 가 스스로 선택창(Choice)으로 돌아간다.
+// 그래서 여기서 메뉴로 되돌리지 않는다 — 되돌리면 정본의 "선택창으로 돌아온다" 가 깨진다.
+//
+// 항목 문구는 정본 D S#14 의 소제목을 그대로 쓴다(문단 542 · 546 · 556).
+// ⚠ 이 노드는 수기 허브다. 정본 대사가 0줄이라 node_map.json 에 등재하지 않는다.
+-> 순도에 대하여
+    <<jump Village_Sol_Talk_Purity>>
+-> 마을에 언제부터 있었는지
+    <<jump Village_Sol_Talk_Since>>
+-> 돈을 받지 않는 이유
+    <<jump Village_Sol_Talk_Money>>
+-> 그만한다
+===
