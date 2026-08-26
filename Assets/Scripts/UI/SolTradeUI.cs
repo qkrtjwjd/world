@@ -14,17 +14,29 @@ using TMPro;
 ///   - 이전 키(backKey): Choice 복귀 / 취소 키(설정의 일시정지 키): 전체 종료
 ///
 /// [금지 — 정본 기준]
-///   가격·수치·등급을 표시하지 않는다. 잔액·통화·되판매 감가 개념이 없다.
-///   등급 표시용 아이콘·텍스트를 만들지 않는다.
+///   가격·잔액·예치금·통화·되판매 감가는 개념 자체를 두지 않는다.
+///   인형화 수치를 어떤 형태로도 표시하지 않는다.
+///
+/// [등급은 표시한다] — 2026-08-27 개정
+///   ⚠ 이 항목은 뒤집힌 규정이다. 되돌리지 말 것.
+///   원래 이 주석은 "가격·수치·등급을 표시하지 않는다" 였고 근거는 C-11 이었다.
+///   <b>F-7-4(문단 804)와 C-15-5(문단 1098)가 그것을 개정했다</b> —
+///   "등급은 표시한다. 인형화 수치는 표시하지 않는다. C-11 의 UI 금지 항목은 게이지 수치에만 적용된다."
+///   데모는 하등급 단일 구성이므로 화면에 나타나는 값은 「하」 하나뿐이다(C-15-5 주석).
+///   ※ C-11 문단 876 은 아직 옛 문장 그대로다. 정본끼리 어긋나 있으니 C 를 근거로 되돌리지 않는다.
 ///
 /// [Unity 에디터 세팅]
 ///   1. Canvas 하위 Panel 에 이 컴포넌트 추가
 ///   2. panel / choiceGroup / tradeGroup / itemFocusGroup : 각 단계의 루트 GameObject
 ///   3. talkButton, tradeButton : Choice 단계 버튼
 ///   4. slotContainer + openSlotPrefab + coveredSlotPrefab : 품목 목록
-///   5. focusIcon / focusNameText / focusDescriptionText : 품목 상세
+///   5. focusIcon / focusNameText / focusDescriptionText / focusGradeText : 품목 상세
 ///   6. offerContainer + offerSlotPrefab : 루가 내밀 수 있는 소지품
 ///   7. sfx* : AudioManager 에 이미 등록된 이름만 넣는다. 비워두면 무음.
+///
+///   ⚠ 등급은 <b>품목 목록 칸이 아니라 ItemFocus 에만</b> 둔다. BuildSlotList 가
+///     GetComponentInChildren&lt;TMP_Text&gt;() 로 이름 칸을 잡기 때문에, 슬롯 프리팹에
+///     TMP_Text 를 하나 더 넣으면 이름이 엉뚱한 칸에 들어간다.
 /// </summary>
 public class SolTradeUI : MonoBehaviour
 {
@@ -68,6 +80,8 @@ public class SolTradeUI : MonoBehaviour
     public Image      focusIcon;
     public TMP_Text   focusNameText;
     public TMP_Text   focusDescriptionText;
+    [Tooltip("등급 표시 자리 (F-7-4 · C-15-5). 이름·설명과 달리 마을에서도 가리지 않는다.\n비워두면 표시하지 않고 에러도 나지 않는다.")]
+    public TMP_Text   focusGradeText;
     public Transform  offerContainer;
     [Tooltip("Button + Image(아이콘) + TMP_Text(개수) 를 포함한 프리팹")]
     public GameObject offerSlotPrefab;
@@ -258,8 +272,26 @@ public class SolTradeUI : MonoBehaviour
         if (focusDescriptionText != null)
             focusDescriptionText.text = reveal ? want.description : hiddenDescriptionLabel;
 
+        // 등급은 이름·설명과 달리 마을에서도 가리지 않는다.
+        // C-15-2 가 가리라고 한 것은 '이름과 설명' 둘뿐이고, C-15-5 는 등급을 표시하라고 한다.
+        if (focusGradeText != null)
+            focusGradeText.text = GradeLabel(want.grade);
+
         BuildOfferList();
     }
+
+    /// <summary>
+    /// 등급의 화면 표기. 데모는 하등급 단일 구성이라 실제로 뜨는 것은 「하」 하나뿐이다(C-15-5 주석).
+    /// 상위 등급 표기는 본편에서 쓰이므로 자리만 맞춰 둔다.
+    /// </summary>
+    static string GradeLabel(Grade grade) => grade switch
+    {
+        Grade.Low  => "하",
+        Grade.Mid  => "중",
+        Grade.High => "상",
+        Grade.Top  => "최상",
+        _          => "",
+    };
 
     // ─────────────────────────────────────────────
     //  품목 목록
