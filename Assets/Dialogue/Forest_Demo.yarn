@@ -1,5 +1,5 @@
 // ============================================================
-// 무채색 낙원 — 숲 구간 (D-3 / S#16 ~ S#17)
+// 무채색 낙원 — 숲 구간 (D-3 / S#16 ~ S#20)
 //
 // 2026-08-16 — D 시나리오 정본을 반영했다. 표시 텍스트는 Scenario/output_v3/Forest_Demo.yarn
 //   (화이트리스트 변환 v3, 게이트 PASS: S#16A 0 · S#16B 3 · S#16C 5 · S#16D 3 ·
@@ -12,8 +12,12 @@
 //     Shelter_Entry · Shelter_Mirror · Shelter_Exit_Sol
 //   삭제 전 전수 조사에서 씬·프리팹·에셋·C# 실동작 참조가 **0건**임을 확인했다.
 //
-// ⚠ 정본은 S#17E 에서 끝난다. node_map.json 범위도 S#01~S#17E 다.
-//   S#18 이후 원고는 아직 없으므로, 데모를 끝까지 굴리기 위해 구 원고 노드 2개를 남겼다:
+// 2026-08-27 — D 2026-08-26 개정분에서 S#20(숲 → 솔 재조우 · 거래 성립)을 반영했다.
+//   게이트 PASS(S#20 47/47 · 솔 18 · 루 14 · 쿠루 15). 인형화 0~30 / 31+ 두 분기가 원고에 다 있다.
+//   같은 개정에서 [분기] 표기가 새로 들어와 파서의 STAGING_TAGS 에 열었다.
+//
+// ⚠ S#18(전투 직후 → 솔 이야기)은 정본이 여전히 「※ 대사 미작성」이라 노드를 만들지 않았다.
+//   S#21(라디오)도 비트 뼈대만이다. 데모를 끝까지 굴리기 위해 구 원고 노드 2개를 남겨 뒀다:
 //     Forest_GoldenThorns  결계 강화 = 데모 종료의 뼈대 (C-14-5)
 //     Forest_Camp_Night    데모 엔딩 타이틀
 //   이 둘은 정본 원고가 나오면 교체 대상이다.
@@ -44,6 +48,18 @@
 //   S#17C Forest_Wolf_Hurt          피해 직후 1회 · 각설탕 사용 안내
 //   S#17D Forest_Wolf_KillEnd       [공격] 으로 종료
 //   S#17E Forest_Wolf_PurifyEnd     [쓰다듬기] 3회 정화로 종료
+//   S#19A Forest_Wolf2_Encounter    두 번째 늑대 · 쿠루가 무기를 묻는다
+//   S#19B Forest_Wolf2_Reveal       현실 전환 — "이제 보이는구나"
+//   S#19C Forest_Wolf2_Weakpoint    전투 중 · 약점 표시
+//         Forest_Wolf2_Finisher     HP 5% 이하 · E키 마무리 프롬프트
+//   S#19D Forest_Wolf2_KillEnd      숨통을 끊은 경우
+//   S#19E Forest_Wolf2_SpareEnd     놓아준 경우
+//   S#20  Forest_Sol_Reunion        솔 재조우 (분기 판정 → _Low / _High)
+//         Forest_Sol_Reject_Sugar   각설탕 거절 (분기 판정 → _Low / _High)
+//         Sol_Trade_Reject_Contaminated  검은 구슬 거절 (분기 없음)
+//         Forest_Sol_Talk_Faster    상시 대화 1 — 어떻게 저보다 더 빨리 왔어요?
+//         Forest_Sol_Talk_Stock     상시 대화 2 — Intro → 분기 → Common
+//         Forest_Sol_Talk_Outside   상시 대화 3 — Intro → 분기
 //   (구)  Forest_GoldenThorns       결계 강화 — 원고 대기
 //   (구)  Forest_Camp_Night         데모 엔딩 타이틀 — 원고 대기
 // ============================================================
@@ -465,6 +481,374 @@ tags: ingame
 
 <<showSprite "루" "neutral" "right">>
 {$이름}: 네!
+<<hideSprite>>
+===
+
+// ════════════════════════════════════════════════════════════
+//  S#20 — 숲 → 솔 재조우 · 거래 성립
+//  2026-08-27 반영. 정본 D 2026-08-26 개정분.
+//  게이트 PASS(S#20 47/47 · 솔 18 · 루 14 · 쿠루 15).
+//
+//  ⚠ 이 씬은 인형화 0~30 / 31+ 두 버전이 원고에 다 들어와 있다.
+//    F v1.15 2-2 가 "원고가 확정된 씬은 두 버전 모두 채운다" 로 개정한 결과다.
+//    (CLAUDE.md §4 의 "31 이상은 노드만 만들고 비운다" 는 이 씬에 적용되지 않는다)
+//
+//  ⚠ 분기 판정은 씬 진입 시 1회다(F-4-8 · 정본 S#20 머리 주석).
+//    대사 0줄짜리 디스패처 노드가 인형화를 한 번만 평가하고 jump 한다.
+//    갈라진 뒤에는 재판정하지 않으므로 분기 노드 안에 조건문을 두지 않는다.
+//    디스패처는 정본 대사가 0줄이라 node_map.json 에 등재하지 않았다.
+//
+//  ⚠ 거래창은 아직 게임에 없다(수동작업 15번 — SolStock·TradeItem·SolTradeUI 0개).
+//    open_sol_trade 는 SolStock 에셋 이름을 인자로 받는데 그 에셋이 없으므로
+//    커맨드를 지어 넣지 않고 [TRIGGER] 주석으로 남긴다(CLAUDE.md §0-4).
+//
+//  ── 노드 지도 ────────────────────────────────────────────────
+//   S#20-A Forest_Sol_Reunion            분기 판정 (대사 0)
+//          Forest_Sol_Reunion_Low        0~30 · 4줄
+//          Forest_Sol_Reunion_High       31+  · 7줄
+//   S#20-B Forest_Sol_Reject_Sugar       분기 판정 (대사 0)
+//          Forest_Sol_Reject_Sugar_Low   0~30 · 4줄
+//          Forest_Sol_Reject_Sugar_High  31+  · 7줄
+//   S#20-C Sol_Trade_Reject_Contaminated 검은 구슬 거절 · 1줄 (분기 없음)
+//   S#20-D Forest_Sol_Talk_Faster        상시 대화 1 — 분기 판정
+//          Forest_Sol_Talk_Faster_Low/High
+//          Forest_Sol_Talk_Stock         상시 대화 2 — Intro → 분기 → Common
+//          Forest_Sol_Talk_Stock_Intro/Low/High/Common
+//          Forest_Sol_Talk_Outside       상시 대화 3 — Intro → 분기
+//          Forest_Sol_Talk_Outside_Intro/Low/High
+// ════════════════════════════════════════════════════════════
+
+title: Forest_Sol_Reunion
+tags: ingame
+---
+// S#20-A 조우 — 분기 판정만 한다. 대사 없음.
+// [TRIGGER] 2차 전투(S#19) 종료 후 이동 중 자동 발동
+// [FILTER] 직전 전투의 필터를 유지한다 — set_filter 를 부르지 않는 것이 정본이다.
+// [CAM] 솔이 먼저 고개를 돌린다. 루의 걸음이 그 뒤에 멈춘다.
+// [지문 제거] 좌판·가방·황금빛 눈 → 배경·스프라이트로 전달한다.
+<<if $인형화 >= 31>>
+    <<jump Forest_Sol_Reunion_High>>
+<<else>>
+    <<jump Forest_Sol_Reunion_Low>>
+<<endif>>
+===
+
+title: Forest_Sol_Reunion_Low
+tags: ingame
+---
+// S#20-A 인형화 0~30 — 루가 지난 만남을 스스로 꺼낸다
+<<showSprite "솔" "neutral_flat">>
+솔: 둘이 같이 있네.
+
+<<showSprite "루" "neutral" "right">>
+{$이름}: …또 만났네요.
+
+<<showSprite "쿠루" "neutral_observe">>
+쿠루: 물건이 별로 없네. 상인이 이렇게 물건을 조금 들고 다녀도 되겠어?
+
+<<showSprite "솔" "neutral_flat">>
+솔: 살 거야?
+
+// [TRIGGER] 대화 종료 → 거래창 개방(ForestTrade) · 숲 상시 대화 개방
+//   ⚠ open_sol_trade 가 들어갈 자리다. SolStock 에셋이 아직 없어 비워 둔다.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Reunion_High
+tags: ingame
+---
+// S#20-A 인형화 31+ — 루는 받기만 하고, 새벽 손님 정보가 눈앞에서 샌다
+// ▶ 연출 솔의 시선이 루의 손끝에 한 번 머문다(마디의 진행). 대사로 말하지 않는다.
+// ▶ 연출 루는 이 대화에 반응하지 않는다. 시선도 움직이지 않는다.
+<<showSprite "솔" "neutral_flat">>
+솔: 둘이 같이 있네.
+
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: …네.
+
+// ▶ 스프라이트 쿠루 — 고개를 숙인 정지 자세(31+ 전용 1종). 미제작.
+//   등록된 emotionId 에 해당 계열이 없어 closed_guard 로 임시 대체했다(F 7-5 · 신규 에셋 대기).
+<<showSprite "쿠루" "closed_guard">>
+쿠루: 물건이 별로 없네. 상인이 이렇게 물건을 조금 들고 다녀도 되겠어?
+
+<<showSprite "솔" "neutral_flat">>
+솔: 오늘 새벽에 큰 손님이 싹 사가서 지금은 별로 없는 거뿐이야.
+
+<<showSprite "쿠루" "flustered">>
+쿠루: 손님 신상을 이렇게 팔면 되나—
+
+<<showSprite "솔" "neutral_flat">>
+솔: 물건이 적은 이유를 설명한 것뿐입니다.
+솔: 살 거야?
+
+// [TRIGGER] 대화 종료 → 거래창 개방(ForestTrade) · 숲 상시 대화 개방
+<<hideSprite>>
+===
+
+title: Forest_Sol_Reject_Sugar
+tags: ingame
+---
+// S#20-B 각설탕 거절 — 분기 판정만 한다. 대사 없음.
+// [TRIGGER] 거래창에서 각설탕 선택
+//   ⚠ TradeItem(각설탕) 의 rejectNodeForest 가 이 노드를 가리켜야 한다. 에셋은 수동작업 15번.
+<<if $인형화 >= 31>>
+    <<jump Forest_Sol_Reject_Sugar_High>>
+<<else>>
+    <<jump Forest_Sol_Reject_Sugar_Low>>
+<<endif>>
+===
+
+title: Forest_Sol_Reject_Sugar_Low
+tags: ingame
+---
+// S#20-B 인형화 0~30 — 루가 실망을 스스로 낸다
+// ※ 쿠루는 솔이 거절할 것을 이미 알고 있다. 웃음은 그것이 새어 나온 자리이며 개그로 처리한다.
+//   웃음의 이유를 지문으로 확정하지 않는다 — 모른 채로 남는 것이 이 장면의 기능이다.
+<<showSprite "루" "flustered" "right">>
+{$이름}: 저… 쿠루, 이거 팔아도 되요?
+
+<<showSprite "쿠루" "smirk_memo">>
+쿠루: 하하하 {$이름}! 너 귀엽네.
+쿠루: 그건 내가 너에게 준 거니까 이젠 네 거야. 너의 마음대로 해도 되.
+
+<<showSprite "솔" "neutral_flat">>
+솔: 지금 내가 가지고 있는 것보다 너무 가치가 높아. 받을 수 없어.
+
+// ▶ 스프라이트 루 — 입을 부풀린 표정. 미등록(정본 D-3 남은 결정 · F 7-5).
+//   지어내지 않고 비워 둔다. 감정 ID 가 등록되면 여기에 showSprite 를 얹는다.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Reject_Sugar_High
+tags: ingame
+---
+// S#20-B 인형화 31+ — 루는 아무것도 내지 않고, 쿠루가 그것을 실망으로 대신 읽는다
+// ※ 쿠루의 오독이 이 분기의 지표다. 지문으로 설명하지 않는다.
+// ※ 쿠루가 두 번 쓰다듬는다. 접촉의 증가가 그의 불안이며 대사로 말하지 않는다.
+// ※ 쿠루가 속으로 안심하는 것은 오판이다. 지문으로 정정하지 않는다(B-쿠루-3).
+<<showSprite "쿠루" "neutral_observe">>
+쿠루: 왜? 각설탕 또 줘?
+
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: 이거 팔아도 되요?
+
+<<showSprite "쿠루" "smirk_memo">>
+쿠루: 당연히 그래도 되지! 내가 너한테 준 건 너 마음대로 하라고 준 거야.
+쿠루: 귀여운 자식. {$이름}, 네가 원하는 대로 해.
+
+<<showSprite "솔" "neutral_flat">>
+솔: 지금 내가 가지고 있는 것보다 너무 가치가 높아. 받을 수 없어.
+
+// ▶ 연출 각설탕이 허공을 맴돈다 — 루가 손을 거두지 못하는 것이다.
+//   카메라를 손에 붙이지 않는다. 강조하면 증상이 아니라 연출이 된다.
+<<showSprite "쿠루" "neutral_observe">>
+쿠루: 너무 실망하진 마. 나중에 각설탕으로 바꿀 수 있는 게 있겠지.
+
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: 네.
+<<hideSprite>>
+===
+
+title: Sol_Trade_Reject_Contaminated
+tags: ingame
+---
+// S#20-C 검은 구슬 거절 — 몰살로 전투를 끝낸 플레이어만 도달한다
+// [TRIGGER] 거래창에서 검은 구슬 선택
+// ▶ 연출 각설탕과 같은 A안 트윈. 아이콘을 위로 짧게 띄웠다가 원위치로 되돌린다.
+//
+// ⚠ 인형화 분기를 두지 않는다. 거절 사유가 등급이 아니라 오염이라 루의 상태와 무관하다.
+// ⚠ 쿠루는 반응하지 않는다. 쿠루가 준 물건이 아니므로 새어 나올 것이 없다.
+// ⚠ 루의 대사를 붙이지 않는다. 오염이 무엇인지 묻는 방향으로 흐르게 하지 않는다.
+// ⚠ 노드 이름에 Forest_ 접두가 없는 것은 의도다 —
+//   YarnNodes.Sol_Trade_Reject_Contaminated 가 이 이름이고 SolTradeRules 의 기본 경로가 부른다.
+<<showSprite "솔" "neutral_flat">>
+솔: 오염된건 안 받아.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Talk_Faster
+tags: ingame
+---
+// S#20-D 상시 대화 1 — 어떻게 저보다 더 빨리 왔어요?
+// [TRIGGER] S#20-A 종료 후 개방. 순서 없음. 반복 선택 가능
+// ※ D-2 상시 대화 2 의 회수다. 마을에서 루는 「내가 물어본 건 그런 뜻이 아닌데」를 삼켰다.
+// ※ 「내가 원하면 어디든 갈 수 있어」는 사실이 아니다. 마을에서 한 것과 같은 거짓말이다(B-솔-5).
+<<if $인형화 >= 31>>
+    <<jump Forest_Sol_Talk_Faster_High>>
+<<else>>
+    <<jump Forest_Sol_Talk_Faster_Low>>
+<<endif>>
+===
+
+title: Forest_Sol_Talk_Faster_Low
+tags: ingame
+---
+// S#20-D 대화 1 · 인형화 0~30 — 루가 의문을 입 밖에 내고 한 번 더 파고든다
+<<showSprite "루" "suspicious" "right">>
+{$이름}: …분명 길은 하나밖에 없고 여기까지 오면서 한 번도 마주치지 않았는데, 어떻게 저보다 더 빨리 왔어요?
+
+<<showSprite "솔" "neutral_flat">>
+솔: 내가 원하면 어디든 갈 수 있어.
+
+<<showSprite "루" "puzzled" "right">>
+{$이름}: 어디든이요?
+
+<<showSprite "쿠루" "neutral_observe">>
+쿠루: 그러니까, 그걸 어떻게 했냐고 물어본 거잖아.
+
+<<showSprite "솔" "subtle_pause">>
+솔: 비밀.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Talk_Faster_High
+tags: ingame
+---
+// S#20-D 대화 1 · 인형화 31+ — 루의 말이 질문이 아니라 진술이 된다.
+//   물음표가 사라지고 되묻기도 사라진다. 파고드는 자리를 쿠루가 통째로 가져간다.
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: 길은 하나인 줄 알았는데. 저보다 빨리 오셨네요.
+
+<<showSprite "솔" "neutral_flat">>
+솔: 내가 원하면 어디든 갈 수 있어.
+
+<<showSprite "쿠루" "stern">>
+쿠루: 어디든? 정말 어디로든 갈 수 있는 거 맞아? 방법은?
+
+<<showSprite "솔" "subtle_pause">>
+솔: 비밀.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Talk_Stock
+tags: ingame
+---
+// S#20-D 상시 대화 2 — 본래 물건을 별로 안 들고 다니세요?
+// 공통 구간이 앞뒤로 있어 Intro → 분기 → Common 세 조각으로 나눴다(F-4-8 공통 구간 분리).
+// 분기 판정은 Intro 끝에서 1회만 한다.
+<<jump Forest_Sol_Talk_Stock_Intro>>
+===
+
+title: Forest_Sol_Talk_Stock_Intro
+tags: ingame
+---
+// 공통 앞 — 솔은 침묵하고 쿠루가 끼어든다
+<<showSprite "쿠루" "smirk_memo">>
+쿠루: {$이름}, 원하는 물건이 없어?
+
+<<if $인형화 >= 31>>
+    <<jump Forest_Sol_Talk_Stock_High>>
+<<else>>
+    <<jump Forest_Sol_Talk_Stock_Low>>
+<<endif>>
+===
+
+title: Forest_Sol_Talk_Stock_Low
+tags: ingame
+---
+// 인형화 0~30 — 루가 실망을 말한다. 쿠루는 조금 놀랐다가 그 반응을 메모한다.
+// ※ 쿠루의 메모지 버릇은 B-쿠루-4 확정 항목이다. 여기서는 솔이 아니라 루를 적는다.
+//   무엇을 적는지는 보여주지 않는다.
+<<showSprite "루" "holding_tears" "right">>
+{$이름}: 생각보다 뭐가 없어서 조금 실망했어요…
+<<jump Forest_Sol_Talk_Stock_Common>>
+===
+
+title: Forest_Sol_Talk_Stock_High
+tags: ingame
+---
+// 인형화 31+ — 루가 감정을 말하지 않는다. 쿠루의 「조금 놀랐다가」도 메모도 사라진다
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: 네. 별로 뭐가 없네요.
+<<jump Forest_Sol_Talk_Stock_Common>>
+===
+
+title: Forest_Sol_Talk_Stock_Common
+tags: ingame
+---
+// 공통 뒤 — 대사를 바꾸지 않고 앞줄만으로 의미가 뒤집히는 자리다.
+//   0~30 에서는 루의 실망을 받는 말, 31+ 에서는 루가 말하지 않은 감정을 쿠루가 붙이는 말이 된다.
+// ※ 쿠루의 「다음에 만날 땐」은 자기가 새벽에 사간 것을 알고 하는 말이다.
+// ※ 쿠루가 솔을 「상인씨」로 부른다. 데모에서 솔의 이름은 아직 밝혀지지 않았다.
+<<showSprite "쿠루" "smirk_memo">>
+쿠루: {$이름}, 너무 실망하진 마. 다음에 만날 땐 물건이 더 다양하고 알찬 것들로 채워져 있겠지. 그렇지, 상인씨?
+
+// ※ 솔은 쿠루를 보지 않는다. 루를 본 채로 대답한다 — 쿠루를 상대하지 않는다는 표시다.
+//   시선 지문 한 줄로만 처리하고 설명하지 않는다.
+<<showSprite "솔" "subtle_pause">>
+솔: …응, 그런 게.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Talk_Outside
+tags: ingame
+---
+// S#20-D 상시 대화 3 — 밖에 나가본 적 있어요?
+// 공통 앞줄이 있어 Intro → 분기 두 조각으로 나눴다. 판정은 Intro 끝에서 1회.
+<<jump Forest_Sol_Talk_Outside_Intro>>
+===
+
+title: Forest_Sol_Talk_Outside_Intro
+tags: ingame
+---
+// 공통 앞 — 솔은 오랫동안 침묵하다가 입을 연다
+// ※ 「20년 전」은 대재앙 이전을 가리킨다. 사이의 2년은 대사로 꺼내지 않는다(B-솔-5 · A-11-4).
+// ※ 쿠루의 표정이 어두워지는 것은 그도 그 시절을 겪었기 때문이다. 지문으로 설명하지 않는다.
+<<showSprite "솔" "subtle_pause">>
+솔: 20년 전에는 그랬지.
+
+<<if $인형화 >= 31>>
+    <<jump Forest_Sol_Talk_Outside_High>>
+<<else>>
+    <<jump Forest_Sol_Talk_Outside_Low>>
+<<endif>>
+===
+
+title: Forest_Sol_Talk_Outside_Low
+tags: ingame
+---
+// 인형화 0~30 — 루의 질문이 솔에게로 간다
+<<showSprite "루" "puzzled" "right">>
+{$이름}: 그럼 최근에는요?
+
+// ▶ 연출 솔이 자신의 얼굴에서 황금색으로 빛나는 부분을 가리킨다.
+<<showSprite "솔" "neutral_flat">>
+솔: 이거 때문에 안 돼.
+
+<<showSprite "쿠루" "smirk_memo">>
+쿠루: 그게 정확히 뭘 의미하는 건데? 어쩌다가 그렇게 된 건데? 그로 인해 네가 얻은 것과 잃은 것은? 너와 같은 인물이 또 있어?
+
+// ※ 솔은 쿠루의 폭풍 질문에 대답하지 않고 루를 바라본다.
+<<showSprite "솔" "neutral_flat">>
+솔: 너는 무사히 나가면 좋겠네.
+
+<<showSprite "루" "holding_tears" "right">>
+{$이름}: 네, 감사해요.
+<<hideSprite>>
+===
+
+title: Forest_Sol_Talk_Outside_High
+tags: ingame
+---
+// 인형화 31+ — 루의 질문이 자기에게로 온다.
+//   남이 보이지 않게 된 것이지 이기적으로 변한 것이 아니다.
+//   「저는 나갈 수 있나요?」는 능동적으로 보이지만 실은 확인을 구하는 말이다.
+// ⚠ 이 분기에서는 솔의 황금빛과 「이거 때문에 안 돼」가 통째로 빠진다.
+//   회수 지점을 따로 만들지 않는다 — 정보가 빠진 것이 아니라 루가 얻지 못한 것이다.
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: 저는 나갈 수 있나요?
+
+// ※ 솔이 쿠루를 「저분」이라 부른다. 이름을 모르는 것이 아니라 부르지 않는 것이며
+//   「상인씨」와 대칭을 이룬다.
+<<showSprite "솔" "neutral_flat">>
+솔: 응, 할 수 있을 거야. 그리고 안 되도 저분이 도와주시겠지.
+
+<<showSprite "쿠루" "smirk_memo">>
+쿠루: 걱정 마 {$이름}, 넌 꼭 밖으로 나가게 도와줄게. 날 믿어.
+
+// ▶ 연출 루는 고개를 갸웃하다가 이내 끄덕인다. 그 반응조차 늦다는 표시다.
+<<showSprite "루" "blank_shock" "right">>
+{$이름}: 네.
 <<hideSprite>>
 ===
 

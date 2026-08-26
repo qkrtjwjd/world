@@ -170,27 +170,27 @@
     ],
     "BE#02-b": [
       {
-        "para": 641,
+        "para": 648,
         "tag": "[FILTER]",
         "body": "환상(F)"
       },
       {
-        "para": 642,
+        "para": 649,
         "tag": "[BGM]",
         "body": "없음"
       },
       {
-        "para": 643,
+        "para": 650,
         "tag": "[SFX]",
         "body": "문 너머에서 저녁 만드는 소리. 도마 소리, 냄비 소리. 아주 멀게"
       },
       {
-        "para": 644,
+        "para": 651,
         "tag": "[CAM]",
         "body": "루 시점 고정. 문이 열리며 들어오는 빛과 세라의 실루엣. 얼굴은 역광으로 반쯤만 보이게"
       },
       {
-        "para": 650,
+        "para": 657,
         "tag": "[TRIGGER]",
         "body": "문 닫힘 → BE#02-c 자동 전환",
         "command": null,
@@ -199,32 +199,32 @@
     ],
     "BE#02-c": [
       {
-        "para": 655,
+        "para": 662,
         "tag": "[FILTER]",
         "body": "환상(F)"
       },
       {
-        "para": 656,
+        "para": 663,
         "tag": "[BGM]",
         "body": "없음"
       },
       {
-        "para": 657,
+        "para": 664,
         "tag": "[SFX]",
         "body": "의자 끄는 소리. 식기 소리. BE#01-d와 같은 소스를 쓴다"
       },
       {
-        "para": 658,
+        "para": 665,
         "tag": "[CAM]",
         "body": "S#04A · BE#01-d와 같은 구도. 접시 수만 다르다"
       },
       {
-        "para": 664,
+        "para": 671,
         "tag": "[UI]",
         "body": "엔딩 화면 → 「다시 시도해 보시겠습니까?」"
       },
       {
-        "para": 665,
+        "para": 672,
         "tag": "[TRIGGER]",
         "body": "복귀 → 마을 진입 지점",
         "command": null,

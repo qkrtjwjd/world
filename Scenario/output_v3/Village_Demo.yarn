@@ -76,21 +76,22 @@ title: Village_Sera_Captured
 ===
 
 // ── 판정 실패 (UNCLASSIFIED) — 사람이 확인할 것 ──
-// UNCLASSIFIED [문단542 S#14] 대화 1.  순도에 대하여
-// UNCLASSIFIED [문단546 S#14] 대화 2.  마을에 언제부터 있었는지
-// UNCLASSIFIED [문단556 S#14] 대화 3.  돈을 받지 않는 이유
-// UNCLASSIFIED [문단563 S#15] 15-A.  세라 — 마을 전역
+// UNCLASSIFIED [문단542 S#14] 대화 1. 순도에 대하여
+// UNCLASSIFIED [문단546 S#14] 대화 2. 마을에 언제부터 있었는지
+// UNCLASSIFIED [문단556 S#14] 대화 3. 돈을 받지 않는 이유
+// UNCLASSIFIED [문단563 S#15] 15-A. 세라 — 마을 전역
 // UNCLASSIFIED [문단564 S#15] [1차 발각]
-// UNCLASSIFIED [문단568 S#15] [2차 발각]  → Bad ending #2. 감금 엔딩 후 마을 진입 지점으로 복귀. 인형화 페널티 없음
-// UNCLASSIFIED [문단571 S#15] 15-B.  미루 — 빵집
-// UNCLASSIFIED [문단581 S#15] 15-C.  아모 — 꽃집
-// UNCLASSIFIED [문단588 S#15] 15-D.  광장 아이들
-// UNCLASSIFIED [문단593 S#15] 15-E.  솔의 거래창
-// UNCLASSIFIED [문단598 S#15] 15-E-1.  각설탕 — 루가 스스로 거둔다
-// UNCLASSIFIED [문단606 S#15] 15-E-2.  거절 — 빵 반죽 · 시든 아네모네
-// UNCLASSIFIED [문단613 S#15] 5. 신규 필요 에셋
-// UNCLASSIFIED [문단614 S#15] 배경  마을 광장 / 빵집 외관 / 꽃집 외관 / 마을 길 · 골목
-// UNCLASSIFIED [문단615 S#15] 캐릭터  솔 좌판 앉은 자세 / 미루 반죽 치는 루프 / 아모 화분 만지는 루프 / 광장 아이들 놀이 루프 / 세라 마을 보행 (뛰는 모션 없음)
-// UNCLASSIFIED [문단616 S#15] 오브젝트  솔의 낡은 가방 / 각설탕 (솔 소지) / 엄폐물 세트 (수레·화분·간판) 및 소실 단계
-// UNCLASSIFIED [문단617 S#15] 아이템  빵 반죽 / 시든 아네모네
-// UNCLASSIFIED [문단619 S#15] 마을 구간 배드 엔딩 — BE#02
+// UNCLASSIFIED [문단568 S#15] [2차 발각] → Bad ending #2. 감금 엔딩 후 마을 진입 지점으로 복귀. 인형화 페널티 없음
+// UNCLASSIFIED [문단571 S#15] 15-B. 미루 — 빵집
+// UNCLASSIFIED [문단581 S#15] 15-C. 아모 — 꽃집
+// UNCLASSIFIED [문단588 S#15] 15-D. 광장 아이들
+// UNCLASSIFIED [문단593 S#15] 15-E. 솔의 거래창
+// UNCLASSIFIED [문단598 S#15] 15-E-1. 각설탕 — 루가 스스로 거둔다
+// UNCLASSIFIED [문단606 S#15] 15-E-2. 거절 — 빵 반죽 · 시든 아네모네
+// UNCLASSIFIED [문단613 S#15] 15-E-3. 침묵 — 마시멜로
+// UNCLASSIFIED [문단620 S#15] 5. 신규 필요 에셋
+// UNCLASSIFIED [문단621 S#15] 배경 마을 광장 / 빵집 외관 / 꽃집 외관 / 마을 길 · 골목
+// UNCLASSIFIED [문단622 S#15] 캐릭터 솔 좌판 앉은 자세 / 미루 반죽 치는 루프 / 아모 화분 만지는 루프 / 광장 아이들 놀이 루프 / 세라 마을 보행 (뛰는 모션 없음)
+// UNCLASSIFIED [문단623 S#15] 오브젝트 솔의 낡은 가방 / 각설탕 (솔 소지) / 엄폐물 세트 (수레·화분·간판) 및 소실 단계
+// UNCLASSIFIED [문단624 S#15] 아이템 빵 반죽 / 시든 아네모네
+// UNCLASSIFIED [문단626 S#15] 마을 구간 배드 엔딩 — BE#02
