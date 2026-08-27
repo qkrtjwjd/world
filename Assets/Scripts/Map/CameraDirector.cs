@@ -162,8 +162,19 @@ public class CameraDirector : MonoBehaviour
         var cam = CameraFollow.Instance;
         if (cam == null) yield break;
 
+        // 접근성 설정을 여기서 한 번에 존중한다.
+        // 예전에는 shakeOffset 대체 경로(CameraFollow.LateUpdate)에만 걸려 있어서,
+        // 노이즈 경로를 타면 "화면 흔들림 끄기" 가 무시됐다.
+        if (!(SettingsManager.Instance?.cameraShakeEnabled ?? true)) yield break;
+
         var noise = cam.GetNoise();
-        if (noise != null)
+
+        // ⚠ 컴포넌트가 있어도 NoiseProfile 이 비어 있으면 진폭을 올려도 출력이 0 이다.
+        //   Cinemachine 자신도 IsValid 를 `enabled && NoiseProfile != null` 로 본다.
+        //   존재 여부만 보고 이 분기를 타면 흔들림이 조용히 죽는다 — 2026-08-27 까지 그 상태였다.
+        //   (프로젝트에 NoiseSettings 에셋이 0개라 yarn 의 cam_shake 3건이 전부 무효였다.)
+        //   프로필이 없으면 shakeOffset 대체 경로로 넘긴다.
+        if (noise != null && noise.NoiseProfile != null)
         {
             // Cinemachine noise 기반 쉐이크
             float elapsed = 0f;
