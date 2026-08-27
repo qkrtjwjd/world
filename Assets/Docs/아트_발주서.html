@@ -1,0 +1,539 @@
+<title>무채색 낙원 아트 발주서</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap">
+
+<style>
+  :root{
+    --paper:#f1efea;
+    --surface:#f8f7f4;
+    --sunk:#e7e4dc;
+    --ink:#17161a;
+    --ink-soft:#413f42;
+    --muted:#78756e;
+    --line:#d9d5cb;
+    --line-soft:#e6e2d8;
+    --gold:#8a7c3a;
+    --gold-bright:#d4c97a;
+    --gold-wash:#f0ead2;
+    --blocked:#9d3f34;
+    --blocked-wash:#f3e2de;
+    --temp:#5d6a72;
+    --temp-wash:#e3e8ea;
+    --wait:#6f6a5c;
+    --wait-wash:#eae7dc;
+    --shadow:0 1px 2px rgba(23,22,26,.06),0 8px 24px -16px rgba(23,22,26,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#121214;
+      --surface:#191919;
+      --sunk:#0d0d0e;
+      --ink:#eceae4;
+      --ink-soft:#c3c0b8;
+      --muted:#8d8a82;
+      --line:#2e2d2b;
+      --line-soft:#242322;
+      --gold:#d4c97a;
+      --gold-bright:#e6dda0;
+      --gold-wash:#2a271b;
+      --blocked:#d98577;
+      --blocked-wash:#2e1e1a;
+      --temp:#9fb0b9;
+      --temp-wash:#1b2226;
+      --wait:#a49e8d;
+      --wait-wash:#232219;
+      --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#121214;
+    --surface:#191919;
+    --sunk:#0d0d0e;
+    --ink:#eceae4;
+    --ink-soft:#c3c0b8;
+    --muted:#8d8a82;
+    --line:#2e2d2b;
+    --line-soft:#242322;
+    --gold:#d4c97a;
+    --gold-bright:#e6dda0;
+    --gold-wash:#2a271b;
+    --blocked:#d98577;
+    --blocked-wash:#2e1e1a;
+    --temp:#9fb0b9;
+    --temp-wash:#1b2226;
+    --wait:#a49e8d;
+    --wait-wash:#232219;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -16px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    font-weight:300;
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:60rem;margin:0 auto;padding:4rem 1.75rem 7rem;}
+  @media (max-width:640px){ .wrap{padding:2.5rem 1.1rem 4rem;} }
+
+  /* ── 머리 ─────────────────────────────── */
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 1.1rem;
+  }
+  h1{
+    font-family:"Gowun Batang","Apple SD Gothic Neo",serif;
+    font-weight:700;font-size:clamp(2.1rem,5.5vw,3.1rem);
+    line-height:1.22;letter-spacing:-.01em;margin:0 0 1rem;text-wrap:balance;
+  }
+  .lede{
+    font-size:1.05rem;color:var(--ink-soft);max-width:38rem;margin:0 0 2.25rem;
+  }
+  .tally{
+    display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);
+    border-radius:2px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow);
+  }
+  .tally div{
+    flex:1 1 8rem;padding:1.05rem 1.2rem;border-right:1px solid var(--line-soft);
+  }
+  .tally div:last-child{border-right:0;}
+  .tally b{
+    display:block;font-family:"IBM Plex Mono",monospace;font-weight:500;
+    font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums;
+  }
+  .tally span{font-size:.76rem;color:var(--muted);letter-spacing:.02em;}
+  .tally .hot b{color:var(--blocked);}
+
+  /* ── 구조 ─────────────────────────────── */
+  section{margin-top:3.75rem;}
+  h2{
+    font-family:"Gowun Batang",serif;font-weight:700;
+    font-size:1.5rem;line-height:1.35;margin:0 0 .3rem;
+    display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;text-wrap:balance;
+  }
+  h2 .n{
+    font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:500;
+    color:var(--muted);font-variant-numeric:tabular-nums;
+  }
+  .sub{color:var(--muted);font-size:.88rem;margin:0 0 1.15rem;max-width:44rem;}
+
+  .chip{
+    display:inline-block;font-family:"IBM Plex Mono",monospace;
+    font-size:.66rem;letter-spacing:.08em;padding:.16rem .5rem;border-radius:2px;
+    vertical-align:.12em;font-weight:500;white-space:nowrap;
+  }
+  .c-blocked{background:var(--blocked-wash);color:var(--blocked);}
+  .c-temp{background:var(--temp-wash);color:var(--temp);}
+  .c-wait{background:var(--wait-wash);color:var(--wait);}
+  .c-done{background:var(--gold-wash);color:var(--gold);}
+
+  /* ── 규격 카드 ─────────────────────────── */
+  .spec{
+    border:1px solid var(--line);border-left:3px solid var(--gold-bright);
+    background:var(--surface);border-radius:2px;padding:1.5rem 1.6rem;
+    box-shadow:var(--shadow);
+  }
+  .spec h3{
+    font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold);margin:0 0 1.1rem;font-weight:500;
+  }
+  .specgrid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));
+    gap:1.1rem 2rem;margin:0;
+  }
+  .specgrid div{border-top:1px solid var(--line-soft);padding-top:.65rem;}
+  .specgrid dt{font-size:.76rem;color:var(--muted);margin-bottom:.15rem;}
+  .specgrid dd{
+    margin:0;font-family:"IBM Plex Mono",monospace;font-size:.95rem;
+    font-weight:500;font-variant-numeric:tabular-nums;
+  }
+  .specgrid dd em{
+    font-style:normal;font-family:"IBM Plex Sans KR",sans-serif;
+    font-weight:300;font-size:.82rem;color:var(--muted);display:block;margin-top:.1rem;
+  }
+
+  /* ── 표 ───────────────────────────────── */
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:2px;background:var(--surface);}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:34rem;}
+  th,td{text-align:left;padding:.62rem .95rem;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  th{
+    font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:.68rem;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    background:var(--sunk);border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  tr:last-child td{border-bottom:0;}
+  td.k{font-family:"IBM Plex Mono",monospace;font-size:.82rem;white-space:nowrap;}
+  td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+  td .em{color:var(--ink);font-weight:500;}
+  code{
+    font-family:"IBM Plex Mono",monospace;font-size:.85em;
+    background:var(--sunk);padding:.08em .38em;border-radius:2px;
+  }
+
+  /* ── 정본 인용 ─────────────────────────── */
+  .canon{
+    margin:1.15rem 0 0;padding:.85rem 0 .85rem 1.1rem;
+    border-left:2px solid var(--gold-bright);
+    font-family:"Gowun Batang",serif;font-size:.95rem;line-height:1.7;color:var(--ink-soft);
+  }
+  .canon p{margin:0 0 .55rem;}
+  .canon p:last-child{margin-bottom:0;}
+  .canon .src{
+    font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.06em;
+    color:var(--gold);margin-right:.5rem;
+  }
+
+  .note{
+    margin-top:1.1rem;padding:.85rem 1rem;background:var(--sunk);
+    border-radius:2px;font-size:.85rem;color:var(--ink-soft);
+  }
+  .note strong{color:var(--ink);font-weight:600;}
+
+  hr{border:0;border-top:1px solid var(--line);margin:3.5rem 0 0;}
+  .foot{margin-top:1.4rem;font-size:.78rem;color:var(--muted);}
+  .foot code{background:transparent;padding:0;color:var(--ink-soft);}
+  a{color:var(--gold);}
+  a:focus-visible,th:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px;}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">무채색 낙원 · 데모</p>
+  <h1>아직 그림이 없는 것들</h1>
+  <p class="lede">
+    배선은 전부 끝나 있습니다. 파일을 규격에 맞춰 정해진 이름으로 넣으면 그 자리에 바로 뜹니다.
+    아래 “느낌” 칸은 제가 쓴 게 아니라 <strong>시나리오 정본의 <span style="font-family:'Gowun Batang',serif">▶스프라이트</span> 지시를 그대로 옮긴 것</strong>이고,
+    괄호 안 숫자는 정본 문단 번호입니다.
+  </p>
+
+  <div class="tally">
+    <div class="hot"><b>73</b><span>필수 장수</span></div>
+    <div><b>43</b><span>선택 · 변형</span></div>
+    <div><b>27</b><span>포트레이트 — 하나도 없음</span></div>
+    <div><b>18</b><span>정본의 그림 지시</span></div>
+  </div>
+
+  <!-- ── 규격 ───────────────────────────── -->
+  <section>
+    <h2>먼저 규격</h2>
+    <p class="sub">
+      데모 종료까지 바뀌지 않는 고정값입니다. 캔버스 크기와 피벗만 맞으면 나머지는 자동으로 처리됩니다.
+    </p>
+
+    <div class="spec">
+      <h3>고정 규격</h3>
+      <dl class="specgrid">
+        <div>
+          <dt>화면 내부 해상도</dt>
+          <dd>640 × 360 <em>정수배로만 확대, 남는 곳은 검은 띠</em></dd>
+        </div>
+        <div>
+          <dt>캐릭터 캔버스</dt>
+          <dd>32 × 48 <em>전 캐릭터 공통</em></dd>
+        </div>
+        <div>
+          <dt>캐릭터 피벗</dt>
+          <dd>0.5, 2/48 <em>가로 중앙 · 발끝 아래 2px 여백</em></dd>
+        </div>
+        <div>
+          <dt>아이콘</dt>
+          <dd>32 × 32 <em>피벗 정중앙</em></dd>
+        </div>
+        <div>
+          <dt>타일</dt>
+          <dd>32 × 32</dd>
+        </div>
+        <div>
+          <dt>일러스트 컷</dt>
+          <dd>640 × 360 <em>화면 전면. 도트 아님</em></dd>
+        </div>
+        <div>
+          <dt>걷기</dt>
+          <dd>3방향 × 3프레임 <em>오른쪽은 왼쪽을 뒤집어 씁니다 — 그리지 마세요</em></dd>
+        </div>
+        <div>
+          <dt>걷기 속도</dt>
+          <dd>0.15초 / 프레임</dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="note">
+      <strong>넣는 곳은 <code>Assets/Art/</code> 아래입니다.</strong>
+      이 폴더에 넣은 그림만 자동으로 도트 설정(안티에일리어싱 없음 · 무압축 · 피벗)이 붙습니다.
+      다른 곳에 넣으면 흐릿하게 뭉개집니다.
+    </div>
+  </section>
+
+  <!-- ── 1. 포트레이트 ──────────────────── -->
+  <section>
+    <h2>대화 포트레이트 <span class="chip c-blocked">막힘</span> <span class="n">27장</span></h2>
+    <p class="sub">
+      가장 급합니다. <strong>한 장도 없어서 대화 중에 인물이 아예 안 나옵니다.</strong>
+      파일명은 <code>캐릭터_감정.png</code> 형식이고, 아래 이름을 그대로 써야 합니다.
+      루만 화면 오른쪽에 서고 나머지는 전부 왼쪽입니다.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>인물</th><th class="num">장수</th><th>감정 이름 (파일명에 그대로)</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="em">루</td><td class="num">10</td>
+            <td class="k">neutral · angry · fearful · flustered · puzzled · suspicious · blank_shock · holding_tears · eyes_closed · alive_eyes</td>
+          </tr>
+          <tr>
+            <td class="em">쿠루</td><td class="num">8</td>
+            <td class="k">stern · flustered · half_face · closed_guard · low_observe · neutral_observe · smirk_memo · subtle_pause</td>
+          </tr>
+          <tr>
+            <td class="em">세라</td><td class="num">3</td>
+            <td class="k">warm_smile · neutral_cold · door_gap</td>
+          </tr>
+          <tr><td class="em">미루</td><td class="num">2</td><td class="k">working · mannequin</td></tr>
+          <tr><td class="em">솔</td><td class="num">2</td><td class="k">neutral_flat · subtle_pause</td></tr>
+          <tr><td class="em">아모</td><td class="num">1</td><td class="k">perfect_smile</td></tr>
+          <tr><td class="em">부엉이</td><td class="num">1</td><td class="k">perched</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canon">
+      <p><span class="src">쿠루 · 716</span>눈동자는 검은색, 흰자가 파란색이다. 지문의 「푸른 눈」은 이 흰자를 가리킨다.</p>
+      <p><span class="src">세라 · 34</span>첫 등장. 문틈 클로즈업 — 얼굴 전체가 아니라 눈만 보이게. 0.5초 정지. 빛 속성 발광 이펙트를 아주 약하게.</p>
+      <p><span class="src">부엉이 · 15</span>창틀 정지 포즈. 고개를 돌리지 않고 루 쪽만 응시한다. 눈 깜빡임 애니메이션 1회(느리게).</p>
+    </div>
+
+    <div class="note">
+      <strong>추가로 필요할 수 있는 3종.</strong> 정본이 “등록된 감정 ID를 확인하고 없으면 신규 1종을 추가한다”고 적은 것들입니다 —
+      루 <em>어깨를 웅크린 자세 · 시무룩 계열</em>(758) · 루 <em>입을 부풀린 표정</em>(1085) ·
+      쿠루 <em>고개를 숙인 정지 자세</em>(1054). 위 27장에 이름이 없으면 새로 만들어야 합니다.
+    </div>
+
+    <div class="note">
+      <strong>선택 — 현실 버전 27장.</strong> 주인공이 “인형화” 수치 70을 넘으면 같은 표정의 다른 버전으로 바뀝니다.
+      파일명 끝에 <code>_real</code>을 붙입니다(예: <code>루_angry_real.png</code>).
+      없으면 그냥 원래 표정을 계속 씁니다 — 데모에 필수는 아닙니다.
+    </div>
+  </section>
+
+  <!-- ── 2. 걷기 ────────────────────────── -->
+  <section>
+    <h2>루 걷기 도트 <span class="chip c-temp">임시 그림 사용 중</span> <span class="n">9장</span></h2>
+    <p class="sub">
+      지금은 회색 실루엣 더미가 대신 걷고 있습니다. <strong>같은 이름으로 덮어쓰면 그대로 교체됩니다.</strong>
+      캔버스·피벗·프레임 수가 이미 맞춰져 있으니 규격만 지키면 추가 작업이 없습니다.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>방향</th><th>파일명</th><th class="num">장수</th></tr></thead>
+        <tbody>
+          <tr><td class="em">정면(아래)</td><td class="k">lu_walk_down_01 / _02 / _03</td><td class="num">3</td></tr>
+          <tr><td class="em">뒷모습(위)</td><td class="k">lu_walk_up_01 / _02 / _03</td><td class="num">3</td></tr>
+          <tr><td class="em">왼쪽</td><td class="k">lu_walk_left_01 / _02 / _03</td><td class="num">3</td></tr>
+          <tr><td class="em">오른쪽</td><td class="k" style="color:var(--muted)">그리지 않습니다 — 왼쪽을 좌우 반전해서 씁니다</td><td class="num">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <strong>02번이 가운데 프레임입니다.</strong> 현재 더미는 01·03이 같은 접지 자세이고 02만 1픽셀 떠 있습니다.
+      같은 리듬이면 그대로 들어맞습니다.
+    </div>
+  </section>
+
+  <!-- ── 3. 전신 ────────────────────────── -->
+  <section>
+    <h2>루 전신 — 인형화 5단계 <span class="chip c-wait">대기</span> <span class="n">5장</span></h2>
+    <p class="sub">
+      게임 내내 조용히 쌓이는 “인형화” 수치를 <strong>숫자로는 절대 보여주지 않습니다.</strong>
+      플레이어가 알아채는 통로가 이 그림입니다. 파일명은 <code>Body_단계.png</code>.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>단계</th><th>파일명</th><th>몸의 상태</th></tr></thead>
+        <tbody>
+          <tr><td class="em">완전한 자율</td><td class="k">Body_Autonomy</td><td>손가락 마디가 <span class="em">두 마디</span></td></tr>
+          <tr><td class="em">균열의 시작</td><td class="k">Body_Crack</td><td>손가락 마디가 <span class="em">세 마디</span>로 늘어남</td></tr>
+          <tr><td class="em">역효과</td><td class="k">Body_Backfire</td><td></td></tr>
+          <tr><td class="em">통제 불능</td><td class="k">Body_Loss</td><td></td></tr>
+          <tr><td class="em">소멸</td><td class="k">Body_Doll</td><td>인형이 된 상태</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canon">
+      <p><span class="src">58</span>루 손 클로즈업 오버레이. 이불 밖으로 나온 손. 손가락 두 마디가 도자기 재질. 달빛에 미묘하게 다른 질감으로 반사된다. 소리 없음.</p>
+    </div>
+
+    <div class="note">
+      <strong>손가락 마디 수가 정보입니다.</strong> 두 마디면 아직 사람, 세 마디면 인형화가 시작된 것입니다.
+      이 차이가 눈에 보여야 하고, 그 밖의 방법으로 수치를 드러내면 안 됩니다.
+    </div>
+  </section>
+
+  <!-- ── 4. 아이템 ──────────────────────── -->
+  <section>
+    <h2>아이템 아이콘 <span class="chip c-wait">대기</span> <span class="n">14장 · 32×32</span></h2>
+    <p class="sub">전체 18개 중 4개(다락방 열쇠 · 에스프레소 · 마시멜로 · 핫초코)는 이미 있습니다. 나머지가 비어 있습니다.</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>아이템</th><th>파일명</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td class="em">각설탕</td><td class="k">SugarCube</td><td>중요 소품 — 아래 정본 지시 참조</td></tr>
+          <tr><td class="em">단검</td><td class="k">dagger</td><td>은빛. 쥐면 세상이 현실로 보임</td></tr>
+          <tr><td class="em">라디오</td><td class="k">radio</td><td>아버지의 목소리가 나오는 물건</td></tr>
+          <tr><td class="em">현관문 열쇠</td><td class="k">FrontDoorKey</td><td>아래 정본 지시 참조</td></tr>
+          <tr><td class="em">코트</td><td class="k">Coat</td><td>아버지의 것. 루에게는 큼</td></tr>
+          <tr><td class="em">쿠루의 쪽지</td><td class="k">KuruNote</td><td></td></tr>
+          <tr><td class="em">아네모네</td><td class="k">Anemone</td><td>말라서 잘못 건드리면 바스라짐</td></tr>
+          <tr><td class="em">붉은 결정</td><td class="k">RedCrystal</td><td></td></tr>
+          <tr><td class="em">검은 구슬</td><td class="k">BlackOrb</td><td></td></tr>
+          <tr><td class="em">물병</td><td class="k">BottledWater</td><td></td></tr>
+          <tr><td class="em">빵 반죽</td><td class="k">BreadDough</td><td></td></tr>
+          <tr><td class="em">마른 씨앗 (산 것)</td><td class="k">DriedSeedAlive</td><td></td></tr>
+          <tr><td class="em">마른 씨앗 (죽은 것)</td><td class="k">DriedSeedDead</td><td>위와 한 쌍 — 차이가 보여야 함</td></tr>
+          <tr><td class="em">핫초코 (2종)</td><td class="k">M_hotch</td><td>기존 <code>hotchocolate</code>와 다른 물건</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canon">
+      <p><span class="src">각설탕 · 223</span>각설탕 클로즈업. 환상 필터의 부드러운 색조 속에서 <strong>이것만 채도와 윤곽이 다르게</strong> 처리된다.</p>
+      <p><span class="src">현관문 열쇠 · 347</span>녹슬지 않았다. 손때가 묻어 반들거린다. 같은 화면에 녹슨 열쇠를 겹쳐 보여줘도 좋다 — 두 열쇠의 상태 차이가 아버지가 이 집을 얼마나 자주 드나들었는지를 말한다.</p>
+      <p><span class="src">녹슨 열쇠 · 323</span>환상 필터의 매끄러운 색조 안에서 이것만 질감이 거칠다. 각설탕과 같은 방향이되, 각설탕이 ’밖에서 들어온 것’이라면 이 열쇠는 ’안에서 오래 방치된 것’이다. <strong>채도를 올리지 말고 떨어뜨린다.</strong></p>
+    </div>
+
+    <div class="note">
+      <strong>선택 — 환상 버전 16장.</strong> 같은 아이템이 “환상”으로 볼 때 다르게 보이는 버전입니다.
+      없으면 기본 아이콘을 계속 씁니다. 위 각설탕·열쇠 지시가 정확히 이 대비를 말하는 것이라,
+      만든다면 그 세 개부터가 효과가 큽니다.
+    </div>
+  </section>
+
+  <!-- ── 5. 적 ─────────────────────────── -->
+  <section>
+    <h2>적 4종 <span class="chip c-temp">임시 그림 사용 중</span> <span class="n">4장 이상</span></h2>
+    <p class="sub">지금은 검은 실루엣이 대신 나옵니다. 넷이 서로 다른 실루엣이긴 하지만 정식 그림이 아닙니다.</p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>적</th><th>현재</th></tr></thead>
+        <tbody>
+          <tr><td class="em">인형 관리자</td><td class="k">sil_doll_keeper — 실루엣</td></tr>
+          <tr><td class="em">잉크 사냥개</td><td class="k">sil_ink_hound — 실루엣</td></tr>
+          <tr><td class="em">마시멜로</td><td class="k">sil_marshmallow — 실루엣</td></tr>
+          <tr><td class="em">꼭두각시</td><td class="k">sil_puppet — 실루엣</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canon">
+      <p><span class="src">786</span>오염 늑대 — 환상 필터 외형. 큰 개로 보인다. 회색 털, 처진 등, 목줄 없음.
+        <strong>현실 필터 외형과 완전히 별개의 스프라이트 세트다.</strong></p>
+    </div>
+
+    <div class="note">
+      <strong>적은 보는 방식에 따라 다른 생물로 보입니다.</strong> 환상으로 보면 큰 개, 현실로 보면 다른 것 —
+      같은 그림에 색만 바꾸는 게 아니라 <strong>두 벌을 따로</strong> 그려야 합니다.
+      현실 쪽 외형이 정본에 아직 안 적혀 있으니 착수 전에 기획에 확인해 주세요.
+    </div>
+  </section>
+
+  <!-- ── 6. 컷 ─────────────────────────── -->
+  <section>
+    <h2>클로즈업 컷 <span class="chip c-wait">대기</span> <span class="n">8장 · 640×360</span></h2>
+    <p class="sub">
+      화면을 꽉 채우는 한 장짜리 그림입니다. <strong>도트가 아니어도 됩니다.</strong>
+      이야기의 결정적인 순간마다 한 번씩 뜹니다.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>장면</th><th>내용</th></tr></thead>
+        <tbody>
+          <tr><td class="em">상자 속</td><td>코트 · 라디오 · 단검이 <span class="em">한 화면에 동시에</span>. 순서대로 비추지 말 것</td></tr>
+          <tr><td class="em">코트 주머니</td><td>주머니를 더듬는 손 → 꺼낸 현관문 열쇠</td></tr>
+          <tr><td class="em">라디오 다이얼</td><td>다이얼. 목소리가 나오는 동안 화면이 바뀌지 않음</td></tr>
+          <tr><td class="em">마당의 각설탕</td><td>꽃들 사이의 각설탕. <span class="em">채도와 윤곽이 주변과 달라야 함</span></td></tr>
+          <tr><td class="em">창문 잠금장치</td><td><span class="em">풀린</span> 상태. 밤 장면의 잠긴 상태와 같은 물건</td></tr>
+          <tr><td class="em">열쇠 구멍</td><td></td></tr>
+          <tr><td class="em">손잡이를 쥔 손</td><td></td></tr>
+          <tr><td class="em">역광의 세라</td><td>뒤에서 빛을 받는 실루엣</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canon">
+      <p><span class="src">44</span>이불을 여미는 손 클로즈업. 부드러운 동작인데 이불이 목까지 올라온다.
+        <strong>다정함과 구속이 같은 그림이 되도록</strong> 구도를 잡을 것.</p>
+      <p><span class="src">367</span>코트를 끌어안는 동작. 얼굴을 묻지 않는다. 그냥 팔로 감싼다. <strong>과하게 연출하면 이 씬이 무너진다.</strong></p>
+      <p><span class="src">404</span>코트를 입은 루. 사이즈가 맞지 않는다. 소매가 손을 덮는다.
+        <strong>도자기 손가락이 소매에 가려 보이지 않는 것이 이 스프라이트의 핵심이다.</strong></p>
+    </div>
+  </section>
+
+  <!-- ── 7. 다락방 ──────────────────────── -->
+  <section>
+    <h2>다락방 상자 속 4종 <span class="chip c-wait">대기</span> <span class="n">4장</span></h2>
+    <p class="sub">
+      놓일 자리는 이미 잡혀 있습니다. <strong>그림만 넣으면 그 좌표에 그대로 뜹니다.</strong>
+      네 물건이 한 상자에 함께 있다는 사실 자체가 이야기의 정보라서 배치가 정해져 있습니다.
+    </p>
+
+    <div class="canon">
+      <p><span class="src">336</span>코트는 접혀 있지 않고 아무렇게나 눌려 있다. 라디오는 다이얼이 정면을 향한다.
+        단검은 칼집째로 <strong>코트 아래 절반쯤 가려져 있다 — 플레이어가 바로 알아보지 못하도록.</strong></p>
+      <p><span class="src">335</span>상자 안의 세 물건을 한 화면에 동시에 보여준다. 순서대로 비추지 않는다.
+        셋이 함께 놓여 있었다는 사실 자체가 정보다.</p>
+    </div>
+
+    <div class="note">
+      <strong>가림 순서가 중요합니다.</strong> 단검이 코트에 절반 가려야 하므로,
+      코트가 단검보다 앞에 그려집니다. 두 그림의 겹치는 부분을 염두에 두고 그려 주세요.
+    </div>
+  </section>
+
+  <!-- ── 8. 나머지 ──────────────────────── -->
+  <section>
+    <h2>낱장 <span class="chip c-wait">대기</span> <span class="n">2장</span></h2>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>그림</th><th>쓰이는 곳</th></tr></thead>
+        <tbody>
+          <tr><td class="em">도자기 손가락</td><td>밤 장면. <span class="em">소리 없이 시각으로만</span> 전달되는 순간</td></tr>
+          <tr><td class="em">장면 전환 효과</td><td>화면이 갈라지는 연출에 쓰이는 이미지</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="canon">
+      <p><span class="src">쪽지 · 179</span>쪽지 텍스트는 손글씨 폰트로 표시.
+        <strong>결계 안 UI 폰트와 다르게 처리해서 외부에서 들어온 물건이라는 것을 보이게 한다.</strong></p>
+    </div>
+
+    <div class="note">
+      쪽지는 그림이 아니라 <strong>손글씨 글꼴</strong>이 필요한 항목입니다. 폰트를 고르거나 만들어야 합니다.
+    </div>
+  </section>
+
+  <hr>
+  <p class="foot">
+    규격 출처는 프로젝트 규약 <code>CLAUDE.md §11</code>, 느낌 지시는 <code>D_무채색_낙원_시나리오_정본</code>의
+    <code>▶스프라이트</code> 항목입니다. 정본 문단 번호를 그대로 달아 두었으니 원문 대조가 필요하면 그 번호로 찾으시면 됩니다.
+    <br>
+    “선택”으로 표시한 것은 없어도 데모가 돌아갑니다. “막힘”은 없으면 화면에 아무것도 안 나옵니다.
+  </p>
+
+</div>
