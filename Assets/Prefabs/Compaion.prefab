@@ -648,8 +648,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1a13588efa302f04289ca92aced54df9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CompanionFollow
-  followDistance: 1.5
-  moveSpeed: 4
+  followDistance: 0.84375
+  moveSpeed: 2.25
 --- !u!212 &7641437415267730457
 SpriteRenderer:
   serializedVersion: 2

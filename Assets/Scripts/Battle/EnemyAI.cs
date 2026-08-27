@@ -16,7 +16,7 @@ public class EnemyAI : MonoBehaviour
     // ─────────────────────────────────────────────
     [Header("이동")]
     [Tooltip("추격 속도 (단위/초)")]
-    public float moveSpeed = 2.5f;
+    public float moveSpeed = 1.40625f;
 
     [Header("근접 공격")]
     [Tooltip("공격이 시작되는 거리")]

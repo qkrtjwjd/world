@@ -13,7 +13,7 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] CinemachineConfiner2D confiner;
 
     [Header("Zoom")]
-    public float defaultOrthoSize = 5f;
+    public float defaultOrthoSize = 5.625f;
 
     [Header("Shake")]
     [HideInInspector] public Vector3 shakeOffset;
@@ -246,11 +246,24 @@ public class CameraFollow : MonoBehaviour
         if (snap) SnapToTarget();
     }
 
+    /// <summary>
+    /// 목표 ortho 로 줌한다.
+    ///
+    /// <para>⚠ <b>픽셀퍼펙트가 켜져 있으면 duration 을 무시하고 즉시 적용한다.</b>
+    /// <c>CinemachinePixelPerfect</c> 가 ortho 를 <c>base / N</c>(N = 정수)로 스냅하기 때문에
+    /// 쓸 수 있는 값이 5.625 · 2.8125 · 1.875 · 1.40625 … 뿐이고 중간값이 아예 없다.
+    /// 이때 Lerp 를 돌리면 전반부에는 아무 일도 일어나지 않다가 중간에 한 번 튄다 —
+    /// 부드러워지는 게 아니라 지연만 생긴다. 그래서 끊어서 적용하는 편이 낫다.</para>
+    ///
+    /// <para>연출의 호흡은 호출부가 잡는다. 예를 들어 배드엔딩 문 줌은 단계마다
+    /// <c>ZoomTo</c> 뒤에 <c>WaitForSecondsRealtime</c> 로 기다리므로,
+    /// 스냅해도 세 박자로 끊어 들어가는 연출이 그대로 유지된다.</para>
+    /// </summary>
     public void ZoomTo(float targetSize, float duration)
     {
         if (_zoomCoroutine != null) StopCoroutine(_zoomCoroutine);
         if (followVCam == null) return;
-        if (duration <= 0f) { SetOrthoSize(targetSize); return; }
+        if (duration <= 0f || PixelPerfectActive) { SetOrthoSize(targetSize); return; }
         _zoomCoroutine = StartCoroutine(ZoomCoroutine(targetSize, duration));
     }
 
@@ -275,6 +288,19 @@ public class CameraFollow : MonoBehaviour
         followVCam != null ? followVCam.GetComponent<CinemachineBasicMultiChannelPerlin>() : null;
 
     // ─── Private ─────────────────────────────────────────────────────
+
+    // 같은 GameObject 의 PixelPerfectCamera. 없을 수도 있으므로 조회 여부를 따로 기억한다.
+    PixelPerfectCamera _ppc;
+    bool _ppcLookedUp;
+
+    bool PixelPerfectActive
+    {
+        get
+        {
+            if (!_ppcLookedUp) { _ppc = GetComponent<PixelPerfectCamera>(); _ppcLookedUp = true; }
+            return _ppc != null && _ppc.isActiveAndEnabled;
+        }
+    }
 
     void SetOrthoSize(float size)
     {

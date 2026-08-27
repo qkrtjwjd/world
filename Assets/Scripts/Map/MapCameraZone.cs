@@ -34,7 +34,7 @@ public class MapCameraZone : MonoBehaviour
     // Track
     [SerializeField] float trackSmoothTime     = 0.15f;
     [SerializeField] float trackLagTime        = 1.0f;
-    [SerializeField] float lookAheadAmount     = 1.5f;
+    [SerializeField] float lookAheadAmount     = 0.84375f;
     [SerializeField] float lookAheadSmoothTime = 0.05f;
 
     // Trigger
@@ -50,8 +50,8 @@ public class MapCameraZone : MonoBehaviour
     [SerializeField] float  fadeDuration = 0.4f;
     [SerializeField] string targetName   = "";
     [SerializeField] float  povAngle     = 0f;
-    [SerializeField] float  panHeight    = 5f;
-    [SerializeField] float  panSpeed     = 3f;
+    [SerializeField] float  panHeight    = 2.8125f;
+    [SerializeField] float  panSpeed     = 1.6875f;
 
     // ─── 런타임 ─────────────────────────────────────────────────────
 

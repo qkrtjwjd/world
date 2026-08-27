@@ -10,9 +10,9 @@ public class CompanionFollow : MonoBehaviour
 {
     [Header("추적 설정")]
     [Tooltip("플레이어와 유지할 최소 거리 (유닛)")]
-    public float followDistance = 1.5f;
+    public float followDistance = 0.84375f;
     [Tooltip("동료 이동 속도 — 플레이어 walkSpeed(4f)와 맞추세요")]
-    public float moveSpeed = 4f;
+    public float moveSpeed = 2.25f;
 
     // ── 내부 상태 ──
     private Transform      _player;

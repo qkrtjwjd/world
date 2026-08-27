@@ -76,7 +76,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 741f30960d63a984c904285d23069b75, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ClearSky.SimplePlayerController
-  walkSpeed: 4
+  walkSpeed: 2.25
   runMultiplier: 1.8
 --- !u!114 &2376888896039484991
 MonoBehaviour:

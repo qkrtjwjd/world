@@ -96,7 +96,7 @@ public class CameraDirector : MonoBehaviour
 
     // ─── 3. PanTo ───────────────────────────────────────────────────
 
-    public void TriggerPanTo(Transform target, float speed = 3f)
+    public void TriggerPanTo(Transform target, float speed = 1.6875f)
         => RunExclusive(DoPanTo(target, speed));
 
     IEnumerator DoPanTo(Transform target, float speed)
@@ -110,7 +110,7 @@ public class CameraDirector : MonoBehaviour
 
         float timeout = 5f;
         while (timeout > 0f &&
-               Vector2.Distance(cam.transform.position, target.position) > 0.15f)
+               Vector2.Distance(cam.transform.position, target.position) > 0.084375f)
         {
             timeout -= Time.deltaTime;
             yield return null;
@@ -119,7 +119,7 @@ public class CameraDirector : MonoBehaviour
 
     // ─── 4. PanUp ───────────────────────────────────────────────────
 
-    public void TriggerPanUp(float height, float speed = 2f)
+    public void TriggerPanUp(float height, float speed = 1.125f)
         => RunExclusive(DoPanUp(height, speed));
 
     IEnumerator DoPanUp(float height, float speed)
@@ -440,7 +440,7 @@ public class CameraDirector : MonoBehaviour
 
     // <<camera_pan "오브젝트명" 속도>>
     [YarnCommand("camera_pan")]
-    public static void YarnPanTo(string objectName, float speed = 3f)
+    public static void YarnPanTo(string objectName, float speed = 1.6875f)
     {
         if (Instance == null) return;
         Transform t = GameObject.Find(objectName)?.transform;
