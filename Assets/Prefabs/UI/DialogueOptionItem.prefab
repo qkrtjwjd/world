@@ -150,6 +150,7 @@ GameObject:
   - component: {fileID: 3390506372669768328}
   - component: {fileID: 1644053829069050841}
   - component: {fileID: 9042439369108542935}
+  - component: {fileID: 5537407848701865565}
   m_Layer: 0
   m_Name: DialogueOptionItem
   m_TagString: Untagged
@@ -268,3 +269,23 @@ MonoBehaviour:
     sprite: {fileID: 0}
     colour: {r: 0.129, g: 0.125, b: 0.118, a: 1}
   disabledStrikeThrough: 1
+--- !u!114 &5537407848701865565
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3897786378664006551}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.LayoutElement
+  m_IgnoreLayout: 0
+  m_MinWidth: -1
+  m_MinHeight: 52
+  m_PreferredWidth: -1
+  m_PreferredHeight: 52
+  m_FlexibleWidth: -1
+  m_FlexibleHeight: 0
+  m_LayoutPriority: 1
