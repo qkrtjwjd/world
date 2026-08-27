@@ -322,3 +322,70 @@ FAIL S#04C  세라: 기대 11 / 산출 10  (-1)
 - 솔은 거짓말하지 않지만 전부 말하지도 않는다. 묻지 않은 것은 알아서 말하지 않는다
 - 유의 라디오는 유가 알던 범위 밖을 대답하지 못한다. 솔에게는 잡음만 흐르고 솔 본인이 반응하며, 쿠루에게는 아무 반응도 없다
 - 미루는 단검에 반응하지만 아모는 같은 미소로 같은 대사를 반복한다. 반응 없음이 연출이다
+
+---
+
+## 11. 도트 규격
+
+**데모 종료까지 변경하지 않는 고정값이다.** 값 하나를 바꾸면 나머지가 전부 따라 움직인다.
+
+### 기준 삼각형 — 따로 정할 수 없다
+
+```
+내부 해상도 세로 ÷ 2 ÷ PPU = 카메라 ortho size
+        360 ÷ 2 ÷ 32     = 5.625
+```
+
+내부 해상도·PPU·ortho 는 한 묶음이다. 하나를 정하면 나머지는 계산으로 나온다.
+**카메라를 만지기 전에 이 식을 먼저 볼 것.**
+
+### 상수
+
+| 항목 | 값 |
+|---|---|
+| 내부 해상도 | **640 × 360** |
+| PPU | **32** |
+| 타일 | **32 × 32** (= 1 월드유닛) |
+| 카메라 ortho size | **5.625** |
+| 확대 | **정수배만.** 남는 영역은 레터박스 |
+| 캐릭터 캔버스 | **32 × 48** (전 캐릭터 공통, = 1 × 1.5 유닛) |
+| 캐릭터 피벗 | Bottom Center, 발끝 아래 2px 여백 → **(0.5, 2/48)** |
+| 아이콘 | **32 × 32**, 피벗 Center |
+| 일러 컷 | **640 × 360 전면.** 도트가 아니므로 PPU 무관 |
+| 걷기 | 4방향 × 방향당 **3프레임**, 좌우는 **flipX** 반전, 스텝당 **0.15초** |
+
+### Pixel Perfect Camera
+
+**URP 쪽을 쓴다** — `UnityEngine.Rendering.Universal.PixelPerfectCamera`.
+레거시 `com.unity.2d.pixel-perfect` 패키지에도 **같은 이름의 클래스가 있으니** 잘못 붙이지 말 것.
+
+| 필드 | 값 |
+|---|---|
+| Assets Pixels Per Unit | 32 |
+| Reference Resolution | 640 × 360 |
+| Crop Frame | `Windowbox` |
+| Grid Snapping | `UpscaleRenderTexture` |
+| Filter Mode | `Point` |
+
+Cinemachine 과 함께 쓰므로 vcam 에 **`CinemachinePixelPerfect`** 익스텐션이 필요하다.
+둘 다 ortho size 를 쓰기 때문이다. 이 익스텐션은 ortho size 를 픽셀퍼펙트 값으로 스냅하므로
+**부드러운 줌이 계단식이 된다.**
+
+> ⚠️ **규격서 문구와 엔진 API 가 어긋나는 지점 4건.** 규격서와 대조하면 틀려 보이지만 이쪽이 맞다.
+>
+> 1. **"Upscale Render Texture = ON" 과 "Pixel Snapping = ON" 은 동시에 켤 수 없다.**
+>    URP 17.4 에서 둘은 하나의 enum `GridSnapping` 의 서로 다른 값이다. 엔진의 마이그레이션 코드가
+>    우선순위를 못박고 있다 — Upscale 이 켜지면 Pixel Snapping 은 버려진다. → `UpscaleRenderTexture`
+> 2. **"Crop Frame = X and Y" + "Stretch Fill = OFF" 는 현재 API 에서 `Windowbox` 다.**
+>    "남는 영역은 레터박스"라는 규격서 의도와 일치한다.
+> 3. **`right` 방향 스프라이트와 애니메이션 클립은 만들지 않는다.** `left` 를 flipX 로 뒤집는다.
+>    규격서 "4방향"은 파일 개수가 아니라 화면에 나오는 방향 수를 말한다.
+> 4. **Filter Mode 기본값 `RetroAA` 를 쓰면 안 된다.** 최종 업스케일에 바이리니어를 한 번 더 걸어
+>    픽셀 경계를 뭉갠다. 도트가 또렷하려면 `Point` 여야 한다.
+
+### 신규 도트 자산의 자리
+
+- **`Assets/Art/` 아래에 둔다.** 이 경로에만 PPU 32 프리셋이 자동 적용된다
+  (Preset Manager 는 폴더 단위 적용을 지원하지 않아 `AssetPostprocessor` 로 처리한다).
+- **기존 `Assets/Images/` 는 PPU 100 그대로 둔다.** 두 체계가 공존한다.
+  기존 자산은 대부분 UI 라 PPU 영향을 받지 않는다.
