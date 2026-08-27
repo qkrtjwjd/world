@@ -14,7 +14,7 @@ public class GaugeBoundaryMonitor : MonoBehaviour
     [Header("구간 경계 임계값")]
     public float fantasyGlitchBoundary = 30f;  // 이하: Fantasy / 초과: Glitch
     public float glitchRealityBoundary = 70f;  // 미만: Glitch / 이상: Reality
-    public float warningDistance       = 5f;   // 경계 ± 이내에서 경고 연출 시작
+    public float warningDistance       = 2.8125f;   // 경계 ± 이내에서 경고 연출 시작
 
     [Header("경계 돌파 글리치 연출")]
     public float        glitchDuration = 0.5f;

@@ -10,7 +10,7 @@ public class RealityCombatController : MonoBehaviour
 {
     [Header("■ 전투 설정")]
     [Tooltip("공격 사거리 (레이캐스트 길이)")]
-    public float attackRange = 5f;
+    public float attackRange = 2.8125f;
     [Tooltip("기본 공격력 (DamageCalculator의 attack 스탯)")]
     public float attackDamage = 50f;
     [Tooltip("비약점 타격 시 데미지 배율 (1.0 = 동일, 0.6 = 60%)")]

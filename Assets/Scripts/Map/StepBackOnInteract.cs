@@ -14,7 +14,7 @@ public class StepBackOnInteract : MonoBehaviour
 {
     [Header("후퇴 설정")]
     [Tooltip("플레이어가 뒤로 물러날 거리 (유닛)")]
-    public float stepBackDistance = 0.8f;
+    public float stepBackDistance = 0.45f;
 
     [Tooltip("후퇴 소요 시간 (초). 작을수록 빠르게 이동합니다.")]
     public float stepBackDuration = 0.2f;

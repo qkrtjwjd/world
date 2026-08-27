@@ -375,7 +375,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GaugeBoundaryMonitor
   fantasyGlitchBoundary: 30
   glitchRealityBoundary: 69
-  warningDistance: 5
+  warningDistance: 2.8125
   glitchDuration: 0.5
   glitchPreset:
     intensity: 0.85

@@ -12,7 +12,7 @@ public class SolNPC : MonoBehaviour
     [SerializeField] private string breadRejectNode = "Sol_BreadDoughReject";
 
     [Header("근접 감지")]
-    [SerializeField] private float     autoTriggerRadius = 2f;
+    [SerializeField] private float     autoTriggerRadius = 1.125f;
     [SerializeField] private LayerMask playerLayer;
 
     private bool _hasGreeted;

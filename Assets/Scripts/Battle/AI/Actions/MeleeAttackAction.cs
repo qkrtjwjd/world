@@ -8,7 +8,7 @@ using UnityEngine;
 public class MeleeAttackAction : EnemyAction
 {
     [Tooltip("이 사거리 이내에서만 발동 (단위: 월드).")]
-    public float maxRange = 1.5f;
+    public float maxRange = 0.84375f;
 
     public override bool CanExecute(EnemyAI ai, Transform target)
     {

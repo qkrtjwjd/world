@@ -590,11 +590,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyAI
   moveSpeed: 1.40625
-  attackRange: 1
+  attackRange: 0.5625
   attackDamage: 10
   attackCooldown: 1.5
   attackDuration: 0.2
-  knockbackForce: 4
+  knockbackForce: 2.25
   knockbackDuration: 0.15
   spriteRenderer: {fileID: 0}
   fleeSpeed: 4
@@ -623,7 +623,7 @@ MonoBehaviour:
   evasion: 5
   deathEffect: {fileID: 0}
   fleeHealthRatio: 0.1
-  respawnDistance: 20
+  respawnDistance: 11.25
   respawnCheckInterval: 0.5
   respawnPlayerSearchTimeout: 30
 --- !u!50 &4786421705258952684

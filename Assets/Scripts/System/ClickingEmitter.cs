@@ -24,7 +24,7 @@ public class ClickingEmitter : MonoBehaviour
 
     [Header("세라 반응")]
     [Tooltip("이 거리 안에서 발동하면 세라가 돌아본다(유닛). 시야 거리보다 넉넉하게 잡는다.")]
-    public float attentionRadius = 6f;
+    public float attentionRadius = 3.375f;
 
     [Header("소리")]
     [Tooltip("AudioManager 등록 이름. 비우면 무음이지만 발동 자체는 그대로 일어난다.")]

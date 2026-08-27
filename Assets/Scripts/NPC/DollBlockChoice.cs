@@ -15,7 +15,7 @@ public class DollBlockChoice : MonoBehaviour
     [SerializeField] private string choiceNode = "DollBlock_Choice";
 
     [Header("근접 감지")]
-    [SerializeField] private float     triggerRadius = 1.2f;
+    [SerializeField] private float     triggerRadius = 0.675f;
     [SerializeField] private LayerMask playerLayer;
 
     private bool _hasFired;

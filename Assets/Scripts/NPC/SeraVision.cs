@@ -16,7 +16,7 @@ public class SeraVision : MonoBehaviour
     [Tooltip("부채꼴 전체 각도. 정본 90도.")]
     public float viewAngle = 90f;
     [Tooltip("시야 거리(유닛 = 타일). 정본 4타일.")]
-    public float viewDistance = 4f;
+    public float viewDistance = 2.25f;
     [Tooltip("시야 안에 이 시간(초)만큼 머물러야 발각된다. 정본 2초.")]
     public float detectionTime = 2f;
 

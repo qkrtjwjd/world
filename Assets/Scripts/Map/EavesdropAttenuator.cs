@@ -21,9 +21,9 @@ public class EavesdropAttenuator : MonoBehaviour
 
     [Header("거리 → 감쇠")]
     [Tooltip("이 반경 안에서는 100% 들린다.")]
-    public float fullHearRadius = 1.5f;
+    public float fullHearRadius = 0.84375f;
     [Tooltip("이 반경 밖에서는 최소치까지 떨어진다.")]
-    public float inaudibleRadius = 6f;
+    public float inaudibleRadius = 3.375f;
 
     [Header("최소치 (완전히 0으로 만들지 않는다)")]
     [Range(0f, 1f)] public float minVolume        = 0.12f;

@@ -151,7 +151,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 20b1e41731200bd4496b6ee795da6824, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RealityCombatController
-  attackRange: 5
+  attackRange: 2.8125
   attackDamage: 50
   nonWeakPointMultiplier: 0.1
   attackCooldown: 0.3
@@ -167,7 +167,7 @@ MonoBehaviour:
   puppetReductionOnCombat: 2
   hitEffect: {fileID: 0}
   critEffect: {fileID: 0}
-  knockbackForce: 3
+  knockbackForce: 1.6875
 --- !u!50 &372680126210068970
 Rigidbody2D:
   serializedVersion: 5

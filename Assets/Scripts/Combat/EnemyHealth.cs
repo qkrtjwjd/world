@@ -29,7 +29,7 @@ public class EnemyHealth : MonoBehaviour
 
     [Header("귀환 설정")]
     [Tooltip("플레이어가 이 거리 이상 멀어지면 적이 원래 위치로 귀환합니다.")]
-    public float respawnDistance = 20f;
+    public float respawnDistance = 11.25f;
     [Tooltip("귀환 감시 간격 (초)")]
     public float respawnCheckInterval = 0.5f;
     [Tooltip("플레이어를 못 찾을 때 감시 코루틴을 종료하는 타임아웃 (초). 0 이하면 무한 대기.")]

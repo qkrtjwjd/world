@@ -20,7 +20,7 @@ public class EnemyAI : MonoBehaviour
 
     [Header("근접 공격")]
     [Tooltip("공격이 시작되는 거리")]
-    public float attackRange = 1.0f;
+    public float attackRange = 0.5625f;
     [Tooltip("한 번 공격에 가하는 피해")]
     public float attackDamage = 10f;
     [Tooltip("공격 쿨타임 (초)")]
@@ -30,7 +30,7 @@ public class EnemyAI : MonoBehaviour
 
     [Header("피격 넉백")]
     [Tooltip("피격 시 밀려나는 힘")]
-    public float knockbackForce = 4f;
+    public float knockbackForce = 2.25f;
     [Tooltip("넉백이 유지되는 시간 (초)")]
     public float knockbackDuration = 0.15f;
 

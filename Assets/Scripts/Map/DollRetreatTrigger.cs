@@ -6,7 +6,7 @@ using UnityEngine;
 /// </summary>
 public class DollRetreatTrigger : MonoBehaviour
 {
-    [SerializeField] private float     radius    = 1.5f;
+    [SerializeField] private float     radius    = 0.84375f;
     [SerializeField] private float     cooldown  = 3f;
     [SerializeField] private LayerMask playerLayer;
 
