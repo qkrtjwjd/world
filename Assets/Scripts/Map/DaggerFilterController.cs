@@ -26,6 +26,15 @@ public class DaggerFilterController : MonoBehaviour
 
     public bool IsReality { get; private set; } = false;
 
+    /// <summary>
+    /// 지금 현실을 보고 있는가. 컨트롤러가 없는 씬에서는 false(환상)로 본다.
+    ///
+    /// <para>예전에는 씬 이름으로 판정했지만(<c>SceneNames.IsRealityScene</c>) 현실/환상은
+    /// 별도 씬이 아니라 한 씬 안에서 F키로 바뀌므로 그 배선은 애초에 동작하지 않았다.
+    /// 2026-08-27 에 DarkReality 씬을 폐기하면서 이쪽으로 옮겼다.</para>
+    /// </summary>
+    public static bool IsRealityView => Instance != null && Instance.IsReality;
+
     private RealityFilterObject[] _filterObjects = new RealityFilterObject[0];
     private Coroutine _fadeCoroutine;
     private Coroutine _forcedReturnCoroutine;

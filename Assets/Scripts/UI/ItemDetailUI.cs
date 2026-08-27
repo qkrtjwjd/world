@@ -206,8 +206,7 @@ public class ItemDetailUI : MonoBehaviour
             ItemNotificationUI.Instance?.ShowDialogue(dialogue);
 
         // 설명란(BuildAutoStats)과 동일하게 씬 종류에 따라 환상/현실 효과 선택
-        bool isRealityScene = SceneNames.IsRealityScene(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        bool isRealityScene = DaggerFilterController.IsRealityView;
         var effect = isRealityScene ? _selected.realityEffect : _selected.fantasyEffect;
 
         // 특수 시각/시스템 효과 (realityEffect.specialEffectCode 기준)
@@ -297,8 +296,7 @@ public class ItemDetailUI : MonoBehaviour
 
     static string BuildAutoStats(ItemData item)
     {
-        bool isReality = SceneNames.IsRealityScene(
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        bool isReality = DaggerFilterController.IsRealityView;
         return isReality
             ? BuildEffectString(item.realityEffect)
             : BuildEffectString(item.fantasyEffect);

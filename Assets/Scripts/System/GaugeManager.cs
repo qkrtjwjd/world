@@ -137,7 +137,6 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
 
     static bool IsGameplayScene(string name) =>
         name == SceneNames.Map        ||
-        name == SceneNames.DarkReality ||
         name == SceneNames.Battle     ||
         name == SceneNames.Shelter;
 

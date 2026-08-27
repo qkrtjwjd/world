@@ -26,7 +26,7 @@ public class ItemData : ScriptableObject
     [Tooltip("체크하면 정체불명의 존재에게 먹일 수 있는 아이템입니다.")]
     public bool canFeed;
 
-    [Tooltip("현실(DarkReality) 씬 아이콘 겸 기본 폴백 아이콘입니다.")]
+    [Tooltip("현실(F키로 볼 때)의 아이콘 겸 기본 폴백 아이콘입니다.")]
     public Sprite itemIcon;
 
     [Header("■ 환상 아이콘")]
@@ -39,7 +39,7 @@ public class ItemData : ScriptableObject
     public string description;
 
     [Header("■ 현실 설명")]
-    [Tooltip("현실(DarkReality) 씬에서 표시될 설명. 비워두면 위 설명(description)과 동일하게 표시됩니다.")]
+    [Tooltip("현실(F키로 볼 때) 표시될 설명. 비워두면 위 설명(description)과 동일하게 표시됩니다.")]
     [TextArea(2, 4)]
     public string realityDescription;
 
@@ -94,7 +94,7 @@ public class ItemData : ScriptableObject
     {
         get
         {
-            bool isReality = SceneNames.IsRealityScene(SceneManager.GetActiveScene().name);
+            bool isReality = DaggerFilterController.IsRealityView;
             if (isReality && !string.IsNullOrEmpty(realityDescription))
                 return realityDescription;
             return description;
@@ -106,7 +106,7 @@ public class ItemData : ScriptableObject
     {
         get
         {
-            bool isReality = SceneNames.IsRealityScene(SceneManager.GetActiveScene().name);
+            bool isReality = DaggerFilterController.IsRealityView;
             if (!isReality && fantasyIcon != null) return fantasyIcon;
             return itemIcon;
         }

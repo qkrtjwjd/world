@@ -1603,15 +1603,8 @@ public class BattleSystem : MonoBehaviour
             yield break;
         }
 
-        // 현실씬(DarkReality) 위 오버레이로 실행된 턴제 → 환상 맵으로 이동
-        string origin = GameState.battleReturn.returnSceneName;
-        if (SceneNames.IsRealityScene(origin))
-        {
-            Destroy(gameObject.transform.root.gameObject);
-            UnityEngine.SceneManagement.SceneManager.LoadScene(
-                SceneNames.GetFantasyScene(origin));
-            yield break;
-        }
+        // 2026-08-27 — 현실 전용 씬(DarkReality)을 폐기하면서, 현실씬 위 오버레이 턴제에서
+        // 환상 맵으로 되돌리던 분기를 함께 제거했다. 현실/환상은 이제 한 씬 안에서 F키로 오간다.
 
         Destroy(gameObject.transform.root.gameObject);
     }

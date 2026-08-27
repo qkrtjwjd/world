@@ -103,14 +103,8 @@ public class PlayerStats : MonoBehaviour, IPlayerStatsService
     {
         GameState.mentalBreakdownTimer = 60f;
 
-        string current = SceneManager.GetActiveScene().name;
-        if (SceneNames.IsRealityScene(current))
-        {
-            GameState.lastPosition                     = transform.position;
-            GameState.hasPositionSaved                 = true;
-            GameState.battleReturn.isComingFromBattle  = false;
-            SceneManager.LoadScene(SceneNames.GetFantasyScene(current));
-        }
+        // 2026-08-27 — 예전에는 현실 전용 씬(DarkReality)에 있으면 환상 맵으로 되돌렸다.
+        // 그 씬을 폐기했고, 현실/환상은 이제 한 씬 안에서 F키로 오가므로 씬 이동이 필요 없다.
     }
 
     // ── UI 갱신 ──

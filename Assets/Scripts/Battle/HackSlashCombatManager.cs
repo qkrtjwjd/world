@@ -492,7 +492,7 @@ public class HackSlashCombatManager : MonoBehaviour
         if (_combatCtrl    != null) _combatCtrl.enabled = active;
     }
 
-    /// <summary>DarkRealityController 게이지 소진 시 호출됩니다.</summary>
+    /// <summary>게이지 소진 시 호출됩니다. (호출처였던 DarkRealityController 는 2026-08-27 폐기)</summary>
     public void ForceEndCombatByGauge()
     {
         if (!_isCombatActive) return;

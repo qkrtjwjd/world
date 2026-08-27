@@ -320,7 +320,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
 
     static bool IsGameplayScene(string name)
         => name == SceneNames.Home || name == SceneNames.Map
-        || name == SceneNames.DarkReality || name == SceneNames.Shelter;
+        || name == SceneNames.Shelter;
 
     // ─────────────────────────────────────────────
     //  데이터 조회 (UI 표시용)

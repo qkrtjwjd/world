@@ -133,9 +133,6 @@ public static class GameState
     // ──────────────────────────────────────────
     public static List<ItemData> inventoryItems = null;
 
-    // SceneNames 위임
-    public static string GetFantasyScene(string scene) => SceneNames.GetFantasyScene(scene);
-    public static bool   IsRealityScene(string scene)  => SceneNames.IsRealityScene(scene);
 
     // ──────────────────────────────────────────
     //  플레이 시작 시 정적 변수 초기화

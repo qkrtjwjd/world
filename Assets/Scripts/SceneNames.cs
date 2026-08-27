@@ -8,25 +8,11 @@ public static class SceneNames
     public const string Intro       = "IntroScene";
     public const string Home        = "Home";
     public const string Map         = "MapScene";
-    public const string DarkReality = "DarkReality";
     public const string Battle      = "BattleScene";
     public const string Shelter     = "Shelter";
     public const string BadEnding   = "BadEndingScene";
     public const string Credits     = "CreditsScene";
 
-    // 현실(Dark) <-> 환상(Fantasy) 짝꿍 매핑
-    public static string GetFantasyScene(string realityScene)
-    {
-        switch (realityScene)
-        {
-            case DarkReality: return Map;
-            // 추후 씬 추가 시 여기에 케이스만 추가
-            default:          return Map;
-        }
-    }
-
-    public static bool IsRealityScene(string sceneName)
-    {
-        return sceneName == DarkReality || sceneName.Contains("Dark");
-    }
+    // 현실/환상은 씬이 아니라 한 씬 안에서 F키로 오간다.
+    // 상태는 DaggerFilterController.IsRealityView 를 볼 것. (2026-08-27 DarkReality 씬 폐기)
 }
