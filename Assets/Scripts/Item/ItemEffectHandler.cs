@@ -26,7 +26,7 @@ public class ItemEffectHandler : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this) { SingletonGuard.DestroyDuplicate(this); return; }
         Instance = this;
         _blurWait = new WaitForSecondsRealtime(blurDuration);
         if (blurOverlayPanel != null) blurOverlayPanel.SetActive(false);

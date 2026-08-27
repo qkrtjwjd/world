@@ -25,7 +25,7 @@ public class CrackEventManager : MonoBehaviour
         }
         else
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
         }
     }
 

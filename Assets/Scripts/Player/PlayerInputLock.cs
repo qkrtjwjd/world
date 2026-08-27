@@ -45,7 +45,7 @@ public class PlayerInputLock : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
         }
     }
 

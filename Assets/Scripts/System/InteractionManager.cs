@@ -67,7 +67,7 @@ public class InteractionManager : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
         }
     }
 

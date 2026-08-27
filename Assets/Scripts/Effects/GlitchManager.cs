@@ -74,7 +74,7 @@ public class GlitchManager : MonoBehaviour
         }
         else
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
         }
     }
 

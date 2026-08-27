@@ -24,7 +24,7 @@ public class RadioManager : MonoBehaviour
         }
         else
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
         }
     }
 

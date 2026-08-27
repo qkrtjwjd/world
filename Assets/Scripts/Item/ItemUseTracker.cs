@@ -35,7 +35,7 @@ public class ItemUseTracker : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        if (Instance != null && Instance != this) { SingletonGuard.DestroyDuplicate(this); return; }
         Instance = this;
     }
 

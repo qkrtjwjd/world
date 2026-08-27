@@ -88,7 +88,7 @@ public class BattleTransitionManager : MonoBehaviour
         }
         else if (_instance != this)
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
             return;
         }
 

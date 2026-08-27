@@ -95,7 +95,7 @@ public class HackSlashCombatManager : MonoBehaviour
     void Awake()
     {
         if (Instance == null) Instance = this;
-        else { Destroy(gameObject); return; }
+        else { SingletonGuard.DestroyDuplicate(this); return; }
     }
 
     void OnDestroy()

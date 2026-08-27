@@ -18,7 +18,7 @@ public abstract class PersistentSingleton<T> : MonoBehaviour where T : MonoBehav
         }
         else
         {
-            Destroy(gameObject);
+            SingletonGuard.DestroyDuplicate(this);
         }
     }
 
