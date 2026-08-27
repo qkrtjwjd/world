@@ -120,9 +120,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ShelterTeleport
   teleportKey: 104
   shelterSceneName: Shelter
-  allowedScenes:
-  - MapScene
-  - DarkReality
+  allowedScenes: []
 --- !u!114 &4388174069741993559
 MonoBehaviour:
   m_ObjectHideFlags: 0
