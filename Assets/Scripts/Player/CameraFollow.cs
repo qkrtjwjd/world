@@ -12,6 +12,13 @@ public class CameraFollow : MonoBehaviour
     [SerializeField] CinemachineCamera followVCam;
     [SerializeField] CinemachineConfiner2D confiner;
 
+    [Header("씬 기본 바운드")]
+    [Tooltip("방 바운드가 풀릴 때 되돌아갈 씬 전체 바운드. 씬의 \"SceneCameraBounds\" 에서 자동으로 찾으므로 직접 꽂지 않아도 된다.")]
+    [SerializeField] BoxCollider2D defaultBound;
+
+    /// <summary>씬 기본 바운드로 쓸 오브젝트의 이름. 이 이름이어야 씬 로드 때 자동으로 잡힌다.</summary>
+    public const string SceneBoundName = "SceneCameraBounds";
+
     [Header("Zoom")]
     public float defaultOrthoSize = 5.625f;
 
@@ -75,10 +82,29 @@ public class CameraFollow : MonoBehaviour
         followVCam      = vcam;
         _follow         = vcam.GetComponent<CinemachineFollow>();
         _followVCamName = vcam.name;
+
+        // ⚠ confiner 도 같이 다시 잡는다. 가상 카메라와 같은 GameObject 에 붙어 있으므로
+        //   이전 씬의 가상 카메라가 파괴되면 confiner 도 같이 가짜 null 이 된다.
+        //   이걸 빼면 씬을 넘어간 뒤 SetBound 가 조용히 아무 일도 하지 않는다.
+        confiner = vcam.GetComponent<CinemachineConfiner2D>();
+    }
+
+    /// <summary>씬의 기본 바운드를 이름으로 다시 찾습니다.</summary>
+    /// <remarks>
+    /// ⚠ <see cref="followVCam"/> 과 똑같은 이유로 매 씬마다 다시 찾아야 한다.
+    /// 이 GameObject 는 <c>DontDestroyOnLoad</c> 라 씬을 넘어 살아남지만,
+    /// <see cref="defaultBound"/> 가 가리키던 씬 오브젝트는 이전 씬과 함께 파괴돼 가짜 null 이 된다.
+    /// </remarks>
+    void BindDefaultBound()
+    {
+        var go = GameObject.Find(SceneBoundName);
+        defaultBound = go != null ? go.GetComponent<BoxCollider2D>() : null;
     }
 
     void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        BindDefaultBound();
+
         if (followVCam == null)
         {
             var candidates = FindObjectsByType<CinemachineCamera>(FindObjectsInactive.Include);
@@ -101,9 +127,15 @@ public class CameraFollow : MonoBehaviour
 
         if (followVCam == null)
         {
-            // 가상 카메라가 없는 씬도 있다(MapScene). 그 씬에서는 원래 따라가지 않으므로 정상이다.
+            // 가상 카메라가 없는 씬에서는 따라갈 대상이 없다. 플레이가 있는 세 씬
+            // (Home · MapScene · Shelter)에는 전부 "Follow VCam" 이 있어야 한다.
             return;
         }
+
+        // 씬 기본 바운드를 적용한다. confiner 를 다시 잡은 뒤라야 의미가 있다.
+        // 방에서 시작하는 경우에는 씬 오브젝트의 Start() 가 sceneLoaded 뒤에 돌기 때문에
+        // RoomTransfer.Start 가 방 바운드로 덮어쓴다 — 순서가 맞다.
+        SetBound(null);
 
         if (followVCam.Follow == null)
         {
@@ -129,6 +161,10 @@ public class CameraFollow : MonoBehaviour
 
     void Start()
     {
+        // 첫 씬에서는 sceneLoaded 가 이 컴포넌트의 OnEnable 보다 먼저 지나갈 수 있으므로
+        // 여기서도 한 번 잡는다.
+        if (defaultBound == null) BindDefaultBound();
+
         if (followVCam == null) return;
 
         if (followVCam.Follow == null)
@@ -235,11 +271,19 @@ public class CameraFollow : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// 카메라 바운드를 바꿉니다. <paramref name="newBound"/> 가 <c>null</c> 이면
+    /// "방을 나간다"는 뜻이므로 <b>씬 기본 바운드</b>(<see cref="SceneBoundName"/>)로 되돌아갑니다.
+    /// </summary>
+    /// <remarks>
+    /// null 을 "바운드 없음" 으로 처리하면 방을 한 번 드나든 뒤로는 씬 경계가 영영 사라져,
+    /// 마을 가장자리에서 담 밖 빈 공간이 화면 절반까지 들어온다.
+    /// </remarks>
     public void SetBound(BoxCollider2D newBound, bool snap = false)
     {
         if (confiner != null)
         {
-            confiner.BoundingShape2D = newBound;
+            confiner.BoundingShape2D = newBound != null ? newBound : defaultBound;
             confiner.InvalidateBoundingShapeCache();
         }
         if (newBound == null) ZoomTo(defaultOrthoSize, 0.3f);

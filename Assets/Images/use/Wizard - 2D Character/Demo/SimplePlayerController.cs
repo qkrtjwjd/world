@@ -63,8 +63,16 @@ namespace ClearSky
             _isRunning = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
 
             // 스프라이트 방향·애니메이션은 프레임 단위로 즉시 반영
-            if (h < 0)      transform.localScale = new Vector3(-1, 1, 1);
-            else if (h > 0) transform.localScale = new Vector3(1,  1, 1);
+            // ⚠ 크기는 건드리지 않고 부호만 뒤집는다. (-1,1,1) 을 통째로 대입하면
+            //    씬에 박힌 스케일(도트 규격 전환 이후 0.5625)이 지워져, 좌/우를 처음
+            //    누르는 순간 캐릭터가 1.78배로 커진 채 돌아오지 않는다.
+            //    CompanionFollow 도 같은 형태로 방향만 바꾼다.
+            if (h != 0)
+            {
+                Vector3 s = transform.localScale;
+                s.x = Mathf.Abs(s.x) * (h < 0 ? -1f : 1f);
+                transform.localScale = s;
+            }
 
             anim.SetBool("isRun", _moveInput != Vector2.zero);
         }

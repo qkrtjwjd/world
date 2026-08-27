@@ -411,6 +411,64 @@ N = max(1, round(5.625 / 목표ortho))     실제ortho = 5.625 / N
   없다가 중간에 한 번 튀어서, 부드러워지는 게 아니라 지연만 생기기 때문이다.
   연출의 호흡은 호출부가 `WaitForSeconds` 로 잡는다.
 
+### ⚠ 카메라 바운드 — 화면보다 작으면 카메라가 **움직이지 않는다**
+
+`CinemachineConfiner2D` 의 `OversizeWindow` 가 꺼져 있으면, 바운드가 화면보다 작을 때
+`ConfinerOven` 이 해를 **바운딩 사각형의 중점 한 점**으로 만든다
+(`ConfinerOven.cs` 의 `theoreticalMaxCandidate`). 버그가 아니라 엔진의 동작이다.
+
+```
+theoreticalMax = max(바운드가로 ÷ 1.7778, 바운드세로) ÷ 2
+ortho >= theoreticalMax  →  카메라가 바운드 중앙에 고정된다
+```
+
+- **방을 따라다니게 하려면** `RoomTransfer.targetOrthoSize` 로 줌인해 `ortho < theoreticalMax` 를 만든다.
+  쓸 수 있는 값은 위 줌 절대로 **`5.625 / N` 뿐**이다.
+- **한 화면짜리 방을 정적 카메라로 만들려면** 반대로 이 성질을 그대로 쓴다. 의도임을 주석에 남긴다.
+- ⛔ **씬 YAML 의 `m_Size` 에 스케일을 곱해서 바운드 크기를 재지 말 것.** 회전이 걸린 부모가 있으면
+  축이 뒤바뀐다(`루의 방` 루트가 Z축 90°다). **`Collider2D.bounds`(월드 AABB)로 잰다.**
+
+### 씬 기본 바운드 — 이름 규약 `SceneCameraBounds`
+
+`CameraFollow.SetBound(null)` 은 "바운드 없음" 이 아니라 **"방을 나간다"** 는 뜻이고,
+씬 기본 바운드로 되돌아간다. 호출자가 전부 그 뜻이기 때문이다.
+
+- 씬 루트에 **`SceneCameraBounds` 라는 이름의 GameObject + `BoxCollider2D`(반드시 `isTrigger`)** 를
+  두면 씬 로드 때 자동으로 잡힌다. 인스펙터에 꽂지 않는다.
+- **이름으로 다시 찾는 이유는 `followVCam` 과 같다** — 카메라는 `DontDestroyOnLoad` 로 씬을 넘지만
+  씬 오브젝트를 가리키던 참조는 가짜 null 이 된다. 같은 이유로 `confiner` 도 재바인딩 대상이다.
+- 바깥 경계를 두지 않으면 맵 가장자리에서 담 밖 빈 공간이 화면 절반까지 들어온다.
+
+### ⚠ Point `Light2D` 반경은 트랜스폼 스케일을 무시한다
+
+`Light2D.GetMatrix()`(URP `Runtime/2D/Light2D.cs`)가 **Point 타입일 때만**
+`TRS(position, rotation, outerRadius)` 로 행렬을 새로 만들어 스케일을 통째로 버린다.
+Freeform·Sprite·Parametric 은 `localToWorldMatrix` 를 쓰므로 영향이 없다.
+
+→ **월드 배율을 바꾸면 Point 라이트 반경은 따로 곱해야 한다.** 부모가 줄었다고 따라가지 않는다.
+
+### 스프라이트 좌우 반전에 `localScale` 을 통째 대입하지 않는다
+
+`transform.localScale = new Vector3(-1, 1, 1)` 은 **씬에 박힌 크기를 지운다.**
+월드 배율이 1 이 아닌 이 프로젝트에서는 캐릭터가 그 자리에서 커진다. **에러가 0건이라 안 보인다.**
+부호만 뒤집는다 — 선례는 `Assets/Scripts/NPC/CompanionFollow.cs`.
+
+```csharp
+Vector3 s = transform.localScale;
+s.x = Mathf.Abs(s.x) * (왼쪽 ? -1f : 1f);
+transform.localScale = s;
+```
+
+### 씬의 뷰포트 `y 0.125 / height 0.75` 는 손으로 넣은 값이 아니다
+
+`PixelPerfectCamera` 는 `[ExecuteInEditMode]` 라 **에디터에서도** 매 프레임 `Camera.pixelRect` 를
+Windowbox 값으로 다시 잡고, 씬을 저장하면 그 결과가 프리팹 인스턴스 오버라이드로 박힌다.
+**지워도 다시 생긴다. 결함이 아니다.** 런타임에는 `CameraFollow.LateUpdate` 가 `viewportRect`
+(0,0,1,1)로 되돌린 뒤 PPC 가 다시 잡으므로, 실제 레터박스는 언제나 Windowbox 가 만든다.
+
+> ⚠ 그 오버라이드를 `PrefabUtility.SetPropertyModifications` 로 걷어내면
+> **그 순간의 값이 프리팹 원본으로 흘러들어간다.** 프리팹은 씬 정리보다 **나중에** 못박을 것.
+
 ### 신규 도트 자산의 자리
 
 - **`Assets/Art/` 아래에 둔다.** 이 경로에만 PPU 32 프리셋이 자동 적용된다

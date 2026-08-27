@@ -156,7 +156,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   followVCam: {fileID: 0}
   confiner: {fileID: 0}
-  defaultOrthoSize: 5
+  defaultBound: {fileID: 0}
+  defaultOrthoSize: 5.625
   shakeOffset: {x: 0, y: 0, z: 0}
   tiltAngle: 0
   viewportRect:
@@ -190,10 +191,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b1b61c2bbf37d2448a120776c5e5e432, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SceneCameraSetup
-  shots:
-  - name: 
-    vcam: {fileID: 0}
-    blendTime: 0.4
+  shots: []
 --- !u!114 &1152863613522188007
 MonoBehaviour:
   m_ObjectHideFlags: 0
