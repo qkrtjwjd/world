@@ -49,10 +49,7 @@ public class DialogueLogUI : MonoBehaviour
         var canvas = root.AddComponent<Canvas>();
         canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 98;   // 설정 패널(99) 아래, 테두리 효과(95) 위
-        var scaler = root.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight  = 0.5f;
+        UiCanvasScale.Add(root);   // 640x360 Expand — 단일 출처
         root.AddComponent<GraphicRaycaster>();
 
         _instance = root.AddComponent<DialogueLogUI>();

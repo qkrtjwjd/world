@@ -74,7 +74,7 @@ public class IntroManager : MonoBehaviour
         var canvas = root.AddComponent<Canvas>();
         canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100;
-        root.AddComponent<UnityEngine.UI.CanvasScaler>();
+        UiCanvasScale.Add(root);   // 640x360 Expand - 단일 출처
         _group = root.AddComponent<CanvasGroup>();
         _group.alpha          = 0f;
         _group.blocksRaycasts = false;

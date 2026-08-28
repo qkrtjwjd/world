@@ -77,7 +77,7 @@ public class EasterEggLetter : MonoBehaviour
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 200;
-        canvasGo.AddComponent<CanvasScaler>();
+        UiCanvasScale.Add(canvasGo);   // 640x360 Expand — 단일 출처
         canvasGo.AddComponent<GraphicRaycaster>();
 
         var cg    = canvasGo.AddComponent<CanvasGroup>();

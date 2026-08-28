@@ -61,7 +61,7 @@ public class QuickSaveController : MonoBehaviour
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 120;
-        canvasGo.AddComponent<CanvasScaler>();
+        UiCanvasScale.Add(canvasGo);   // 640x360 Expand — 단일 출처
 
         _toastGroup = canvasGo.AddComponent<CanvasGroup>();
         _toastGroup.alpha          = 0f;

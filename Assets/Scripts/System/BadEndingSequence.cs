@@ -70,7 +70,7 @@ public class BadEndingSequence : MonoBehaviour
         var canvas = root.AddComponent<Canvas>();
         canvas.renderMode  = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100;   // TransitionManager 의 페이드 오버레이(999)보다 아래
-        root.AddComponent<CanvasScaler>();
+        UiCanvasScale.Add(root);   // 640x360 Expand — 단일 출처
         root.AddComponent<GraphicRaycaster>();   // '타이틀로' 버튼이 클릭을 받으려면 필요하다
 
         var seq = root.AddComponent<BadEndingSequence>();

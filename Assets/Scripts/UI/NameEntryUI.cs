@@ -83,10 +83,7 @@ public class NameEntryUI : MonoBehaviour
         canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 97;   // 설정(99)·힌트(94) 사이. 타이틀 UI 위를 덮는다.
 
-        var scaler = root.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight  = 0.5f;
+        UiCanvasScale.Add(root);   // 640x360 Expand — 단일 출처
         root.AddComponent<GraphicRaycaster>();
 
         _instance     = root.AddComponent<NameEntryUI>();

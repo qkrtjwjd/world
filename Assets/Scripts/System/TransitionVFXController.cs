@@ -839,7 +839,7 @@ public class TransitionVFXController : MonoBehaviour
         canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 998; // TransitionManager(999) 바로 아래
 
-        canvasGo.AddComponent<CanvasScaler>();
+        UiCanvasScale.Add(canvasGo);   // 640x360 Expand — 단일 출처
         canvasGo.AddComponent<GraphicRaycaster>();
 
         var imageGo = new GameObject("WhiteImage");

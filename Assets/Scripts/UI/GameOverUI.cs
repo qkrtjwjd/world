@@ -29,7 +29,7 @@ public class GameOverUI : MonoBehaviour
         var canvas = root.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 100;
-        root.AddComponent<CanvasScaler>();
+        UiCanvasScale.Add(root);   // 640x360 Expand — 단일 출처
         root.AddComponent<GraphicRaycaster>();
 
         _instance     = root.AddComponent<GameOverUI>();

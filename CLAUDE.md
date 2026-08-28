@@ -411,6 +411,25 @@ N = max(1, round(5.625 / 목표ortho))     실제ortho = 5.625 / N
   없다가 중간에 한 번 튀어서, 부드러워지는 게 아니라 지연만 생기기 때문이다.
   연출의 호흡은 호출부가 `WaitForSeconds` 로 잡는다.
 
+### UI 도 640 × 360 을 기준으로 한다
+
+게임은 640×360 을 **정수배**로 확대해 그린다. UI 가 그 확대를 따라가지 않으면 둘이 따로 논다 —
+`ConstantPixelSize` 캔버스는 1080p(3배)에서 UI 만 1배로 남고, 기준을 1920×1080 으로 두면 또 다른 비율로 움직인다.
+
+| 필드 | 값 |
+|---|---|
+| `CanvasScaler.uiScaleMode` | **`ScaleWithScreenSize`** |
+| `referenceResolution` | **640 × 360** |
+| `screenMatchMode` | **`Expand`** |
+| `referencePixelsPerUnit` | **100 그대로** — UI 스프라이트는 `Assets/Images` 의 PPU 100 자산이다 |
+
+- **코드에서 캔버스를 만들 때는 `UiCanvasScale.Add(go)` 를 쓴다.**
+  `Assets/Scripts/UI/UiCanvasScale.cs` 가 **기준 해상도의 단일 출처**다. 640×360 을 다른 곳에 적지 않는다.
+- **Screen Space - Overlay 를 유지한다**(§7). Overlay 는 창 전체를 덮으므로 레터박스 위로도 그려진다.
+  다만 **1280×720 · 1920×1080 처럼 640×360 의 정수배 창에서는 레터박스 자체가 생기지 않는다.**
+  에디터 Game View 에서 보이는 레터박스는 창 크기가 정수배가 아니라서 생기는 것이다.
+- 정수배가 아닌 창에서는 게임이 내림한 정수배, UI 는 소수배라 서로 조금 어긋난다. 이건 구조상 어쩔 수 없다.
+
 ### ⚠ 카메라 바운드 — 화면보다 작으면 카메라가 **움직이지 않는다**
 
 `CinemachineConfiner2D` 의 `OversizeWindow` 가 꺼져 있으면, 바운드가 화면보다 작을 때

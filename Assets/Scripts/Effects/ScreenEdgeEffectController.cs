@@ -43,7 +43,7 @@ public class ScreenEdgeEffectController : MonoBehaviour
         var canvas = root.AddComponent<Canvas>();
         canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 95;   // 게임 UI 위, 설정 패널 아래
-        root.AddComponent<UnityEngine.UI.CanvasScaler>();
+        UiCanvasScale.Add(root);   // 640x360 Expand — 단일 출처
 
         _instance = root.AddComponent<ScreenEdgeEffectController>();
         _instance.BuildOverlay(root.transform);

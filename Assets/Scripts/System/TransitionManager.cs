@@ -84,7 +84,7 @@ public class TransitionManager : MonoBehaviour
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 999;
 
-        canvasGo.AddComponent<CanvasScaler>();
+        UiCanvasScale.Add(canvasGo);   // 640x360 Expand — 단일 출처
         canvasGo.AddComponent<GraphicRaycaster>();
 
         var imageGo = new GameObject("BlackImage");

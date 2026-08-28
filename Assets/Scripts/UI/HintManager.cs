@@ -45,10 +45,7 @@ public class HintManager : MonoBehaviour
         var canvas = root.AddComponent<Canvas>();
         canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 94;   // 게임 UI 위, 테두리 효과(95) 아래
-        var scaler = root.AddComponent<CanvasScaler>();
-        scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1920f, 1080f);
-        scaler.matchWidthOrHeight  = 0.5f;
+        UiCanvasScale.Add(root);   // 640x360 Expand — 단일 출처
 
         _instance = root.AddComponent<HintManager>();
         _instance.BuildUI(root.transform);
