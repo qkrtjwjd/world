@@ -3,7 +3,7 @@ title: House_sera_bed
 <<showSprite "루" "neutral" "right">>
 루독백: 엄마의 침대다. 항상 반듯하게 정리되어 있다
 <<showSprite "루" "holding_tears" "right">>
-{$이름}: ...아빠 자리는 역시 없네
+{$이름}: …아빠 자리는 역시 없네
 ===
 title: House_sera_closet
 ---

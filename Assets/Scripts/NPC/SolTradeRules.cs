@@ -83,10 +83,13 @@ public static class SolTradeRules
         if (!CanTrade(offer, want))
             return Reject(mode, offer, RejectReason.GradeMismatch);
 
+        // 성립에는 대사가 없다. 정본이 거절은 사유별로 전부 규정해 두고 성립만 비워 뒀다 —
+        // D-3 S#20 에 수취 대사가 없고 F-7-1 도 성립 시 대사 호출을 규정하지 않는다.
+        // 빈 문자열이면 PlayIfExists 가 건너뛴다. 정본에 성립 대사가 생기면 여기서 부를 것.
         return new TradeOutcome
         {
             accepted = true,
-            yarnNode = YarnNodes.Sol_Trade_Success,
+            yarnNode = string.Empty,
         };
     }
 

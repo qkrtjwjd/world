@@ -1,12 +1,24 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Events;
-using UnityEngine.UI;
 
 public class InteractionTrigger : MonoBehaviour
 {
+    /// <summary>
+    /// 접근 시 띄울 문구. <see cref="showPrompt"/> 가 켜져 있을 때만 보인다.
+    /// </summary>
     [Header("기본 설정")]
-    public string      message               = "E키를 눌러 상호작용";
+    public string      message               = "";
+
+    /// <summary>
+    /// 접근 표시를 띄울지. <b>기본값은 꺼짐이다.</b>
+    ///
+    /// C-16-8 · F-8-6 — 상호작용 가능 표시는 <b>세이브 포인트와 솔에만</b> 붙는다.
+    /// 무엇이 중요한지를 게임이 먼저 알려주면 D-S#07 의 헛수고 설계와 충돌한다.
+    /// 그래서 켜는 쪽을 예외로 두고, 켤 때는 정본의 어느 항목에 해당하는지 확인할 것.
+    /// </summary>
+    public bool        showPrompt            = false;
+
     public bool        hideTextAfterFirstView = false;
 
     [Header("수치 변화 (상호작용 시 즉시 적용)")]
@@ -21,9 +33,11 @@ public class InteractionTrigger : MonoBehaviour
     [Tooltip("E키를 눌렀을 때 실행할 기능을 여기에 연결하세요.")]
     public UnityEvent onInteract;
 
-    [Header("라디오 연동 (Yarn 노드 이름을 지정하면 버튼이 자동으로 표시됩니다)")]
-    public Button radioButton;
-    public string radioYarnNode;
+    // ⚠ 라디오 연동(radioButton · radioYarnNode)은 2026-08-30 삭제했다. 다시 만들지 말 것.
+    //   E-52 가 [라디오] 선택지 방식을 폐기했다 — 유의 반응은 조사 키로만 나오고, 대비
+    //   오브젝트 노드 안에서 소지 여부로 조건 분기한다(F-8-4). 버튼을 두면 입력 축이 하나
+    //   늘고 어떤 물건에 반응이 있는지를 UI 가 먼저 알려주게 된다.
+    //   구 반응 대상 목록 16종도 함께 폐기됐다(E-39-2). 새 대상은 51절의 대비 오브젝트에서 고른다.
 
     [Header("거리 감지 (Solid 콜라이더가 트리거 진입을 막는 경우 사용)")]
     [SerializeField] private bool  useDistanceDetection = false;
@@ -58,10 +72,6 @@ public class InteractionTrigger : MonoBehaviour
 
     void Start()
     {
-        if (radioButton != null)
-            radioButton.onClick.AddListener(OnRadioButtonClicked);
-        RefreshRadioButton(false);
-
         if (useDistanceDetection)
             CachePlayerTransform();
     }
@@ -77,17 +87,6 @@ public class InteractionTrigger : MonoBehaviour
         }
     }
 
-    private void OnRadioButtonClicked()
-    {
-        RadioManager.Instance?.PlayRadioInline(radioYarnNode);
-    }
-
-    private void OnDestroy()
-    {
-        if (radioButton != null)
-            radioButton.onClick.RemoveListener(OnRadioButtonClicked);
-    }
-
     void Update()
     {
         if (!useDistanceDetection) return;
@@ -100,13 +99,11 @@ public class InteractionTrigger : MonoBehaviour
         {
             _canInteract = true;
             InteractionManager.Instance?.RegisterTrigger(this);
-            RefreshRadioButton(true);
         }
         else if (!inRange && _canInteract)
         {
             _canInteract = false;
             InteractionManager.InstanceIfExists?.UnregisterTrigger(this);
-            RefreshRadioButton(false);
         }
     }
 
@@ -232,7 +229,6 @@ public class InteractionTrigger : MonoBehaviour
         _canInteract = false;
         StopAllCoroutines();
         InteractionManager.InstanceIfExists?.UnregisterTrigger(this);
-        RefreshRadioButton(false);
     }
 
     /// <remarks>
@@ -245,7 +241,6 @@ public class InteractionTrigger : MonoBehaviour
     {
         _canInteract = false;
         InteractionManager.InstanceIfExists?.UnregisterTrigger(this);
-        RefreshRadioButton(false);
     }
 
     IEnumerator EnableNextFrame()
@@ -253,13 +248,5 @@ public class InteractionTrigger : MonoBehaviour
         yield return null;
         _canInteract = true;
         InteractionManager.Instance?.RegisterTrigger(this);
-        RefreshRadioButton(true);
-    }
-
-    void RefreshRadioButton(bool inRange)
-    {
-        if (radioButton == null) return;
-        bool show = inRange && !string.IsNullOrEmpty(radioYarnNode);
-        radioButton.gameObject.SetActive(show);
     }
 }

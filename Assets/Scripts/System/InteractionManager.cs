@@ -168,6 +168,10 @@ public class InteractionManager : MonoBehaviour
 
         if (_active == null) { _ui.Hide(); return; }
 
+        // 접근 표시는 세이브 포인트와 솔에만 붙는다 (C-16-8 · F-8-6).
+        // 무엇이 중요한지를 게임이 먼저 알려주면 D-S#07 의 헛수고 설계와 충돌한다.
+        if (!_active.showPrompt) { _ui.Hide(); return; }
+
         if (_active.hideTextAfterFirstView && _active.hasShownText)
             _ui.Hide();
         else

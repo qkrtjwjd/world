@@ -16,6 +16,12 @@ public class YarnNodeListData : ScriptableObject
         // 옛 House.yarn / Opening_Monologue.yarn 시절 이름 8개는 파일 자체가 없어져 삭제:
         //   House_Start, House_Kitchen, House_Kitchen_Noise, House_Kitchen_After,
         //   House_Attic, House_Attic_Inside, House_MomRoom, Opening_Monologue
+        //
+        // ── 2026-08-30 삭제 ──
+        //   Radio_* 18개 — 구 라디오 반응 시스템 폐기(E-39-2 · E-52). Radio_Yu.yarn 도 지웠다.
+        //   House_lu_star_r — 구 라디오 반응 대사. House_lu_sofa — 배선 없는 고아 노드.
+        //   Village_Sol_Radio — 정본 D-2 15-F 삭제(E 3.0).
+        //   Sol_Trade_Success — 정본에 거래 성립 대사가 없다(D-3 S#20 · F-7-1).
 
         // Intro.yarn
         "Intro",
@@ -37,8 +43,8 @@ public class YarnNodeListData : ScriptableObject
         // 집 안 상호작용 (개별 .yarn)
         "House_attic_door",
         "House_kitchen_marshmallow", "House_kitchen_refrigerator", "House_kitchen_refrigerator1",
-        "House_lu_marshmallow", "House_lu_star", "House_lu_star1", "House_lu_star_r",
-        "House_lu_toybox", "House_lu_toybox1", "House_lu_sofa",
+        "House_lu_marshmallow", "House_lu_star", "House_lu_star1",
+        "House_lu_toybox", "House_lu_toybox1",
         "House_sera_bed", "House_sera_closet",
         // Village_Demo.yarn
         "Village_Sol_Square", "Village_FlowerShop", "Village_Bakery",
@@ -46,7 +52,7 @@ public class YarnNodeListData : ScriptableObject
         // D-2 정본 신규 노드 (Scenario/node_map.json 의 S#14·S#15) — 아직 .yarn 미작성
         "Village_Sol_Talk_Purity", "Village_Sol_Talk_Since", "Village_Sol_Talk_Money",
         "Village_Sera_Spotted", "Village_Square_Children",
-        "Village_Sol_Trade_Sugar", "Village_Sol_Radio",
+        "Village_Sol_Trade_Sugar",
         // Forest_Demo — D-3 정본 (S#16~S#17)
         "Forest_Entrance", "Forest_Kuru_Greet", "Forest_Kuru_Radio", "Forest_Kuru_SugarCube",
         "Forest_Wolf_Encounter", "Forest_Wolf_Tutorial", "Forest_Wolf_Guard_Praise",
@@ -55,13 +61,8 @@ public class YarnNodeListData : ScriptableObject
         "Forest_Wolf_KillEnd", "Forest_Wolf_PurifyEnd",
         // 구 원고 잔존분 — S#18 이후 원고가 나오면 교체 대상
         "Forest_GoldenThorns", "Forest_Camp_Night",
-        // Radio_Yu
-        "Radio_Fountain", "Radio_FlowerShop", "Radio_BreadDough", "Radio_DistortedVillage",
-        "Radio_Tracker", "Radio_Miru", "Radio_Amo", "Radio_ToothFlower", "Radio_Stream",
-        "Radio_FallenFruit", "Radio_AllianceMark", "Radio_Wolf", "Radio_Pond", "Radio_Tripped",
-        "Radio_Campfire", "Radio_Shelter", "Radio_BattleSpare", "Radio_BattleWin",
         // 솔 거래 노드 (아직 .yarn 미작성)
-        "Sol_Trade_Success", "Sol_Trade_Reject_Village", "Sol_Trade_Reject_GradeMismatch",
+        "Sol_Trade_Reject_Village", "Sol_Trade_Reject_GradeMismatch",
         "Sol_Trade_Reject_Contaminated", "Sol_Trade_Reject_Empty", "Sol_Trade_Reject_PlayerWithdraws"
     };
 }

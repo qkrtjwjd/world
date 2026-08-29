@@ -35,7 +35,6 @@
 //        Village_Square_Children   광장 아이들 (대사 없음)
 //        Village_Sol_Trade_Sugar   각설탕 — 루가 스스로 거둔다
 //        Sol_BreadDoughReject      거래 거절 — 빵 반죽
-//        Village_Sol_Radio         솔 · 라디오
 //   BE#02-a Village_Sera_Captured   순찰 2회차 발각 → 감금 엔딩
 //        (이후 BE#02-b · c 는 Assets/Dialogue/House_BadEnding.yarn)
 // ============================================================
@@ -233,17 +232,6 @@ tags: ingame
 // S#15 15-E-2 거절 — 빵 반죽. SolTradeUI 의 OnBreadDoughTradeAttempt 가 호출한다.
 <<showSprite "솔" "subtle_pause">>
 솔: 비어 있는건 안 받아.
-<<showSprite "솔" "neutral_flat">>
-===
-
-title: Village_Sol_Radio
-tags: ingame
----
-// S#15 15-F 솔 · 라디오 — 솔에게는 잡음만 흐르고 솔 본인이 반응한다.
-// 쿠루에게는 아무 반응도 없다. 이 대비가 솔의 정체에 대한 단서다.
-// [SFX] 딱 (1회)
-<<showSprite "솔" "subtle_pause">>
-솔: …누구랑 얘기해?
 <<showSprite "솔" "neutral_flat">>
 ===
 
