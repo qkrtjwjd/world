@@ -96,6 +96,38 @@ SCENE_HEADER_PLAIN = re.compile(r"^(" + SCENE_KEY + r")(?:\s|$)")
 # 없고 볼드는 run 속성이므로, `▶` 규칙과 같이 서식에 의존하지 않는 형태로 맞췄다.
 SECTION_HEADER = re.compile(r"^D-\d+\.")
 
+# ---------------------------------------------------------------------------
+# D-4 오브젝트 대사 — 전용 표기 (F-8-9)
+#
+# ⚠ D-1~D-3 과 서식이 다르다. D-4 의 줄은 전부 무서식(볼드도 이탤릭도 아님)이라
+#   화이트리스트 ①(첫 run 볼드)·②(전체 이탤릭) 어디에도 걸리지 않는다. 그대로 두면
+#   원고가 채워지는 순간 대사가 통째로 UNCLASSIFIED 로 떨어지는데 게이트는 PASS 라
+#   눈에 띄지 않는다. F-8-9 가 "4장의 화이트리스트 규약과 별개이며 D-4 전용으로
+#   적용한다" 고 명시했으므로 기존 판정 경로를 건드리지 않고 별도 경로를 둔다.
+OBJECT_SECTION = "D-4"
+
+# "D-4-1.  집 구간" → 구간명 '집'. 번호가 아니라 표제에서 읽는다 —
+# 번호와 구간의 대응을 하드코딩하면 절이 재배열될 때 조용히 틀린다.
+OBJECT_SUBSECTION = re.compile(r"^D-4-\d+\.\s*(.+?)\s*구간\s*$")
+
+# 구간 → 코드 ID 접두 (F-8-3). 매핑표 검증에만 쓴다. 코드 ID 자체는 표에서만 온다.
+OBJECT_PREFIX = {"집": "house_", "마을": "town_", "숲": "forest_"}
+
+OBJECT_LAYERS = ("밀도", "대비", "선택")
+OBJECT_FORMS = ("방법", "태도", "대상", "침묵", "반복")     # C-16-6. 5건에 5형태
+OBJECT_SILENT = "무대사"
+
+OBJ_HEADER = re.compile(r"^\[OBJ\]\s*(.+)$")
+OBJ_VERSION = re.compile(r"^([FNR])\s+루\s*(.*)$")
+OBJ_DENSITY = re.compile(r"^루\s*(.*)$")
+OBJ_CHOICE = re.compile(r"^\[선택\]\s*(.+)$")
+OBJ_REACTION = re.compile(r"^→\s*루\s*(.*)$")
+OBJ_RADIO = re.compile(r"^라디오\s*(.*)$")
+OBJ_KURU = re.compile(r"^쿠루\s*(.*)$")
+
+# 선택지 끝의 (31-) — 인형화 31 이상에서 빠지는 항목 (C-16-6 · F-8-2)
+CHOICE_DROP = re.compile(r"\s*\(\s*31\s*-\s*\)\s*$")
+
 DQUOTE = "\"“”"           # " “ ”
 SQUOTE = "'‘’"            # ' ‘ ’
 MONOLOGUE = re.compile(
@@ -193,6 +225,7 @@ KIND_NARRATION = "narration"
 KIND_STAGING = "staging"
 KIND_BLOCKED = "blocked"
 KIND_UNCLASSIFIED = "unclassified"
+KIND_OBJECT = "object"      # D-4 오브젝트 대사. 씬 카운트에 들어가지 않는다
 
 
 @dataclass
@@ -207,6 +240,30 @@ class Item:
     tag: str = ""
     reason: str = ""
     condition: str = ""      # 「쿠루 · 공격」의 '공격'. 조건부 대사만 채워진다
+
+
+@dataclass
+class ObjectChoice:
+    """선택 오브젝트의 선택지 1개와 그 반응 (C-16-6)."""
+    text: str
+    drop_at_31: bool = False     # (31-) 표기. 인형화 31 이상에서 빠진다
+    reaction: str = ""
+
+
+@dataclass
+class ObjectSpec:
+    """D-4 오브젝트 1건. 필드는 F-8-1 의 6항목에 원고 대조용을 더한 것이다."""
+    para: int
+    manuscript_id: str                                   # 원고 ID (한글). D-4 가 기준
+    layer: str                                           # 밀도 · 대비 · 선택
+    section: str                                         # 집 · 마을 · 숲
+    form: str = ""                                       # 선택 오브젝트의 형태
+    silent: bool = False                                 # 무대사 — 노드를 만들지 않는다
+    density: str = ""
+    versions: dict[str, str] = field(default_factory=dict)   # F · N · R
+    choices: list[ObjectChoice] = field(default_factory=list)
+    radio: str = ""                                      # 유의 한 줄 (화자 ID radio_yu)
+    kuru: str = ""                                       # 숲 지정 오브젝트 한정
 
 
 @dataclass
@@ -226,6 +283,11 @@ class Classifier:
         self.narration_whitelist = narration_whitelist
         self.note_scene = note_scene
         self.scene: Optional[str] = None
+        # D-4 전용 상태
+        self.section: Optional[str] = None       # 현재 구간 표제 (D-1 … D-4)
+        self.obj_sub: Optional[str] = None       # D-4 안의 구간 (집 · 마을 · 숲)
+        self.objects: list[ObjectSpec] = []
+        self._obj: Optional[ObjectSpec] = None   # 지금 채우는 중인 오브젝트
 
     def classify(self, p: Para) -> Optional[Item]:
         s = p.stripped
@@ -240,8 +302,16 @@ class Classifier:
         if s.startswith("【"):
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="씬 헤더")
 
-        # 1b. 구간 표제 — D-1 / D-2 / D-3 …
-        if SECTION_HEADER.match(s):
+        # 1b. 구간 표제 — D-1 / D-2 / D-3 / D-4 …
+        m = SECTION_HEADER.match(s)
+        if m:
+            self.section = m.group(0).rstrip(".")
+            self.obj_sub = None
+            self._obj = None
+            # ⚠ D-4 는 씬이 아니다. 여기서 self.scene 을 끊지 않으면 D-4 의 모든 문단이
+            #   직전 씬(S#20) 소속으로 남아 그 씬의 카운트·UNCLASSIFIED 에 섞인다.
+            if self.section == OBJECT_SECTION:
+                self.scene = None
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="구간 표제")
 
         # 2. ▶ 연출 — 볼드 여부 무관 (원고에 볼드 누락 10건)
@@ -250,6 +320,11 @@ class Classifier:
         for pref, why in zip(BLOCK_PREFIXES, ("연출 지시", "집필 주석", "에셋 목록")):
             if s.startswith(pref):
                 return Item(KIND_BLOCKED, p.idx, self.scene, s, reason=why)
+
+        # 4b. D-4 오브젝트 대사 — 전용 경로 (F-8-9)
+        #     ※ 주석은 바로 위 BLOCK_PREFIXES 가 이미 걷어냈으므로 여기 오지 않는다.
+        if self.section == OBJECT_SECTION:
+            return self._classify_object(p, s)
 
         # 5. 연출 태그 블록 → 연출 데이터로 분리 (텍스트 아님)
         for tag in STAGING_TAGS:
@@ -284,6 +359,134 @@ class Classifier:
 
         # 11. 판정 실패 — 버리지 않고 남긴다
         return Item(KIND_UNCLASSIFIED, p.idx, self.scene, s)
+
+    # ------------------------------------------------------------------
+    # D-4 전용 분류 (F-8-9)
+
+    def _classify_object(self, p: Para, s: str) -> Item:
+        blocked = lambda why: Item(KIND_BLOCKED, p.idx, None, s, reason=why)   # noqa: E731
+
+        # D-4-1 / D-4-2 / D-4-3 — 여기서부터가 실제 수록처다
+        m = OBJECT_SUBSECTION.match(s)
+        if m:
+            self.obj_sub = m.group(1).strip()
+            self._obj = None
+            return blocked("D-4 구간 표제")
+
+        # 「표기 규약」「표기 예시」「미작성 사유」 같은 볼드 표제.
+        # 구간 밖으로 나가므로 그 아래 줄은 오브젝트로 읽지 않는다.
+        if p.first_bold:
+            self.obj_sub = None
+            self._obj = None
+            return blocked("D-4 표제")
+
+        # 구간 밖 — 「표기 예시」의 4건이 여기 걸린다. 규약 설명이지 수록 오브젝트가 아니다.
+        if self.obj_sub is None:
+            return blocked("D-4 표기 규약")
+
+        # ── [OBJ] 헤더 — 오브젝트 1건의 시작
+        m = OBJ_HEADER.match(s)
+        if m:
+            return self._open_object(p, s, m.group(1))
+
+        if self._obj is None:
+            return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+
+        obj = self._obj
+
+        # 대비 버전 — F · N · R. 밀도 판정(^루)보다 반드시 위다.
+        m = OBJ_VERSION.match(s)
+        if m:
+            body = self._quoted(m.group(2))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.versions[m.group(1)] = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        # 선택지
+        m = OBJ_CHOICE.match(s)
+        if m:
+            text = m.group(1).strip()
+            drop = bool(CHOICE_DROP.search(text))
+            obj.choices.append(ObjectChoice(CHOICE_DROP.sub("", text).strip(), drop))
+            return Item(KIND_OBJECT, p.idx, None, text)
+
+        # 선택 반응 — 바로 앞 선택지에 붙는다
+        m = OBJ_REACTION.match(s)
+        if m:
+            body = self._quoted(m.group(1))
+            if body is None or not obj.choices:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.choices[-1].reaction = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        # 라디오 — 화자 ID 는 4-4 의 기존 매핑을 그대로 쓴다 (F-8-4)
+        m = OBJ_RADIO.match(s)
+        if m:
+            body = self._quoted(m.group(1))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.radio = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="radio_yu")
+
+        # 쿠루 — 숲 지정 오브젝트 한정
+        m = OBJ_KURU.match(s)
+        if m:
+            body = self._quoted(m.group(1))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.kuru = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="쿠루")
+
+        # 밀도 대사 — 전용 1줄
+        m = OBJ_DENSITY.match(s)
+        if m:
+            body = self._quoted(m.group(1))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.density = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        # 판정 실패 — 버리지 않고 남긴다 (F-8-9)
+        return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+
+    def _open_object(self, p: Para, s: str, head: str) -> Item:
+        parts = [x.strip() for x in re.split(r"[·ㆍ・]", head) if x.strip()]
+        if len(parts) < 2:
+            self._obj = None
+            return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+
+        manuscript_id, layer, rest = parts[0], parts[1], parts[2:]
+        if layer not in OBJECT_LAYERS:
+            self._obj = None
+            return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+
+        obj = ObjectSpec(para=p.idx, manuscript_id=manuscript_id,
+                         layer=layer, section=self.obj_sub or "")
+        for token in rest:
+            if token == OBJECT_SILENT:
+                obj.silent = True
+            elif token in OBJECT_FORMS:
+                obj.form = token
+            else:
+                # 모르는 접미는 조용히 삼키지 않는다
+                self._obj = None
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+
+        self.objects.append(obj)
+        self._obj = obj
+        return Item(KIND_OBJECT, p.idx, None, manuscript_id)
+
+    @staticmethod
+    def _quoted(rest: str) -> Optional[str]:
+        """따옴표로 감싼 본문을 꺼낸다. _try_speaker 와 같은 관용(닫는 쪽은 선택)."""
+        rest = rest.strip()
+        if not rest or rest[0] not in DQUOTE:
+            return None
+        body = rest[1:]
+        if body and body[-1] in DQUOTE:
+            body = body[:-1]
+        return body.strip()
 
     # ------------------------------------------------------------------
     @staticmethod
@@ -347,6 +550,8 @@ class Converter:
         self.buckets: dict[str, SceneBucket] = {}
         self.order: list[str] = []
         self.failures: list[str] = []
+        self.objects: list[ObjectSpec] = []
+        self.object_failures: list[str] = []
 
     # ------------------------------------------------------------------
     def run(self, docx_path: str, out_dir: str) -> int:
@@ -357,7 +562,13 @@ class Converter:
             item = cls.classify(p)
             if item is None:
                 continue
-            scene = cls.scene or "(씬 이전)"
+            # D-4 는 씬이 아니다. 오브젝트 대사는 씬 카운트에 들어가지 않는다 (F-8-9).
+            if item.kind == KIND_OBJECT:
+                continue
+            if cls.section == OBJECT_SECTION:
+                scene = OBJECT_SECTION
+            else:
+                scene = cls.scene or "(씬 이전)"
             b = self.buckets.get(scene)
             if b is None:
                 b = self.buckets[scene] = SceneBucket(scene)
@@ -375,12 +586,16 @@ class Converter:
             elif item.kind == KIND_UNCLASSIFIED:
                 b.unclassified.append(item)
 
+        self.objects = cls.objects
+
         os.makedirs(out_dir, exist_ok=True)
         assigned = self._assign_nodes()
         self._check_gate()
+        self._check_object_gate()
         self._emit_yarn(out_dir, assigned)
         self._emit_staging(out_dir)
         self._emit_notes(out_dir)
+        self._emit_objects(out_dir)
         self._emit_unclassified(out_dir)
         self._emit_diff(out_dir, assigned)
         return self._emit_gate(out_dir)
@@ -721,6 +936,175 @@ class Converter:
         return out
 
     # ------------------------------------------------------------------
+    # D-4 오브젝트 — 게이트와 산출 (C-16 · F-8)
+
+    def _object_spec(self) -> dict:
+        """node_map 의 objects 절. 없으면 빈 규격으로 돌린다 (D-4 원고 0건 상태)."""
+        return self.map.get("objects") or {}
+
+    def _check_object_gate(self) -> None:
+        """씬 게이트와 별개로 D-4 만 대조한다. 실패는 self.failures 에 합류한다."""
+        spec = self._object_spec()
+        id_map: dict[str, str] = spec.get("id_map", {})
+        layout: dict[str, dict] = spec.get("layout", {})
+
+        fail = self.object_failures.append
+
+        # D-4 원고가 아직 한 줄도 없으면 대조할 것이 없다. 배경 에셋 확정 이후에 채워진다
+        # (D-4 미작성 사유 · F-8-7). 여기서 배치 수량을 걸면 원고가 없다는 이유로 게이트가
+        # 막히는데, 그것은 파서가 판단할 일이 아니다.
+        if not self.objects:
+            return
+
+        # ① 코드 ID — 매핑표에서만 온다. 규칙 변환을 쓰지 않는다 (F-8-3)
+        for o in self.objects:
+            code = id_map.get(o.manuscript_id)
+            if not code:
+                fail("D-4 매핑표에 없는 원고 ID: %s (문단%d) — 코드 ID 를 지어내지 않는다"
+                     % (o.manuscript_id, o.para))
+                continue
+            want = OBJECT_PREFIX.get(o.section)
+            if want and not code.startswith(want):
+                fail("D-4 코드 ID 접두 불일치: %s → %s (구간 %s 는 %s)"
+                     % (o.manuscript_id, code, o.section, want))
+
+        # ② 층별 배치 수량 — C-16-3
+        for section, want in layout.items():
+            got = {layer: 0 for layer in OBJECT_LAYERS}
+            for o in self.objects:
+                if o.section == section:
+                    got[o.layer] = got.get(o.layer, 0) + 1
+            for layer, rng in want.items():
+                lo, hi = (rng if isinstance(rng, list) else [rng, rng])
+                if not (lo <= got.get(layer, 0) <= hi):
+                    fail("D-4 %s 구간 %s 오브젝트 %d 건 — 기대 %d~%d (C-16-3)"
+                         % (section, layer, got.get(layer, 0), lo, hi))
+
+        # ③ 대비 버전 수 — 집·마을은 F·R / 숲은 F·N·R (C-16-2)
+        for o in self.objects:
+            if o.layer != "대비":
+                continue
+            want = {"F", "N", "R"} if o.section == "숲" else {"F", "R"}
+            got = set(o.versions)
+            if got != want:
+                fail("D-4 %s 대비 버전 %s — %s 구간은 %s (C-16-2)"
+                     % (o.manuscript_id, sorted(got) or "없음", o.section, sorted(want)))
+
+        # ④ 선택 오브젝트 — (31-) 는 오브젝트당 정확히 1개, 형태는 5종 중복 금지
+        forms: dict[str, str] = {}
+        for o in self.objects:
+            if o.layer != "선택":
+                continue
+            drops = sum(1 for c in o.choices if c.drop_at_31)
+            if len(o.choices) != 3:
+                fail("D-4 %s 선택지 %d 개 — 0~30 에서 3개다 (C-16-6)"
+                     % (o.manuscript_id, len(o.choices)))
+            if drops != 1:
+                fail("D-4 %s (31-) 표기 %d 개 — 오브젝트당 1개다 (C-16-6)"
+                     % (o.manuscript_id, drops))
+            if not o.form:
+                fail("D-4 %s 선택 오브젝트에 형태 표기가 없다 (C-16-6)" % o.manuscript_id)
+            elif o.form in forms:
+                fail("D-4 형태 '%s' 중복 — %s 와 %s (5건에 5형태)"
+                     % (o.form, forms[o.form], o.manuscript_id))
+            else:
+                forms[o.form] = o.manuscript_id
+
+        # ⑤ 층에 안 맞는 내용이 섞였는지
+        for o in self.objects:
+            if o.layer == "밀도" and (o.versions or o.choices):
+                fail("D-4 %s 밀도 오브젝트에 필터·선택지 분기가 있다 (C-16-1)" % o.manuscript_id)
+            if o.layer != "대비" and o.radio:
+                fail("D-4 %s 라디오 줄은 대비 오브젝트에만 붙는다 (C-16-7)" % o.manuscript_id)
+            if o.kuru and o.section != "숲":
+                fail("D-4 %s 쿠루 줄은 숲 지정 오브젝트 한정이다 (C-16-8)" % o.manuscript_id)
+            if o.silent and (o.density or o.versions or o.choices):
+                fail("D-4 %s 무대사인데 대사가 있다 (C-16-4)" % o.manuscript_id)
+
+        self.failures.extend(self.object_failures)
+
+    def _object_nodes(self, obj: ObjectSpec, code: str) -> list[tuple[str, list[str]]]:
+        """오브젝트 1건 → (노드명, 줄) 목록. 무대사는 노드를 만들지 않는다 (F-8-1)."""
+        if obj.silent:
+            return []
+
+        def radio_tail() -> list[str]:
+            # 별도 노드를 파지 않고 대비 노드 안에서 조건 분기한다 (F-8-4).
+            if not obj.radio:
+                return []
+            return ["<<if $라디오소지>>", "radio_yu: " + obj.radio, "<<endif>>"]
+
+        def kuru_tail() -> list[str]:
+            # 31 이상 침묵은 빈 노드가 아니라 모션 분기다 (F-8-5).
+            if not obj.kuru:
+                return []
+            return ["<<if $인형화 < 31>>", "쿠루: " + obj.kuru,
+                    "<<else>>", "<<kuru_silent>>", "<<endif>>"]
+
+        if obj.layer == "밀도":
+            return [(code, ["루: " + obj.density])] if obj.density else []
+
+        if obj.layer == "대비":
+            out = []
+            for v in ("F", "N", "R"):
+                if v not in obj.versions:
+                    continue        # 없는 버전은 런타임이 F 로 폴백한다. 빈 노드를 두지 않는다
+                out.append(("%s_%s" % (code, v),
+                            ["루: " + obj.versions[v]] + radio_tail() + kuru_tail()))
+            return out
+
+        # 선택 — 선택지 노드 1개 + 선택별 반응. 결과 커맨드를 붙이지 않는다 (F-8-1)
+        #
+        # ⚠ (31-) 항목에 거는 <<if>> 가 "흔적을 남기지 않는다"(C-16-6)를 지키는 것은
+        #   Dialogue.prefab ▸ OptionsPanel 의 OptionsPresenter.showUnavailableOptions 가
+        #   0 이기 때문이다. 그 값이 1 이 되면 세 번째 항목이 회색으로 남아 정본을 어긴다.
+        head: list[str] = []
+        out = []
+        for i, c in enumerate(obj.choices, 1):
+            target = "%s_c%d" % (code, i)
+            guard = " <<if $인형화 < 31>>" if c.drop_at_31 else ""
+            head.append("-> %s%s" % (c.text, guard))
+            head.append("    <<jump %s>>" % target)
+            out.append((target, ["루: " + c.reaction] if c.reaction else []))
+        return [(code, head)] + out
+
+    def _emit_objects(self, out_dir: str) -> None:
+        spec = self._object_spec()
+        id_map: dict[str, str] = spec.get("id_map", {})
+
+        data = []
+        yarn = ["// ============================================================",
+                "// D-4 오브젝트 대사 — 자동 생성. 손으로 고치지 말 것.",
+                "// 층·수량은 C-16, 표기는 F-8-9, 문안의 단일 출처는 D-4 다.",
+                "// ============================================================"]
+
+        for o in self.objects:
+            code = id_map.get(o.manuscript_id, "")
+            nodes = self._object_nodes(o, code) if code else []
+            data.append({
+                "코드ID": code,
+                "원고ID": o.manuscript_id,
+                "층": o.layer,
+                "구간": o.section,
+                "형태": o.form,
+                "무대사": o.silent,
+                "대사노드": [n for n, _ in nodes],
+                "라디오대상": bool(o.radio),
+                "쿠루지정": bool(o.kuru),
+                "문단": o.para,
+            })
+            for name, body in nodes:
+                yarn += ["", "title: %s" % name, "---"] + body + ["==="]
+
+        self._write(out_dir, "objects.json",
+                    json.dumps({"_about": [
+                        "D-4 오브젝트 대사의 산출물. 필드는 F-8-1 의 6항목이다.",
+                        "코드 ID 는 node_map.json 의 objects.id_map 에서만 온다 (F-8-3).",
+                        "원고가 아직 없으면 objects 는 빈 목록인 것이 정상이다.",
+                    ], "objects": data}, ensure_ascii=False, indent=2) + "\n")
+        self._write(out_dir, "Objects.yarn", "\n".join(yarn) + "\n")
+
+    # ------------------------------------------------------------------
     def _emit_gate(self, out_dir: str) -> int:
         d, n, r = self._counts
         ok = not self.failures
@@ -735,6 +1119,8 @@ class Converter:
             % (d, d - mono, MONOLOGUE_SPEAKER_ID, mono, n, r, d + n + r),
             "UNCLASSIFIED %d 건 (실패 조건 아님 — unclassified.txt 확인)"
             % getattr(self, "_unclassified_total", 0),
+            "D-4 오브젝트 %d 건 (씬 카운트와 별개 — objects.json 확인)"
+            % len(self.objects),
             "",
             "--- 씬별 (합계 / 화자별 배분) ---",
         ]
@@ -761,7 +1147,7 @@ class Converter:
 
         self._write(out_dir, "gate_report.txt", "\n".join(lines) + "\n")
 
-        print("\n".join(lines[:8]))
+        print("\n".join(lines[:9]))
         if self.failures:
             print("\n실패 %d 건 — gate_report.txt 확인" % len(self.failures))
             return 1
