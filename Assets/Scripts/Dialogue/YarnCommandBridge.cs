@@ -78,6 +78,10 @@ public class YarnCommandBridge : MonoBehaviour
     private const string VAR_CORRUPTION = "$인형화";
     private const string VAR_RESOLVE    = "$결심";
     private const string VAR_NAME       = "$이름";
+    private const string VAR_HAS_RADIO  = "$라디오소지";
+
+    // 라디오의 ItemData.itemName. Resources/Items/radio.asset 의 값이다.
+    private const string ITEM_RADIO = "라디오";
 
     // ── 포트레이트 상태 ───────────────────────────────────────────────────
     private RectTransform _portraitRT;
@@ -262,6 +266,10 @@ public class YarnCommandBridge : MonoBehaviour
             variableStorage.SetValue(VAR_CORRUPTION, CorruptionManager.Instance.currentCorruption);
 
         variableStorage.SetValue(VAR_RESOLVE, GameState.isResolved);
+
+        // 대비 오브젝트의 유 반응은 소지 여부만 본다 (F-8-4).
+        variableStorage.SetValue(VAR_HAS_RADIO,
+            InventoryManager.Instance != null && InventoryManager.Instance.HasItem(ITEM_RADIO));
 
         if (FlagManager.Instance != null)
         {
@@ -554,6 +562,34 @@ public class YarnCommandBridge : MonoBehaviour
     // 두 번째 인자를 "forest" 로 주면 ForestTrade, 생략하거나 그 외면 VillageBrowse.
     // ※ 사용처였던 Shelter_Exit_Sol 은 2026-08-16 쉼터 데모 제외로 삭제됐다.
     //   마을 거래는 SolTradeInteraction 이 직접 연다.
+    // <<kuru_silent>>  인형화 31 이상에서 쿠루가 말하지 않고 고개를 숙인 정지 자세로 선다.
+    //
+    // 침묵을 빈 노드로 두지 않는 이유는 F-8-5 다 — 빈 노드는 4-8 의 미분류 처리에 걸린다.
+    // 그래서 대사 대신 이 커맨드를 부르는 분기로 둔다.
+    //
+    // ⚠ 자세 스프라이트가 아직 없다. 3-4 의 「루 이동 스프라이트 미제작」과 같은 선행 블로커라
+    //   지금은 Animator 트리거만 걸고, Animator 가 없으면 경고를 남긴다. 조용히 아무 일도
+    //   일어나지 않는 상태로 두지 않는다.
+    [YarnCommand("kuru_silent")]
+    public static void KuruSilent()
+    {
+        var companion = Object.FindAnyObjectByType<CompanionFollow>(FindObjectsInactive.Include);
+        if (companion == null)
+        {
+            Debug.LogWarning("[YarnCommand:kuru_silent] 쿠루(CompanionFollow)를 찾을 수 없습니다.");
+            return;
+        }
+
+        var anim = companion.GetComponent<Animator>();
+        if (anim == null)
+        {
+            Debug.LogWarning("[YarnCommand:kuru_silent] 쿠루에 Animator 가 없습니다 — " +
+                             "고개 숙인 정지 자세(C-16-8)가 아직 미제작입니다.");
+            return;
+        }
+        anim.SetTrigger("Silent");
+    }
+
     [YarnCommand("open_sol_trade")]
     public static void OpenSolTrade(string stockName, string mode = "village")
     {

@@ -14,10 +14,20 @@ title: _Declarations
 ---
 <<declare $인형화 = 0.0>>
 
+// 환상/현실 심리 게이지 0~100. 30 미만 환상 · 30~69 무채색 · 70 이상 현실 (F-2-2).
+// YarnCommandBridge.OnDialogueStart 에서 GaugeManager 값을 매 대화마다 주입한다.
+// 선언이 없으면 House_lu_star1 의 <<if $심리게이지 >= 70>> 이 컴파일 경고를 낸다.
+<<declare $심리게이지 = 0.0>>
+
 // 주인공 이름 — 타이틀에서 플레이어가 정한다.
 // PlayerIdentity → YarnCommandBridge.OnDialogueStart 에서 매 대화 시작 시 주입한다.
 // 조사가 붙는 자리는 {이름조사("가")} 함수를 쓸 것.
 <<declare $이름 = "루">>
+
+// 라디오 소지 여부. 대비 오브젝트를 조사하면 결과 뒤에 유의 목소리가 한 줄 붙는다(C-16-7).
+// 소지 판정만 본다 — 필터·인형화는 참조하지 않는다(F-8-4).
+// YarnCommandBridge.OnDialogueStart 에서 인벤토리를 읽어 매 대화마다 주입한다.
+<<declare $라디오소지 = false>>
 
 <<declare $상인_광장_만남 = false>>
 <<declare $꽃집_탐색 = false>>
