@@ -3,7 +3,8 @@
 결과: PASS
 
 대사 219 (화자대사 215 + 루독백 4) / 쪽지 2 / 나레이션 1  →  총 222
-UNCLASSIFIED 68 건 (실패 조건 아님 — unclassified.txt 확인)
+UNCLASSIFIED 67 건 (실패 조건 아님 — unclassified.txt 확인)
+D-4 오브젝트 0 건 (씬 카운트와 별개 — objects.json 확인)
 
 --- 씬별 (합계 / 화자별 배분) ---
   OK S#01    2 /  2   루독백1·부엉이1

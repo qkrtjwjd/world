@@ -333,14 +333,14 @@
     {
       "scene": "S#15", "expected": 7, "file": "Village_Demo",
       "by_speaker": { "세라": 1, "미루": 2, "아모": 1, "루": 1, "솔": 1, "루독백": 1 },
-      "anchors": { "first": "…루?", "last": "비어 있는건 안 받아." },
+      "anchors": { "first": "…루?", "last": "비어 있는 건 안 받아." },
       "nodes": [
         { "node": "Village_Sera_Spotted",     "count": 1, "anchor": "…루?" },
         { "node": "Village_Bakery",           "count": 3, "anchor": "어서 오세요! 갓 구운 빵이 있어요" },
         { "node": "Village_FlowerShop",       "count": 1, "anchor": "어서오세요. 오늘도 꽃들이 예쁘게 피었답니다." },
         { "node": "Village_Square_Children",  "count": 0, "anchor": null },
         { "node": "Village_Sol_Trade_Sugar",  "count": 1, "anchor": "이건… 아직 쓸 수 없어." },
-        { "node": "Sol_BreadDoughReject",     "count": 1, "anchor": "비어 있는건 안 받아." }
+        { "node": "Sol_BreadDoughReject",     "count": 1, "anchor": "비어 있는 건 안 받아." }
       ],
       "_note": [
         "정본 15-A ~ 15-E 를 노드로 그대로 옮겼다. 15-E(거래창 자체)는 트리거뿐이라 노드가 없다.",
@@ -430,8 +430,8 @@
       "by_speaker": { "루": 1, "쿠루": 10 },
       "nodes": [
         { "node": "Forest_Wolf_Tutorial",     "count": 5, "anchor": "루, 잘 들어 저건 개가 아니야" },
-        { "node": "Forest_Wolf_Guard_Praise", "count": 1, "anchor": "잘 했어" },
-        { "node": "Forest_Wolf_React_Attack", "count": 1, "anchor": "위험했지만 잘했어. 공격은 항상 신중하게 해. 공격을 한 땐 방어를 할 수 없으니까." },
+        { "node": "Forest_Wolf_Guard_Praise", "count": 1, "anchor": "잘했어" },
+        { "node": "Forest_Wolf_React_Attack", "count": 1, "anchor": "위험했지만 잘했어. 공격은 항상 신중하게 해. 공격을 할 땐 방어를 할 수 없으니까." },
         { "node": "Forest_Wolf_React_Guard",  "count": 1, "anchor": "그래 뭘 하기 애매한 땐 방어가 가장 낫지 잘했어" },
         { "node": "Forest_Wolf_React_Pet",    "count": 1, "anchor": "…미쳤어? 상대가 어떻게 나올지 모른다면 공격이나 방어를 해야지! 진짜로 죽을 수도 있다고" },
         { "node": "Forest_Wolf_Pet2",         "count": 1, "anchor": "…진심이야? 계속 쓰다듬으면 저 개가 너한테 꼬리라도 흔들 거 같아?" },
@@ -453,7 +453,7 @@
       "scene": "S#17C", "expected": 4, "file": "Forest_Demo",
       "by_speaker": { "루": 1, "쿠루": 3 },
       "nodes": [
-        { "node": "Forest_Wolf_Hurt", "count": 4, "anchor": "루, 다친 건 가방 안에 있는 물건이나 먹을 걸로 치료 가능해 우선은 내가 줬던 각설탕 아직 가지고 있지? 그거 먹어" }
+        { "node": "Forest_Wolf_Hurt", "count": 4, "anchor": "루, 다친 건 가방 안에 있는 물건이나 먹을 걸로 치료 가능해. 우선은 내가 줬던 각설탕 아직 가지고 있지? 그거 먹어" }
       ],
       "_note": "루가 피해를 입은 직후 1회만. 아이템 사용이 턴을 소모한다는 규칙을 여기서 처음 가르친다."
     },
@@ -477,7 +477,7 @@
       "scene": "S#19A", "expected": 14, "file": "Forest_Demo",
       "by_speaker": { "루": 6, "쿠루": 8 },
       "nodes": [
-        { "node": "Forest_Wolf2_Encounter", "count": 14, "anchor": "… 또 있네" }
+        { "node": "Forest_Wolf2_Encounter", "count": 14, "anchor": "…또 있네" }
       ],
       "_note": "2차 조우. 쿠루가 무기를 묻고 단검 파지를 유도한다. 마지막 줄에서 필터가 현실로 전환된다(컷, 페이드 아님)."
     },
@@ -493,8 +493,8 @@
       "scene": "S#19C", "expected": 2, "file": "Forest_Demo",
       "by_speaker": { "쿠루": 2 },
       "nodes": [
-        { "node": "Forest_Wolf2_Weakpoint", "count": 1, "anchor": "잘했어 내가 저 녀석의 약점을 알아 내서 표시해줄게" },
-        { "node": "Forest_Wolf2_Finisher",  "count": 1, "anchor": "… 끝났네, 잘했어. 마지막은 완전히 숨통을 끊어버려" }
+        { "node": "Forest_Wolf2_Weakpoint", "count": 1, "anchor": "잘했어 내가 저 녀석의 약점을 알아내서 표시해줄게" },
+        { "node": "Forest_Wolf2_Finisher",  "count": 1, "anchor": "…끝났네, 잘했어. 마지막은 완전히 숨통을 끊어버려" }
       ],
       "_note": [
         "한 씬을 2노드로 쪼갠 것은 전투 시스템이 서로 다른 시점에 호출하기 때문이다.",
@@ -507,7 +507,7 @@
       "scene": "S#19D", "expected": 7, "file": "Forest_Demo",
       "by_speaker": { "루": 3, "쿠루": 4 },
       "nodes": [
-        { "node": "Forest_Wolf2_KillEnd", "count": 7, "anchor": "고생했어. 싸우는거 보니까 생각보다 싸움에 소질이 있어보이네" }
+        { "node": "Forest_Wolf2_KillEnd", "count": 7, "anchor": "고생했어. 싸우는 거 보니까 생각보다 싸움에 소질이 있어 보이네" }
       ],
       "_note": "몰살 마무리(E키 또는 일반 공격). 검은 구슬 획득 · 인형화 +2. 쿠루가 자신의 개입을 자각하는 자리다."
     },
@@ -525,9 +525,9 @@
       "nodes": [
         { "node": "Forest_Sol_Reunion_Low",         "count": 4, "anchor": "둘이 같이 있네." },
         { "node": "Forest_Sol_Reunion_High",        "count": 7, "anchor": "둘이 같이 있네." },
-        { "node": "Forest_Sol_Reject_Sugar_Low",    "count": 4, "anchor": "저… 쿠루, 이거 팔아도 되요?" },
+        { "node": "Forest_Sol_Reject_Sugar_Low",    "count": 4, "anchor": "저… 쿠루, 이거 팔아도 돼요?" },
         { "node": "Forest_Sol_Reject_Sugar_High",   "count": 7, "anchor": "왜? 각설탕 또 줘?" },
-        { "node": "Sol_Trade_Reject_Contaminated",  "count": 1, "anchor": "오염된건 안 받아." },
+        { "node": "Sol_Trade_Reject_Contaminated",  "count": 1, "anchor": "오염된 건 안 받아." },
         { "node": "Forest_Sol_Talk_Faster_Low",     "count": 5, "anchor": "…분명 길은 하나밖에 없고" },
         { "node": "Forest_Sol_Talk_Faster_High",    "count": 4, "anchor": "길은 하나인 줄 알았는데." },
         { "node": "Forest_Sol_Talk_Stock_Intro",    "count": 1, "anchor": "루, 원하는 물건이 없어?" },

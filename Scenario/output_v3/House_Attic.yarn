@@ -48,7 +48,7 @@ radio_yu: …그리고 {$이름}. 무섭게 보이면 그게 진짜야. 예쁜 �
 
 title: House_Dagger_Flash
 ---
-{$이름}: …방금 뭐였지. 무섭게, 진짜…..
+{$이름}: …방금 뭐였지. 무섭게, 진짜…
 ===
 
 title: House_FrontDoor_Depart
@@ -57,9 +57,9 @@ title: House_FrontDoor_Depart
 ===
 
 // ── 판정 실패 (UNCLASSIFIED) — 사람이 확인할 것 ──
-// UNCLASSIFIED [문단420 S#13] 4. 신규 필요 에셋
-// UNCLASSIFIED [문단421 S#13] 배경 · 오브젝트
-// UNCLASSIFIED [문단431 S#13] 아이템 스프라이트
-// UNCLASSIFIED [문단437 S#13] 루 스프라이트 · 컷
-// UNCLASSIFIED [문단442 S#13] 화면 효과 · 음향
-// UNCLASSIFIED [문단447 S#13] 집 구간 배드 엔딩 — BE#01
+// UNCLASSIFIED [문단421 S#13] 4. 신규 필요 에셋
+// UNCLASSIFIED [문단422 S#13] 배경 · 오브젝트
+// UNCLASSIFIED [문단434 S#13] 아이템 스프라이트
+// UNCLASSIFIED [문단440 S#13] 루 스프라이트 · 컷
+// UNCLASSIFIED [문단445 S#13] 화면 효과 · 음향
+// UNCLASSIFIED [문단450 S#13] 집 구간 배드 엔딩 — BE#01

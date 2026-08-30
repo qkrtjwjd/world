@@ -38,7 +38,6 @@
     -tags: ingame
   [BakeryNPC_Loop_Normal] 현행에만 있는 노드 — node_map 에 없음
   [BakeryNPC_Loop_Dagger] 현행에만 있는 노드 — node_map 에 없음
-  [Village_Sol_Radio] 현행에만 있는 노드 — node_map 에 없음
   [Village_Sol_TalkMenu] 현행에만 있는 노드 — node_map 에 없음
 
 ### Forest_Demo
