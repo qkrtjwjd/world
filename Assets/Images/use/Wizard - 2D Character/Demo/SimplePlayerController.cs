@@ -18,6 +18,10 @@ namespace ClearSky
         // 코드에서 이동을 잠그는 플래그 (직렬화 제외 → 도메인 리로드 시 자동 해제)
         [System.NonSerialized] private bool _lockedByCode;
 
+        // 바라보는 방향 — Animator 의 dir 파라미터와 같은 값. 0=아래 · 1=옆 · 2=위.
+        // 입력이 없으면 마지막 방향을 유지한다 (제자리 대기도 방향을 가진다).
+        private int _dir;
+
         void Start()
         {
             rb = GetComponent<Rigidbody2D>();
@@ -67,13 +71,25 @@ namespace ClearSky
             //    씬에 박힌 스케일(도트 규격 전환 이후 0.5625)이 지워져, 좌/우를 처음
             //    누르는 순간 캐릭터가 1.78배로 커진 채 돌아오지 않는다.
             //    CompanionFollow 도 같은 형태로 방향만 바꾼다.
+            //    방향은 0=아래 · 1=옆 · 2=위 로 Animator 의 dir 에 넘긴다. right 스프라이트는
+            //    만들지 않고 left 를 flipX 로 뒤집는다(§11) — left 가 왼쪽을 보므로
+            //    왼쪽이 +, 오른쪽이 - 다.
             if (h != 0)
             {
+                _dir = 1;
                 Vector3 s = transform.localScale;
-                s.x = Mathf.Abs(s.x) * (h < 0 ? -1f : 1f);
+                s.x = Mathf.Abs(s.x) * (h > 0 ? -1f : 1f);
+                transform.localScale = s;
+            }
+            else if (v != 0)
+            {
+                _dir = v > 0 ? 2 : 0;
+                Vector3 s = transform.localScale;
+                s.x = Mathf.Abs(s.x);   // 위·아래 스프라이트는 뒤집지 않는다
                 transform.localScale = s;
             }
 
+            anim.SetInteger("dir", _dir);
             anim.SetBool("isRun", _moveInput != Vector2.zero);
         }
 
