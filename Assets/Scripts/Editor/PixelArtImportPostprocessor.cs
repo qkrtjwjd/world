@@ -19,6 +19,8 @@ class PixelArtImportPostprocessor : AssetPostprocessor
     // 맵에 놓인 물건은 피벗이 Center 다. 씬의 기존 오브젝트가 Center 피벗(Square)을 전제로
     // 배치돼 있어서, 바닥 피벗을 주면 전부 위로 뜬다. 값 자체는 아이콘 프리셋과 같다.
     const string ObjectDir = "Assets/Art/Objects/";
+    // 배경 타일도 Center 피벗이다. Grid 셀 1×1 의 한가운데에 놓여야 이어 붙였을 때 틈이 없다.
+    const string TileDir   = "Assets/Art/Tiles/";
 
     const string CharacterPreset = "Assets/Settings/SpritePreset_Character.preset";
     const string IconPreset      = "Assets/Settings/SpritePreset_Icon.preset";
@@ -30,7 +32,8 @@ class PixelArtImportPostprocessor : AssetPostprocessor
 
         // 피벗이 Center 인 것 = 아이콘과 맵 오브젝트. 나머지(캐릭터·토끼)는 바닥 피벗이다.
         bool centerPivot = assetPath.StartsWith(IconDir,   StringComparison.OrdinalIgnoreCase)
-                        || assetPath.StartsWith(ObjectDir, StringComparison.OrdinalIgnoreCase);
+                        || assetPath.StartsWith(ObjectDir, StringComparison.OrdinalIgnoreCase)
+                        || assetPath.StartsWith(TileDir,   StringComparison.OrdinalIgnoreCase);
         string presetPath = centerPivot ? IconPreset : CharacterPreset;
 
         var preset = AssetDatabase.LoadAssetAtPath<Preset>(presetPath);
