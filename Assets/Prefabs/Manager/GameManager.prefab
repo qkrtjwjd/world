@@ -130,6 +130,7 @@ GameObject:
   - component: {fileID: 2920488143991533553}
   - component: {fileID: 7777777777777777777}
   - component: {fileID: 5154268085630116712}
+  - component: {fileID: 2774644668686633948}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -436,6 +437,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::CorruptionManager
   _currentCorruption: 20
   maxCorruption: 100
+--- !u!114 &2774644668686633948
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2680654494162166539}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 208ae17ded44c25459b63bc7f3e696b3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::CutsceneCGView
 --- !u!1 &4317506963917260813
 GameObject:
   m_ObjectHideFlags: 0

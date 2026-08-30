@@ -399,6 +399,32 @@ public class YarnCommandBridge : MonoBehaviour
     // 추가 Yarn 커맨드 — 필터 · 오디오 · UI · 씬 전환 · 연출
     // ════════════════════════════════════════════════════════════════════
 
+    // ── 일러 컷 (CG) ─────────────────────────────────────────────────────
+    // 규격서 8장 — 전부 640x360 전면. 그림은 Assets/Resources/CG/{id}.png 에 넣는다.
+    // 목록은 Assets/Docs/일러컷_파일명.md 에 있다.
+    // ⚠ 그림이 없으면 아무 일도 일어나지 않는다. 경고 한 줄만 남기고 넘어간다 —
+    //    포트레이트와 같은 방침이다. 아트가 없다고 대사가 멈추면 안 된다.
+
+    // <<show_cg "sera_door_gap">>
+    [YarnCommand("show_cg")]
+    public static void ShowCG(string id)
+    {
+        var view = CutsceneCGView.Instance;
+        if (view == null)
+        {
+            Debug.LogWarning($"[YarnCommandBridge] show_cg '{id}': 씬에 CutsceneCGView 가 없습니다.");
+            return;
+        }
+        view.Show(id);
+    }
+
+    // <<hide_cg>>
+    [YarnCommand("hide_cg")]
+    public static void HideCG()
+    {
+        CutsceneCGView.Instance?.Hide();
+    }
+
     // ── 필터 ─────────────────────────────────────────────────────────────
 
     // <<set_filter "fantasy"|"reality"|"none" [intensity=1.0]>>
