@@ -38,6 +38,20 @@ public class TradeItem : ScriptableObject
     [Tooltip("이 품목에 대응하는 ItemData. 연결하면 거래 성립 시 실제로 아이템이 증감한다.")]
     public ItemData source;
 
+    /// <summary>
+    /// 화면에 그릴 아이콘. 규격서 8장이 「인벤토리와 거래창은 같은 그림을 쓴다」고 정했으므로,
+    /// 좌판 전용 <see cref="icon"/> 이 비어 있으면 원본 <see cref="source"/> 의 아이콘으로 넘어간다.
+    /// → 아이콘을 ItemData 한 곳에만 꽂아도 인벤토리와 거래창 양쪽에 나온다.
+    /// </summary>
+    public Sprite DisplayIcon
+    {
+        get
+        {
+            if (icon != null) return icon;
+            return source != null ? source.CurrentIcon : null;
+        }
+    }
+
     [Header("거절 오버라이드 (선택)")]
     [Tooltip("체크하면 등급 규칙보다 아래 사유가 우선한다. 루가 이 품목을 내밀었을 때 적용된다.")]
     public bool hasRejectOverride;

@@ -264,8 +264,8 @@ public class SolTradeUI : MonoBehaviour
 
         if (focusIcon != null)
         {
-            focusIcon.sprite  = want.icon;
-            focusIcon.enabled = want.icon != null;
+            focusIcon.sprite  = want.DisplayIcon;
+            focusIcon.enabled = want.DisplayIcon != null;
         }
         if (focusNameText != null)
             focusNameText.text = reveal ? want.displayName : hiddenNameLabel;
@@ -317,7 +317,7 @@ public class SolTradeUI : MonoBehaviour
             var go = Instantiate(openSlotPrefab, slotContainer);
             _slotObjects.Add(go);
 
-            SetIcon(go, want.icon);
+            SetIcon(go, want.DisplayIcon);
 
             var txt = go.GetComponentInChildren<TMP_Text>();
             if (txt != null)
@@ -380,7 +380,7 @@ public class SolTradeUI : MonoBehaviour
             var go = Instantiate(offerSlotPrefab, offerContainer);
             _offerObjects.Add(go);
 
-            SetIcon(go, offer.icon);
+            SetIcon(go, offer.DisplayIcon);
 
             var txt = go.GetComponentInChildren<TMP_Text>();
             if (txt != null)
