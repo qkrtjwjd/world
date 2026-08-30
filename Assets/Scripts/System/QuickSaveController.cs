@@ -13,6 +13,10 @@ public class QuickSaveController : MonoBehaviour
 {
     static QuickSaveController _instance;
 
+    [Tooltip("토스트 배경 스프라이트. 비워 두면 단색 반투명 상자다 — 예전 동작 그대로다. " +
+             "도트 더미는 Assets/Images/UI/_dummy/ui_panel.png 다.")]
+    public Sprite toastBackground;
+
     CanvasGroup     _toastGroup;
     TextMeshProUGUI _toastText;
     Coroutine       _toastRoutine;
@@ -71,7 +75,17 @@ public class QuickSaveController : MonoBehaviour
         var bg  = new GameObject("BG");
         bg.transform.SetParent(canvasGo.transform, false);
         var img = bg.AddComponent<Image>();
-        img.color = new Color(0f, 0f, 0f, 0.7f);
+        if (toastBackground != null)
+        {
+            // 스프라이트가 있으면 그쪽 알파가 투명도를 맡는다 (필드 UI 교체와 같은 방식)
+            img.sprite = toastBackground;
+            img.type   = Image.Type.Sliced;
+            img.color  = Color.white;
+        }
+        else
+        {
+            img.color = new Color(0f, 0f, 0f, 0.7f);
+        }
         var bgRect = bg.GetComponent<RectTransform>();
         bgRect.anchorMin        = bgRect.anchorMax = new Vector2(0.5f, 0f);
         bgRect.anchoredPosition = new Vector2(0f, 90f);
