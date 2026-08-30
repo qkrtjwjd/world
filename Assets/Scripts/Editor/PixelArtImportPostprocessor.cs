@@ -16,6 +16,9 @@ class PixelArtImportPostprocessor : AssetPostprocessor
 {
     const string ArtRoot = "Assets/Art/";
     const string IconDir = "Assets/Art/Icons/";
+    // 맵에 놓인 물건은 피벗이 Center 다. 씬의 기존 오브젝트가 Center 피벗(Square)을 전제로
+    // 배치돼 있어서, 바닥 피벗을 주면 전부 위로 뜬다. 값 자체는 아이콘 프리셋과 같다.
+    const string ObjectDir = "Assets/Art/Objects/";
 
     const string CharacterPreset = "Assets/Settings/SpritePreset_Character.preset";
     const string IconPreset      = "Assets/Settings/SpritePreset_Icon.preset";
@@ -25,8 +28,10 @@ class PixelArtImportPostprocessor : AssetPostprocessor
         // 경로 검사가 맨 앞에 온다. 기존 Assets/Images/(PPU 100)를 지키는 유일한 장치다.
         if (!assetPath.StartsWith(ArtRoot, StringComparison.OrdinalIgnoreCase)) return;
 
-        bool isIcon = assetPath.StartsWith(IconDir, StringComparison.OrdinalIgnoreCase);
-        string presetPath = isIcon ? IconPreset : CharacterPreset;
+        // 피벗이 Center 인 것 = 아이콘과 맵 오브젝트. 나머지(캐릭터·토끼)는 바닥 피벗이다.
+        bool centerPivot = assetPath.StartsWith(IconDir,   StringComparison.OrdinalIgnoreCase)
+                        || assetPath.StartsWith(ObjectDir, StringComparison.OrdinalIgnoreCase);
+        string presetPath = centerPivot ? IconPreset : CharacterPreset;
 
         var preset = AssetDatabase.LoadAssetAtPath<Preset>(presetPath);
         if (preset == null)
@@ -46,7 +51,7 @@ class PixelArtImportPostprocessor : AssetPostprocessor
         // (그림자 토끼 16×16 등)에도 규격서의 「발끝 아래 2px」이 유지되도록,
         // 실제 세로 픽셀을 읽어 피벗을 다시 계산한다. 32×48 이면 값이 그대로다(2/48).
         // 아이콘은 피벗이 Center 라 대상이 아니다.
-        if (!isIcon) ApplyFootPivot();
+        if (!centerPivot) ApplyFootPivot();
     }
 
     /// <summary>발끝 아래 여백(px). 규격서 2장.</summary>
