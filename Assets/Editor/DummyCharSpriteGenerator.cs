@@ -50,15 +50,15 @@ public static class DummyCharSpriteGenerator
     static readonly Spec[] Specs =
     {
         new Spec { Folder = "Sera", Prefix = "sera", SilHeight = 44, Walk = true,
-                   Note = "성인 체격. D-625 마을 보행" },
-        new Spec { Folder = "Kuru", Prefix = "kuru", SilHeight = 40, Walk = true,
-                   Note = "D-1027 앞서 걷는 동작" },
-        new Spec { Folder = "Sol",  Prefix = "sol",  SilHeight = 40, Walk = false,
-                   Note = "D-625 좌판 앉은 자세 — 제자리" },
-        new Spec { Folder = "Miru", Prefix = "miru", SilHeight = 40, Walk = false,
-                   Note = "D-625 반죽 치는 루프 — 제자리" },
-        new Spec { Folder = "Amo",  Prefix = "amo",  SilHeight = 40, Walk = false,
-                   Note = "D-625 화분 만지는 루프 — 제자리" },
+                   Note = "규격서 44px. D-625 마을 보행(뛰는 모션 없음)" },
+        new Spec { Folder = "Kuru", Prefix = "kuru", SilHeight = 46, Walk = true,
+                   Note = "규격서 46px — 루보다 확실히 커야 한다. D-1027 앞서 걷는 동작" },
+        new Spec { Folder = "Sol",  Prefix = "sol",  SilHeight = 32, Walk = false,
+                   Note = "규격서 32px — 앉은 자세 기준. D-625 좌판 앉은 자세" },
+        new Spec { Folder = "Miru", Prefix = "miru", SilHeight = 34, Walk = false,
+                   Note = "규격서 34px. D-625 반죽 치는 루프" },
+        new Spec { Folder = "Amo",  Prefix = "amo",  SilHeight = 34, Walk = false,
+                   Note = "규격서 34px. D-625 화분 만지는 루프" },
     };
 
     [MenuItem("Tools/도트/NPC 더미 스프라이트 생성")]
@@ -85,18 +85,17 @@ public static class DummyCharSpriteGenerator
                     foreach (var t in Tone)
                         for (int frame = 1; frame <= 3; frame++)
                         {
-                            // 02 만 1px 위로 — 걷기 bob. 01/03 은 접지 자세로 동일하다.
-                            int lift = (frame == 2) ? 1 : 0;
+                            // 01=정지 02=왼발 03=오른발 (규격서 5장)
                             string path = string.Format("{0}/{1}_walk_{2}_{3:00}.png",
                                                         dir, sp.Prefix, t.dir, frame);
-                            Write(path, sp, t.dir, t.tone, lift);
+                            Write(path, sp, t.dir, t.tone, frame);
                             made.Add(path);
                         }
                 }
                 else
                 {
                     string path = string.Format("{0}/{1}_idle_down.png", dir, sp.Prefix);
-                    Write(path, sp, "down", Tone[0].tone, 0);
+                    Write(path, sp, "down", Tone[0].tone, 1);
                     made.Add(path);
                 }
             }
@@ -115,8 +114,7 @@ public static class DummyCharSpriteGenerator
         foreach (var p in made)
         {
             var sp = SpecOf(p);
-            int lift = p.EndsWith("_02.png") ? 1 : 0;
-            fails += Verify(p, sp.SilHeight, lift, log);
+            fails += Verify(p, sp.SilHeight, log);
         }
 
         log.AppendLine();
@@ -135,15 +133,16 @@ public static class DummyCharSpriteGenerator
         return Specs[0];
     }
 
-    static void Write(string path, Spec sp, string dir, float tone, int lift)
+    static void Write(string path, Spec sp, string dir, float tone, int frame)
     {
-        var tex = Draw(sp, dir, tone, lift);
+        var tex = Draw(sp, dir, tone, frame);
         File.WriteAllBytes(path, tex.EncodeToPNG());
         Object.DestroyImmediate(tex);
     }
 
-    /// <summary>32x48 캔버스에 단색 실루엣을 그린다. y 는 아래가 0.</summary>
-    static Texture2D Draw(Spec sp, string dir, float tone, int lift)
+    /// <summary>32x48 캔버스에 단색 실루엣을 그린다. y 는 아래가 0.
+    /// frame 1=정지 2=왼발 3=오른발. 든 다리만 2px 올리므로 실루엣 높이·바닥 여백은 변하지 않는다.</summary>
+    static Texture2D Draw(Spec sp, string dir, float tone, int frame)
     {
         var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
         var px = new Color32[W * H];
@@ -152,13 +151,16 @@ public static class DummyCharSpriteGenerator
         byte v = (byte)Mathf.RoundToInt(tone * 255f);
         var col = new Color32(v, v, v, 255);
 
-        int baseY = FootMargin + lift;              // 발끝
+        int baseY = FootMargin;                     // 발끝
         int cx = W / 2;
-        int bodyH = sp.SilHeight - LegH - HeadH;    // 40 → 20, 44 → 24
+        int bodyH = sp.SilHeight - LegH - HeadH;    // 40→20 · 44→24 · 46→26 · 34→14 · 32→12
 
-        // 다리 2개 — 사이를 비워 실루엣이 뭉치지 않게 한다
-        Rect(px, cx - 5, baseY, 4, LegH, col);
-        Rect(px, cx + 1, baseY, 4, LegH, col);
+        // 다리 2개 — 사이를 비워 실루엣이 뭉치지 않게 한다.
+        // 든 발은 2px 짧게 그려 위로 올라간 것처럼 보이게 한다.
+        int lLift = (frame == 2) ? 2 : 0;           // 왼발
+        int rLift = (frame == 3) ? 2 : 0;           // 오른발
+        Rect(px, cx - 5, baseY + lLift, 4, LegH - lLift, col);
+        Rect(px, cx + 1, baseY + rLift, 4, LegH - rLift, col);
 
         // 몸통
         Rect(px, cx - 7, baseY + LegH, 14, bodyH, col);
@@ -188,7 +190,7 @@ public static class DummyCharSpriteGenerator
 
     /// <summary>PNG 를 다시 읽어 캔버스·실루엣 높이·바닥 여백을 픽셀로 판정하고,
     /// 임포트된 Sprite 의 PPU·피벗까지 확인한다.</summary>
-    static int Verify(string path, int silHeight, int expectedLift, StringBuilder log)
+    static int Verify(string path, int silHeight, StringBuilder log)
     {
         if (!File.Exists(path)) { log.AppendLine("  FAIL " + path + " — 파일 없음"); return 1; }
 
@@ -204,7 +206,7 @@ public static class DummyCharSpriteGenerator
 
         int silH = (minY > maxY) ? 0 : maxY - minY + 1;
         int margin = (minY > maxY) ? -1 : minY;
-        int wantMargin = FootMargin + expectedLift;
+        int wantMargin = FootMargin;
 
         // 임포트 결과(후처리기가 붙인 도트 프리셋)까지 본다
         var spr = AssetDatabase.LoadAssetAtPath<Sprite>(path);

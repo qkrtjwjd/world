@@ -43,14 +43,13 @@ public static class DummyLuSpriteGenerator
             {
                 for (int frame = 1; frame <= 3; frame++)
                 {
-                    // 02 만 1px 위로 — 걷기 bob. 01/03 은 접지 자세로 동일하다.
-                    int lift = (frame == 2) ? 1 : 0;
-                    var tex = Draw(kv.Key, kv.Value, lift);
+                    // 01=정지 02=왼발 03=오른발. 규격서 5장의 3장 구성이다.
+                    var tex = Draw(kv.Key, kv.Value, frame);
 
                     string path = $"{OutDir}/lu_walk_{kv.Key}_{frame:00}.png";
                     File.WriteAllBytes(path, tex.EncodeToPNG());
                     Object.DestroyImmediate(tex);
-                    log.AppendLine($"  {path}  (lift={lift})");
+                    log.AppendLine($"  {path}  (frame={frame})");
                 }
             }
 
@@ -67,7 +66,7 @@ public static class DummyLuSpriteGenerator
         log.AppendLine("=== 규격 검증 ===");
         foreach (var kv in Tone)
             for (int frame = 1; frame <= 3; frame++)
-                fails += Verify($"{OutDir}/lu_walk_{kv.Key}_{frame:00}.png", frame == 2 ? 1 : 0, log);
+                fails += Verify($"{OutDir}/lu_walk_{kv.Key}_{frame:00}.png", log);
 
         log.AppendLine();
         log.AppendLine("fails = " + fails);
@@ -77,8 +76,9 @@ public static class DummyLuSpriteGenerator
         if (Application.isBatchMode) EditorApplication.Exit(fails == 0 ? 0 : 1);
     }
 
-    /// <summary>32x48 캔버스에 40px 단색 실루엣을 그린다. y 는 아래가 0.</summary>
-    static Texture2D Draw(string dir, float tone, int lift)
+    /// <summary>32x48 캔버스에 40px 단색 실루엣을 그린다. y 는 아래가 0.
+    /// frame 1=정지 2=왼발 3=오른발. 든 다리만 2px 올리므로 실루엣 높이·바닥 여백은 변하지 않는다.</summary>
+    static Texture2D Draw(string dir, float tone, int frame)
     {
         var tex = new Texture2D(W, H, TextureFormat.RGBA32, false);
         var px = new Color32[W * H];
@@ -87,12 +87,15 @@ public static class DummyLuSpriteGenerator
         byte v = (byte)Mathf.RoundToInt(tone * 255f);
         var col = new Color32(v, v, v, 255);
 
-        int baseY = FootMargin + lift;          // 발끝
+        int baseY = FootMargin;                 // 발끝
         int cx    = W / 2;
 
-        // 다리 2개 (8px) — 두 다리 사이를 비워 실루엣이 뭉치지 않게 한다
-        Rect(px, cx - 5, baseY, 4, 8, col);
-        Rect(px, cx + 1, baseY, 4, 8, col);
+        // 다리 2개 (8px) — 두 다리 사이를 비워 실루엣이 뭉치지 않게 한다.
+        // 든 발은 2px 짧게 그려 위로 올라간 것처럼 보이게 한다.
+        int lLift = (frame == 2) ? 2 : 0;        // 왼발
+        int rLift = (frame == 3) ? 2 : 0;        // 오른발
+        Rect(px, cx - 5, baseY + lLift, 4, 8 - lLift, col);
+        Rect(px, cx + 1, baseY + rLift, 4, 8 - rLift, col);
 
         // 몸통 (20px)
         Rect(px, cx - 7, baseY + 8, 14, 20, col);
@@ -120,7 +123,7 @@ public static class DummyLuSpriteGenerator
     }
 
     /// <summary>PNG 를 다시 읽어 캔버스 크기·실루엣 높이·바닥 여백을 픽셀로 판정한다.</summary>
-    static int Verify(string path, int expectedLift, StringBuilder log)
+    static int Verify(string path, StringBuilder log)
     {
         if (!File.Exists(path)) { log.AppendLine($"  FAIL {path} — 파일 없음"); return 1; }
 
@@ -137,7 +140,7 @@ public static class DummyLuSpriteGenerator
 
         int silH   = (minY > maxY) ? 0 : maxY - minY + 1;
         int margin = (minY > maxY) ? -1 : minY;
-        int wantMargin = FootMargin + expectedLift;
+        int wantMargin = FootMargin;
 
         bool ok = (w == W) && (h == H) && (silH == SilHeight) && (margin == wantMargin);
         log.AppendLine($"  {(ok ? "OK  " : "FAIL")} {Path.GetFileName(path)}  " +
