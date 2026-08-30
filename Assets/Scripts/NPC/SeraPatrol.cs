@@ -44,6 +44,8 @@ public class SeraPatrol : MonoBehaviour
     [Tooltip("Animator 가 있으면 이동/정지 상태를 넘긴다. 비워도 순찰은 동작한다.")]
     public Animator animator;
     public string animatorSpeedParam = "Speed";
+    [Tooltip("바라보는 방향을 넘길 int 파라미터. 0=아래 1=옆 2=위. 비우면 방향 전환을 하지 않는다.")]
+    public string animatorDirParam = "dir";
 
     /// <summary>현재 순찰 회차. 1부터 시작한다. 1회차는 결계의 신호가 아직 닿지 않은 구간이다.</summary>
     public int RoundNumber { get; private set; } = 1;
@@ -121,6 +123,7 @@ public class SeraPatrol : MonoBehaviour
         float   elapsed = 0f;
         float   dur     = Mathf.Max(0.01f, moveDuration);
 
+        SetFacing(target - start);
         SetAnimatorSpeed(1f);
         while (elapsed < dur)
         {
@@ -137,6 +140,32 @@ public class SeraPatrol : MonoBehaviour
             animator.SetFloat(animatorSpeedParam, v);
     }
 
+    /// <summary>
+    /// 이동 방향을 Animator 의 dir(0=아래 1=옆 2=위)로 넘기고, 좌우는 flipX 로 처리한다.
+    /// right 스프라이트는 만들지 않고 left 를 뒤집는다(CLAUDE.md §11).
+    /// ⚠ 부호 규약은 루와 같다 — left 가 왼쪽을 보므로 **왼쪽이 +, 오른쪽이 −** 다.
+    /// ⚠ localScale 을 통째로 대입하지 않는다. 씬에 박힌 크기가 지워진다(§11).
+    /// </summary>
+    void SetFacing(Vector3 delta)
+    {
+        if (Mathf.Abs(delta.x) < 0.001f && Mathf.Abs(delta.y) < 0.001f) return;
+
+        Vector3 s = transform.localScale;
+        if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
+        {
+            if (animator != null && !string.IsNullOrEmpty(animatorDirParam))
+                animator.SetInteger(animatorDirParam, 1);
+            s.x = Mathf.Abs(s.x) * (delta.x > 0f ? -1f : 1f);
+        }
+        else
+        {
+            if (animator != null && !string.IsNullOrEmpty(animatorDirParam))
+                animator.SetInteger(animatorDirParam, delta.y > 0f ? 2 : 0);
+            s.x = Mathf.Abs(s.x);   // 위·아래 스프라이트는 뒤집지 않는다
+        }
+        transform.localScale = s;
+    }
+
     /// <summary>딱딱 소리가 난 방향으로 돌아본다. 발각 판정 전 단계다(F-6 각주).</summary>
     public void LookToward(Vector3 worldPosition)
     {
@@ -145,6 +174,7 @@ public class SeraPatrol : MonoBehaviour
 
         var vision = GetComponentInChildren<SeraVision>();
         vision?.SetFacing(dir.normalized);
+        SetFacing(dir);          // 스프라이트도 같은 쪽을 본다
     }
 
     void OnDisable()

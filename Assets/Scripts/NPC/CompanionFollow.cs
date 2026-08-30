@@ -114,13 +114,25 @@ public class CompanionFollow : MonoBehaviour
         _rb.linearVelocity = dir * moveSpeed;
         _anim?.SetBool("isRun", true);
 
-        // 스프라이트 방향 전환 (SimplePlayerController 방식: localScale.x 반전)
-        if (Mathf.Abs(dir.x) > 0.01f)
+        // 스프라이트 방향 전환 (SimplePlayerController 와 같은 방식: localScale.x 부호만 반전)
+        // dir 파라미터는 0=아래 1=옆 2=위. right 스프라이트는 만들지 않고 left 를 뒤집는다(§11).
+        // ⚠ 부호 규약이 2026-08-31 에 뒤집혔다 — left 가 왼쪽을 보므로 왼쪽이 +, 오른쪽이 − 다.
+        //    루(SimplePlayerController)·세라(SeraPatrol)와 같은 규약이다. 되돌리지 말 것.
+        Vector3 s = transform.localScale;
+        if (Mathf.Abs(dir.x) >= Mathf.Abs(dir.y))
         {
-            Vector3 s = transform.localScale;
-            s.x = Mathf.Abs(s.x) * (dir.x < 0f ? -1f : 1f);
-            transform.localScale = s;
+            if (Mathf.Abs(dir.x) > 0.01f)
+            {
+                _anim?.SetInteger("dir", 1);
+                s.x = Mathf.Abs(s.x) * (dir.x > 0f ? -1f : 1f);
+            }
         }
+        else
+        {
+            _anim?.SetInteger("dir", dir.y > 0f ? 2 : 0);
+            s.x = Mathf.Abs(s.x);   // 위·아래 스프라이트는 뒤집지 않는다
+        }
+        transform.localScale = s;
     }
 
     // ════════════════════════════════════════
