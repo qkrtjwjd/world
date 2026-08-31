@@ -93,6 +93,15 @@ public class HouseEscapePressureController : MonoBehaviour
     /// </summary>
     public static event Action<float> OnLevelChanged;
 
+    /// <summary>
+    /// 압박이 발동한 순간 발행된다. 다락방 문 잠금처럼 <b>단계와 무관하게 즉시</b> 일어나는
+    /// 처리가 여기에 붙는다 (C-14-2-3 — 발동 즉시, 대사를 붙이지 않는다).
+    /// </summary>
+    public static event Action OnPressureBegan;
+
+    /// <summary>압박이 해제된 순간 발행된다(정문 통과·실패 처리 후).</summary>
+    public static event Action OnPressureEnded;
+
     // ── 내부 상태 ────────────────────────────────────────────────────────────
     bool        _active;
     float       _elapsed;
@@ -245,6 +254,9 @@ public class HouseEscapePressureController : MonoBehaviour
         c.ResetStageState();
         c.StartDrone();   // 볼륨 0 으로 시작한다. 소리는 1차(20초)에 들어온다.
         Dbg.Log("[탈출압박] 집 구간 시작 — 제한 " + c.timeLimit + "초");
+
+        // 다락방 문 잠금 등 발동 즉시 처리 (C-14-2-3).
+        OnPressureBegan?.Invoke();
     }
 
     /// <summary>정문을 통과했습니다. 압박을 해제합니다(C-14-2 성공 경로).</summary>
@@ -265,6 +277,7 @@ public class HouseEscapePressureController : MonoBehaviour
         ScreenEdgeEffectController.ClearSustained();
         ResetStageState();
         OnLevelChanged?.Invoke(0f);
+        OnPressureEnded?.Invoke();
     }
 
     /// <summary>단계와 연출값을 발동 전 상태로 되돌립니다.</summary>

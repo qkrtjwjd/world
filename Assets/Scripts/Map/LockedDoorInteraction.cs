@@ -25,10 +25,60 @@ public class LockedDoorInteraction : MonoBehaviour
     public Transform targetLocation;
 
     private bool _unlocked = false;
+    private bool _sealedByPressure = false;
+
+    // ── 탈출 압박 중 잠금 (C-14-2-3) ────────────────────────────────────────
+    void OnEnable()
+    {
+        HouseEscapePressureController.OnPressureBegan += SealForEscapePressure;
+        HouseEscapePressureController.OnPressureEnded += ReleaseEscapePressureSeal;
+    }
+
+    void OnDisable()
+    {
+        HouseEscapePressureController.OnPressureBegan -= SealForEscapePressure;
+        HouseEscapePressureController.OnPressureEnded -= ReleaseEscapePressureSeal;
+    }
+
+    /// <summary>
+    /// 압박 발동과 동시에 다락방을 닫는다 (C-14-2-3).
+    ///
+    /// 되돌아갈 수 있게 두면 제한 시간 안에 이미 본 장면을 다시 지나는 경로가 생긴다.
+    /// ⚠ <b>대사를 붙이지 않는다.</b> 잠겼다는 말도 하지 않고 그냥 열리지 않는다.
+    /// </summary>
+    void SealForEscapePressure()
+    {
+        if (_sealedByPressure) return;
+        _sealedByPressure = true;
+
+        // 열어 두었던 통로(다락방 RoomTransfer 등)를 닫고 문을 되돌린다.
+        foreach (var obj in objectsToEnable)
+            if (obj != null) obj.SetActive(false);
+        foreach (var obj in objectsToDisable)
+            if (obj != null) obj.SetActive(true);
+
+        Dbg.Log("[탈출압박] 다락방 문 잠금 — 대사 없음 (C-14-2-3)");
+    }
+
+    /// <summary>압박이 풀리면(정문 통과) 잠금도 푼다. 실패 경로에서는 어차피 씬이 넘어간다.</summary>
+    void ReleaseEscapePressureSeal()
+    {
+        if (!_sealedByPressure) return;
+        _sealedByPressure = false;
+
+        if (!_unlocked) return;   // 애초에 열린 적이 없으면 되돌릴 것도 없다
+        foreach (var obj in objectsToEnable)
+            if (obj != null) obj.SetActive(true);
+        foreach (var obj in objectsToDisable)
+            if (obj != null) obj.SetActive(false);
+    }
 
     /// <summary>InteractionTrigger.onInteract 에 연결.</summary>
     public void OnAtticDoorInteract()
     {
+        // 압박 중에는 아무 일도 일어나지 않는다. 대사도 없다 (C-14-2-3).
+        if (_sealedByPressure) return;
+
         if (_unlocked) return;
 
         var inv = InventoryManager.Instance
