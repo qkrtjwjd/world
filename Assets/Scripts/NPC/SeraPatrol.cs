@@ -21,9 +21,10 @@ public class SeraPatrol : MonoBehaviour
         public string name = "";
         [Tooltip("세라가 서 있을 지점.")]
         public Transform point;
-        [Tooltip("이 구역에 머무는 시간(초). F-6 초안값 20~30. 광장은 가장 길게 잡는다.")]
-        public float dwellMin = 20f;
-        public float dwellMax = 30f;
+        [Tooltip("이 구역에 머무는 시간(초). F-6 「광장 30초 · 그 외 20초」 — 고정값이다.\n" +
+                 "⚠ 20~30 난수는 폐기된 값이다(탈출 압박 v1.0 표지 2절). 되돌리지 말 것. " +
+                 "라운드 합계가 110초로 떨어져야 하므로 흔들면 안 된다.")]
+        public float dwellSeconds = 20f;
         [Tooltip("세라가 이 구역에 들어오면 솔이 사라진다. 상점 구역에만 체크한다.")]
         public SeraApproachTrigger approachTrigger;
     }
@@ -56,7 +57,34 @@ public class SeraPatrol : MonoBehaviour
     /// <summary>한 회차를 다 돌았을 때 발행된다. 인자는 방금 끝난 회차 번호.</summary>
     public static event Action<int> OnRoundCompleted;
 
-    Coroutine _routine;
+    /// <summary>
+    /// 순찰 1라운드에 걸리는 시간(초). F-6 초안값은 110초다
+    /// (광장 30 + 빵집 20 + 상점 20 + 출구 20 + 이동 5×4).
+    /// </summary>
+    public float RoundSeconds
+    {
+        get
+        {
+            if (zones == null) return 0f;
+            float total = 0f;
+            foreach (var z in zones)
+                if (z != null) total += Mathf.Max(0f, z.dwellSeconds) + Mathf.Max(0f, moveDuration);
+            return total;
+        }
+    }
+
+    /// <summary>세라의 시야. 자식에 붙어 있다.</summary>
+    public SeraVision Vision
+    {
+        get
+        {
+            if (_vision == null) _vision = GetComponentInChildren<SeraVision>();
+            return _vision;
+        }
+    }
+
+    Coroutine  _routine;
+    SeraVision _vision;
 
     void Awake()
     {
@@ -69,6 +97,11 @@ public class SeraPatrol : MonoBehaviour
         if (Instance == this) Instance = null;
     }
 
+    void OnEnable()
+    {
+        if (Vision != null) Vision.OnTurnedToSound += HandleTurnedToSound;
+    }
+
     void Start()
     {
         if (zones == null || zones.Length == 0)
@@ -76,6 +109,12 @@ public class SeraPatrol : MonoBehaviour
             Debug.LogWarning("[SeraPatrol] 순찰 구역이 하나도 배치되지 않았습니다. 순찰을 시작하지 않습니다.");
             return;
         }
+
+        // 1라운드 길이는 엄폐물 소실 속도를 정하는 값이라 어긋나면 난도가 통째로 흔들린다.
+        if (Mathf.Abs(RoundSeconds - 110f) > 0.5f)
+            Debug.LogWarning($"[SeraPatrol] 순찰 1라운드가 {RoundSeconds:F1}초입니다. " +
+                             "F-6 초안값은 110초(광장 30 + 나머지 20×3 + 이동 5×4)입니다.");
+
         _routine = StartCoroutine(PatrolRoutine());
     }
 
@@ -98,8 +137,10 @@ public class SeraPatrol : MonoBehaviour
                 // 마을에서 세라를 인식하고 반응하는 유일한 사례다.
                 zone.approachTrigger?.NotifyApproach();
 
-                float dwell = UnityEngine.Random.Range(zone.dwellMin, zone.dwellMax);
-                yield return new WaitForSeconds(dwell);
+                // 멈춰 서서 결계를 점검한다 — 시야가 넓고 짧아지며 느리게 회전한다 (C-14-3-2).
+                Vision?.SetState(SeraVisionState.Inspecting);
+
+                yield return new WaitForSeconds(Mathf.Max(0f, zone.dwellSeconds));
 
                 CurrentZone = null;
             }
@@ -125,6 +166,11 @@ public class SeraPatrol : MonoBehaviour
 
         SetFacing(target - start);
         SetAnimatorSpeed(1f);
+
+        // 이동 중에는 시야가 진행 방향으로 좁고 길어지며 회전하지 않는다 (C-14-3-2).
+        Vision?.SetState(SeraVisionState.Moving);
+        Vision?.SetFacing(((Vector2)(target - start)).normalized);
+
         while (elapsed < dur)
         {
             elapsed += Time.deltaTime;
@@ -166,19 +212,28 @@ public class SeraPatrol : MonoBehaviour
         transform.localScale = s;
     }
 
-    /// <summary>딱딱 소리가 난 방향으로 돌아본다. 발각 판정 전 단계다(F-6 각주).</summary>
+    /// <summary>
+    /// 딱딱 소리가 난 방향으로 돌아본다. 발각 판정 전 단계다 (C-14-3-2 · F-6).
+    ///
+    /// 소리 → 회전(지연 1초) → 돌아봄 유지(3초) → 원복 순서는 <see cref="SeraVision"/> 이 관리한다.
+    /// 여기서는 스프라이트가 같은 쪽을 보게만 한다.
+    /// </summary>
     public void LookToward(Vector3 worldPosition)
     {
         Vector3 dir = worldPosition - transform.position;
         if (dir.sqrMagnitude < 0.0001f) return;
 
-        var vision = GetComponentInChildren<SeraVision>();
-        vision?.SetFacing(dir.normalized);
-        SetFacing(dir);          // 스프라이트도 같은 쪽을 본다
+        // 스프라이트는 시야가 실제로 돌아본 순간에 맞춰 돌린다(OnTurnedToSound).
+        // 여기서 바로 돌리면 지연 1초 동안 그림만 먼저 돌아 시야와 어긋난다.
+        Vision?.NoticeSound(((Vector2)dir).normalized);
     }
+
+    /// <summary>시야가 소리 쪽으로 돌아본 순간 스프라이트도 같은 쪽을 보게 한다.</summary>
+    void HandleTurnedToSound(Vector2 direction) => SetFacing(direction);
 
     void OnDisable()
     {
+        if (_vision != null) _vision.OnTurnedToSound -= HandleTurnedToSound;
         if (_routine != null) { StopCoroutine(_routine); _routine = null; }
     }
 }
