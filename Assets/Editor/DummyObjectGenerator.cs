@@ -18,7 +18,8 @@ public static class DummyObjectGenerator
     const int W = 32, H = 32;
 
     enum Form { BoxClosed, BoxOpen, Drawer, DrawerOpen, Rack, Dresser, Door, Lock,
-                Plate, Chair, Campfire, Cart, Pot, Sign }
+                Plate, Chair, Campfire, Cart, Pot, Sign,
+                CartGone, PotGone, SignGone }
 
     class Spec
     {
@@ -45,6 +46,13 @@ public static class DummyObjectGenerator
         new Spec { Id = "cover_cart",           Kind = Form.Cart,       Tone = 0.55f, Note = "마을 엄폐물 — 수레" },
         new Spec { Id = "cover_pot",            Kind = Form.Pot,        Tone = 0.70f, Note = "마을 엄폐물 — 화분" },
         new Spec { Id = "cover_sign",           Kind = Form.Sign,       Tone = 0.45f, Note = "마을 엄폐물 — 간판" },
+
+        // 소실 단계 3종 (F-6-1). 라운드가 끝날 때마다 수레 → 화분 → 간판 순으로 이 모습이 된다.
+        // 결계가 조여든 결과이지 세라가 치우는 것이 아니므로 세라의 동선과 무관하게 일어난다(C-14-3-4).
+        // 그냥 사라지게 두면 버그로 읽히므로 남은 자리를 그린다. 명도는 원본보다 낮춘다.
+        new Spec { Id = "cover_cart_gone",      Kind = Form.CartGone,   Tone = 0.30f, Note = "마을 엄폐물 소실 — 수레" },
+        new Spec { Id = "cover_pot_gone",       Kind = Form.PotGone,    Tone = 0.38f, Note = "마을 엄폐물 소실 — 화분" },
+        new Spec { Id = "cover_sign_gone",      Kind = Form.SignGone,   Tone = 0.25f, Note = "마을 엄폐물 소실 — 간판" },
     };
 
     [MenuItem("Tools/도트/맵 오브젝트 더미 생성")]
@@ -171,6 +179,21 @@ public static class DummyObjectGenerator
                 Rect(px, 5, 14, 22, 12, col);             // 판
                 Rect(px, cx - 1, 3, 2, 11, dim);          // 기둥
                 Rect(px, 8, 19, 16, 2, dim);
+                break;
+
+            // ── 소실 단계 — 숨을 수 없는 잔해만 남는다 ──────────────────────
+            case Form.CartGone:
+                Rect(px, 5, 4, 22, 3, col);               // 부서진 바닥판
+                Disc(px, 22, 7, 4, dim);                  // 바퀴 하나만 남는다
+                break;
+            case Form.PotGone:
+                Rect(px, 10, 4, 12, 3, col);              // 깨진 밑동
+                Rect(px, 8, 4, 3, 2, dim);
+                Rect(px, 21, 4, 3, 2, dim);               // 흩어진 조각
+                break;
+            case Form.SignGone:
+                Rect(px, cx - 1, 4, 2, 6, col);           // 부러진 기둥 밑동
+                Rect(px, 6, 4, 5, 2, dim);                // 떨어진 판 조각
                 break;
         }
 
