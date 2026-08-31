@@ -186,7 +186,9 @@ public class HouseEscapePressureController : MonoBehaviour
     void Awake()
     {
         // 씬에 직접 배치한 경우
-        if (_instance != null && _instance != this) { Destroy(gameObject); return; }
+        // ⚠ Destroy(gameObject) 를 쓰면 안 된다. 수치 조정용으로 다른 매니저와 같은 GO 에
+        //    얹어 두면 그 GO 가 통째로 날아간다.
+        if (_instance != null && _instance != this) { SingletonGuard.DestroyDuplicate(this); return; }
         _instance = this;
     }
 

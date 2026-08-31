@@ -51,7 +51,9 @@ public class VillagePatrolController : MonoBehaviour
 
     void Awake()
     {
-        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
+        // ⚠ Destroy(gameObject) 를 쓰면 안 된다. 이 컴포넌트는 세라 GameObject 에 붙어 있어
+        //    SeraVision·SeraPatrol·Animator 가 통째로 날아간다. 에러는 0건이라 콘솔로도 안 잡힌다.
+        if (Instance != null && Instance != this) { SingletonGuard.DestroyDuplicate(this); return; }
         Instance = this;
     }
 
