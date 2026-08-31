@@ -115,7 +115,41 @@ public class SeraPatrol : MonoBehaviour
             Debug.LogWarning($"[SeraPatrol] 순찰 1라운드가 {RoundSeconds:F1}초입니다. " +
                              "F-6 초안값은 110초(광장 30 + 나머지 20×3 + 이동 5×4)입니다.");
 
+        SnapToStart();
         _routine = StartCoroutine(PatrolRoutine());
+    }
+
+    /// <summary>
+    /// 첫 구역(광장)에 점검 상태로 세워 둔다. 광장은 결계의 중심이며 가장 오래 머무는 곳이다(C-14-3-1).
+    /// 순찰 경로가 광장에서 시작하므로 시작 위치도 거기여야 한다 — 아니면 첫 이동이 경로 밖에서 생긴다.
+    /// </summary>
+    void SnapToStart()
+    {
+        if (zones == null || zones.Length == 0 || zones[0]?.point == null) return;
+
+        transform.position = zones[0].point.position;
+        CurrentZone        = null;
+        SetAnimatorSpeed(0f);
+        Vision?.SetState(SeraVisionState.Inspecting);
+    }
+
+    /// <summary>
+    /// 순찰을 처음 상태로 되돌립니다 — 라운드 카운터 0(= 1회차), 광장에서 점검 상태로 재시작 (C-14-3-6).
+    ///
+    /// 라운드 카운터를 초기화하지 않으면 복귀 직후 2회차부터 시작해 한 번만 걸려도 다시 감금된다.
+    /// 되감기가 처벌이 되는 것이며, 이중 처벌 금지와 같은 근거다.
+    /// </summary>
+    public void ResetPatrol()
+    {
+        if (_routine != null) { StopCoroutine(_routine); _routine = null; }
+
+        RoundNumber = 1;
+        SnapToStart();
+
+        if (isActiveAndEnabled && zones != null && zones.Length > 0)
+            _routine = StartCoroutine(PatrolRoutine());
+
+        Dbg.Log("[마을순찰] 초기화 — 1회차 · 광장 점검부터 다시 시작");
     }
 
     IEnumerator PatrolRoutine()
@@ -163,6 +197,15 @@ public class SeraPatrol : MonoBehaviour
         Vector3 start   = transform.position;
         float   elapsed = 0f;
         float   dur     = Mathf.Max(0.01f, moveDuration);
+
+        // 이미 그 자리에 서 있으면 이동하지 않는다. 시야도 점검 상태로 둔다.
+        // 재시작 직후(SnapToStart·ResetPatrol)가 이 경우다 — 여기서 걸어버리면
+        // 「광장에서 점검 상태로 재시작」(C-14-3-6)이 5초 동안 깨진다.
+        if ((target - start).sqrMagnitude < 0.0001f)
+        {
+            SetAnimatorSpeed(0f);
+            yield break;
+        }
 
         SetFacing(target - start);
         SetAnimatorSpeed(1f);

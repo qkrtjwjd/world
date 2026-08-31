@@ -72,8 +72,42 @@ public class VillagePatrolController : MonoBehaviour
     {
         // 감금 엔딩 후 돌아올 자리 = 마을에 처음 들어온 지점 (C-14-3-4 · 데모 범위 §5).
         // 마을에는 세이브 포인트를 두지 않으므로(C-14-3-5) 이 지점이 유일한 복귀 지점이다.
-        if (SceneManager.GetActiveScene().name == SceneNames.Map)
-            SaveManager.Instance?.SaveRewindPoint();
+        if (SceneManager.GetActiveScene().name != SceneNames.Map) return;
+
+        SaveManager.Instance?.SaveRewindPoint();
+        ResetVillageState();
+    }
+
+    /// <summary>
+    /// 마을 진입 시점의 상태로 되돌립니다 (C-14-3-6 · 수치 F-6).
+    ///
+    /// BE#02 이후의 복귀는 <b>되감기이며 저장 데이터를 불러오는 것이 아니다.</b>
+    /// 아이템·인형화는 마을 진입 스냅샷(전용 되감기 키)이 되돌리고, 저장 슬롯은 읽지도 덮지도 않는다.
+    /// 이 메서드는 그 스냅샷에 담기지 않는 <b>런타임 상태</b>만 맡는다.
+    ///
+    ///   · 순찰 라운드 카운터 → 1회차
+    ///   · 세라 → 광장에서 점검 상태로 재시작
+    ///   · 엄폐물 → 전량 복원, 소실 단계 0
+    ///   · 필터 → 환상 복귀, 단검 파지 해제
+    ///
+    /// 첫 진입에서는 전부 이미 그 상태이므로 아무 일도 일어나지 않는다.
+    /// 되감기로 다시 들어왔을 때만 실제로 되돌린다.
+    ///
+    /// ⚠ 인형화 페널티는 붙이지 않는다. 발각 자체로는 어떤 값도 올리지 않는다 (C-14-3-6).
+    /// </summary>
+    void ResetVillageState()
+    {
+        SeraPatrol.Instance?.ResetPatrol();
+        VillageCoverController.Instance?.ResetAll();
+
+        // 단검을 파지한 채 잡혔더라도 환상으로 돌려놓는다. 상태는 IsRealityView 하나만 본다.
+        DaggerFilterController.Instance?.SwitchToFantasyForced();
+        FilterManager.Instance?.SetFilter(FilterType.Fantasy);
+
+        _captured         = false;
+        _handlingSighting = false;
+
+        Dbg.Log("[마을순찰] 진입 상태 초기화 완료 (C-14-3-6)");
     }
 
     // ── 발각 ─────────────────────────────────────────────────────────────────
