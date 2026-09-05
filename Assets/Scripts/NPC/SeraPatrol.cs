@@ -124,6 +124,19 @@ public class SeraPatrol : MonoBehaviour
                              "F-6 초안값은 110초(광장 30 + 나머지 20×3 + 이동 5×4)입니다.");
 
         SnapToStart();
+
+        // ⚠⚠ 이미 돌고 있으면 갈아탄다. 새로 하나 더 만들면 안 된다.
+        //
+        //   VillagePatrolController 는 같은 GameObject 에 붙어 있고, 그쪽 Start() 가
+        //   ResetVillageState() → ResetPatrol() 로 순찰 코루틴을 세운다. 엔진은 같은 GO 안에서
+        //   Start() 순서를 보장하지 않으므로 그쪽이 먼저 돌 수 있고, 그러면 여기서 만드는 것이
+        //   <b>두 번째 코루틴</b>이 된다. 둘이 나란히 돌면 위치는 같아 보이는데
+        //   RoundNumber 와 OnRoundCompleted 가 <b>한 바퀴에 두 번씩</b> 올라간다.
+        //
+        //   2026-09-05 재생 실측에서 실제로 그랬다 — 첫 바퀴가 끝난 106초에 이미 3라운드였고
+        //   엄폐물이 2단계까지 사라져 있었다. 그러면 C-14-3-4 의 「라운드마다 한 단계」와
+        //   「1회차는 못 알아본다 / 2회차 이후 감금」이 둘 다 깨진다.
+        if (_routine != null) StopCoroutine(_routine);
         _routine = StartCoroutine(PatrolRoutine());
     }
 
