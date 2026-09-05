@@ -27,7 +27,18 @@ public class BattleCompanionUI : MonoBehaviour
     [Tooltip("플레이어 HP 0 시 동료 죽음 발동 확률 (0~1)")]
     [Range(0f, 1f)]
     public float deathChance = 0.15f;
-    public float moveSpeed = 3f;
+    /// <summary>
+    /// 동료가 자리를 옮기는 속도. 단위는 <b>UI 유닛 ÷ 100 ÷ 초</b> 다 — 아래 MoveToAnchored 에서
+    /// <c>거리 / (moveSpeed * 100)</c> 로 시간을 낸다. 거리가 anchoredPosition 이므로
+    /// <b>640×360 기준 값</b>이어야 한다.
+    ///
+    /// ⛔ <b>3 으로 되돌리지 말 것.</b> 그것은 1920×1080 시절 값이다.
+    ///   2026-09-03 에 BattleUI 를 ÷3 으로 옮길 때 유니티 내장 필드만 훑고 프로젝트 스크립트
+    ///   필드는 하나도 안 건드렸다. 거리만 3분의 1이 되고 이 값은 그대로여서 이동이 3배 빨라졌다.
+    ///   (지금 배선된 두 자리는 거리가 36.7유닛뿐이라 Mathf.Max 의 0.3초 하한이 대신 막고 있었다 —
+    ///    0.30초 대 0.37초. 거리가 늘어나면 그때 3배로 튄다.)
+    /// </summary>
+    public float moveSpeed = 1f;
 
     private bool _isDead = false;
     private bool _isMoving = false;

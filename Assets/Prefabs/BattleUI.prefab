@@ -7357,7 +7357,7 @@ MonoBehaviour:
   idlePosition: {fileID: 0}
   dialoguePosition: {fileID: 7338865650537663559}
   deathChance: 0.15
-  moveSpeed: 3
+  moveSpeed: 1
 --- !u!1 &8816891397632556114
 GameObject:
   m_ObjectHideFlags: 0
