@@ -387,6 +387,11 @@
       그래서 <strong>조임은 3면</strong>(위 · 좌 · 우)이 맞습니다.
       문단 1018 의 「사방에서 안쪽」 중 아래쪽은 벽이 아니라
       <strong>가장자리 어두워짐이 덮습니다</strong> — 그쪽은 이미 네 변을 다 두르고 있습니다(05 절).
+      <br><br>
+      ⚠ <strong>이 집은 방을 떼어 놓은 것이 아니라 한 평면의 평면도입니다.</strong>
+      그래서 방 하나만 보고 「안쪽」을 정하면 안 됩니다 — 거실 위쪽 벽은 거실과 복도 사이의
+      칸막이라, 아래로 내리면 거실은 좁아지지만 복도는 넓어집니다.
+      배선 규칙은 04 절에 있습니다.
     </div>
   </section>
 
@@ -438,17 +443,36 @@
 
     <div class="scroll">
       <table>
-        <thead><tr><th>방</th><th>오브젝트</th><th>지금 크기 <span style="text-transform:none;letter-spacing:0;">(더미)</span></th><th>움직임</th></tr></thead>
+        <thead><tr><th>구역</th><th>오브젝트</th><th>종류</th><th>움직임</th></tr></thead>
         <tbody>
-          <tr><td class="k">다락방</td><td class="k">벽_시각</td><td class="num">224 × 3</td><td>위쪽 벽 → 아래로</td></tr>
-          <tr><td class="k">다락방</td><td class="k">벽 (1)_시각</td><td class="num">3 × 152</td><td>우 → 안쪽</td></tr>
-          <tr><td class="k">다락방</td><td class="k">벽 (2)_시각</td><td class="num">3 × 152</td><td>좌 → 안쪽</td></tr>
-          <tr><td class="k">집 안</td><td class="k">벽_시각</td><td class="num">325 × 4</td><td>위쪽 벽 → 아래로</td></tr>
-          <tr><td class="k">집 안</td><td class="k">거실 벽_시각</td><td class="num">5 × 514</td><td>우 → 안쪽</td></tr>
-          <tr><td class="k">집 안</td><td class="k">식료품실벽_시각</td><td class="num">5 × 179</td><td>좌 → 안쪽</td></tr>
-          <tr><td class="k">현관</td><td class="k">현관문_시각</td><td class="num">39 × 7</td><td>폭이 39 → 34 → 30</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽_시각</td><td>가로</td><td>아래로</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽 (2)_시각</td><td>세로 · 바깥 좌</td><td>오른쪽</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽 (1)_시각</td><td>세로 · 바깥 우</td><td>왼쪽</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽 (3)</td><td>가로 · 맨 아래</td><td><span class="chip c-temp">안 움직임</span></td></tr>
+          <tr><td class="k">집 본체</td><td class="k">벽_시각</td><td>가로 — 거실 위</td><td>아래로</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">루방벽 (1)_시각</td><td>가로 — 복도 위</td><td>아래로</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">세라방위벽_시각</td><td>가로 — 세라의 방 위</td><td>아래로</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">루방벽_시각</td><td>가로 — 루의 방 위</td><td>아래로</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">유의 방위벽_시각</td><td>가로 — 유의 방 위</td><td>아래로</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">식료품실벽_시각</td><td>세로 · 바깥 좌</td><td>오른쪽</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">루방위벽_시각</td><td>세로 · 바깥 좌</td><td>오른쪽</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">거실 벽_시각</td><td>세로 · 바깥 우</td><td>왼쪽</td></tr>
+          <tr><td class="k">집 본체</td><td class="k">현관벽</td><td>가로 · 맨 아래</td><td><span class="chip c-temp">안 움직임</span></td></tr>
+          <tr><td class="k">집 본체</td><td class="k">루방위벽 (1) · 유의 방벽</td><td>세로 · 안쪽 칸막이</td><td><span class="chip c-temp">안 움직임</span></td></tr>
+          <tr><td class="k">현관</td><td class="k">현관문_시각</td><td>문틀</td><td>폭 39 → 34 → 30</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <div class="spec" style="margin-top:1.2rem;">
+      <h3>어느 벽이 어디로 가는가 — 규칙 셋</h3>
+      <ol style="margin:0;padding-left:1.2rem;font-size:.9rem;color:var(--ink-soft);">
+        <li style="margin-bottom:.45rem;"><strong>가로 벽은 전부 아래로.</strong> 벽면은 항상 아래를 보므로,
+          어느 방에 있든 자기 <em style="font-style:normal;">위쪽</em> 벽이 자기를 향해 옵니다.</li>
+        <li style="margin-bottom:.45rem;"><strong>세로 벽은 바깥 것만 안쪽으로.</strong>
+          안쪽 칸막이는 어느 쪽으로 가도 한 방이 넓어져 모순입니다.</li>
+        <li><strong>각 구역의 맨 아래 가로 벽은 뺍니다.</strong> 그림이 없는 쪽입니다(02-1).</li>
+      </ol>
     </div>
 
     <div class="two">
@@ -603,11 +627,29 @@
         지금까지 여러 번 있었습니다. <strong>크기가 이상해 보이면 먼저 이걸 의심하세요.</strong>
       </div>
 
+      <div class="warn hot">
+        <b>이름이 방 이름과 안 맞습니다. <code>거실 벽</code> 은 거실 벽이 아닙니다.</b>
+        높이가 514 도트로 <code>y −2.8 ~ 13.2</code>, 즉 <strong>거실 · 복도 · 유의 방을 한 줄로 다 덮는
+        집 전체의 오른쪽 바깥벽</strong>입니다. 「위벽」도 마찬가지로 루의 방에서는 세로(좌·우) 벽인데
+        세라의 방·유의 방에서는 가로(위쪽) 벽입니다. <strong>이름으로 방향을 판단하지 마세요</strong> —
+        좌표로 재야 합니다.
+      </div>
+
+      <div class="warn hot">
+        <b><code>pressedLocalPosition</code> 값은 지금 벽 스케일에 묶여 있습니다.</b>
+        <code>3.92</code> · <code>2.71</code> 같은 수는 벽의 로컬 Y 스케일이 0.0957 이라서 나온 값입니다.
+        아트를 넣으며 <code>localScale</code> 을 1 로 되돌리면 <strong>이 값들이 전부 틀려집니다</strong>
+        (스케일 1 에서 0.375 유닛을 내려면 <code>0.667</code> 이어야 합니다).
+        <strong>스케일을 바꾸면 오프셋을 다시 계산하세요</strong> —
+        <code>wall.InverseTransformVector(월드 오프셋)</code> 로 뽑습니다.
+      </div>
+
       <div class="warn cool">
-        <b>루의 방은 위 · 좌 · 우 벽이 다 있는데 압박을 안 걸었습니다.</b>
-        이번 배선은 <strong>다락방과 집 안(거실) 두 곳뿐</strong>입니다.
-        90초 안에 루의 방으로 되돌아가면 그 방만 조임이 멈춰 보입니다.
-        걸지 말지는 정하지 않았습니다 — 방 벽을 세우는 작업과 함께 결정하면 됩니다.
+        <b>벽이 없어 조임을 못 거는 곳이 남아 있습니다.</b>
+        <strong>부엌</strong>은 벽 오브젝트가 하나도 없고, <strong>복도</strong>는 자기 벽 없이
+        위아래 방의 벽이 경계입니다(복도는 위쪽 벽이 내려오므로 조임은 걸립니다).
+        <strong>세라의 방</strong>은 위쪽 벽 하나뿐이라 좌·우가 안 움직입니다.
+        방 벽을 세우면 그대로 채워집니다.
       </div>
     </div>
   </section>
