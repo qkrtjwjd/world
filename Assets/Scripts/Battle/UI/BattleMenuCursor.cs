@@ -20,8 +20,16 @@ namespace Battle.UI
         [Tooltip("커서 글자. 비워 두면 자기 자신에서 찾는다.")]
         public TextMeshProUGUI cursorText;
 
-        [Tooltip("선택된 버튼의 왼쪽 변에서 이 값만큼 더 왼쪽에 놓는다.")]
-        public float gap = 28f;
+        /// <summary>
+        /// 선택된 버튼의 왼쪽 변에서 이 값만큼 더 왼쪽에 커서를 놓는다. <b>640×360 기준 도트</b>다.
+        ///
+        /// ⛔ <b>26 이나 28 로 되돌리지 말 것.</b> 그것은 1920×1080 시절 값이다.
+        ///   2026-09-03 에 BattleUI 를 ÷3 으로 옮길 때 RectTransform 과 글자 크기만 훑고
+        ///   이 직렬화 float 을 지나쳤다. 그래서 커서가 버튼에서 26도트 떨어진 채
+        ///   화면 왼쪽 끝에 붙어 있었다(2026-09-05 재생 실측: 커서 중심 6도트 · 버튼 왼쪽 변 32도트).
+        /// </summary>
+        [Tooltip("선택된 버튼의 왼쪽 변에서 이 값만큼 더 왼쪽에 놓는다. 640×360 기준 도트다.")]
+        public float gap = 9.33f;
 
         RectTransform _rt;
         RectTransform _parent;

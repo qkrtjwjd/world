@@ -6283,7 +6283,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Battle.UI.BattleMenuCursor
   cursorText: {fileID: 6220876263105987876}
-  gap: 26
+  gap: 8.6667
 --- !u!1 &6810970404263230680
 GameObject:
   m_ObjectHideFlags: 0
