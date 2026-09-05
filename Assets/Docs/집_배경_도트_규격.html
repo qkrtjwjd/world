@@ -1,0 +1,553 @@
+<title>집 배경 도트 규격</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap">
+
+<style>
+  :root{
+    --paper:#f1efea;
+    --surface:#f8f7f4;
+    --sunk:#e7e4dc;
+    --ink:#17161a;
+    --ink-soft:#413f42;
+    --muted:#78756e;
+    --line:#d9d5cb;
+    --line-soft:#e6e2d8;
+    --gold:#8a7c3a;
+    --gold-bright:#d4c97a;
+    --gold-wash:#f0ead2;
+    --blocked:#9d3f34;
+    --blocked-wash:#f3e2de;
+    --temp:#5d6a72;
+    --temp-wash:#e3e8ea;
+    --wait:#6f6a5c;
+    --wait-wash:#eae7dc;
+    --shadow:0 1px 2px rgba(23,22,26,.06),0 8px 24px -16px rgba(23,22,26,.28);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#121214;
+      --surface:#191919;
+      --sunk:#0d0d0e;
+      --ink:#eceae4;
+      --ink-soft:#c3c0b8;
+      --muted:#8d8a82;
+      --line:#2e2d2b;
+      --line-soft:#242322;
+      --gold:#d4c97a;
+      --gold-bright:#e6dda0;
+      --gold-wash:#2a271b;
+      --blocked:#d98577;
+      --blocked-wash:#2e1e1a;
+      --temp:#9fb0b9;
+      --temp-wash:#1b2226;
+      --wait:#a49e8d;
+      --wait-wash:#232219;
+      --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -16px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#121214;
+    --surface:#191919;
+    --sunk:#0d0d0e;
+    --ink:#eceae4;
+    --ink-soft:#c3c0b8;
+    --muted:#8d8a82;
+    --line:#2e2d2b;
+    --line-soft:#242322;
+    --gold:#d4c97a;
+    --gold-bright:#e6dda0;
+    --gold-wash:#2a271b;
+    --blocked:#d98577;
+    --blocked-wash:#2e1e1a;
+    --temp:#9fb0b9;
+    --temp-wash:#1b2226;
+    --wait:#a49e8d;
+    --wait-wash:#232219;
+    --shadow:0 1px 2px rgba(0,0,0,.5),0 8px 24px -16px rgba(0,0,0,.8);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+    font-weight:300;
+    line-height:1.75;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:60rem;margin:0 auto;padding:4rem 1.75rem 7rem;}
+  @media (max-width:640px){ .wrap{padding:2.5rem 1.1rem 4rem;} }
+
+  /* ── 머리 ─────────────────────────────── */
+  .eyebrow{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--gold);margin:0 0 1.1rem;
+  }
+  h1{
+    font-family:"Gowun Batang","Apple SD Gothic Neo",serif;
+    font-weight:700;font-size:clamp(2.1rem,5.5vw,3.1rem);
+    line-height:1.22;letter-spacing:-.01em;margin:0 0 1rem;text-wrap:balance;
+  }
+  .lede{
+    font-size:1.05rem;color:var(--ink-soft);max-width:38rem;margin:0 0 2.25rem;
+  }
+  .tally{
+    display:flex;flex-wrap:wrap;gap:0;border:1px solid var(--line);
+    border-radius:2px;background:var(--surface);overflow:hidden;box-shadow:var(--shadow);
+  }
+  .tally div{
+    flex:1 1 8rem;padding:1.05rem 1.2rem;border-right:1px solid var(--line-soft);
+  }
+  .tally div:last-child{border-right:0;}
+  .tally b{
+    display:block;font-family:"IBM Plex Mono",monospace;font-weight:500;
+    font-size:1.7rem;line-height:1.1;font-variant-numeric:tabular-nums;
+  }
+  .tally span{font-size:.76rem;color:var(--muted);letter-spacing:.02em;}
+  .tally .hot b{color:var(--blocked);}
+
+  /* ── 구조 ─────────────────────────────── */
+  section{margin-top:3.75rem;}
+  h2{
+    font-family:"Gowun Batang",serif;font-weight:700;
+    font-size:1.5rem;line-height:1.35;margin:0 0 .3rem;
+    display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;text-wrap:balance;
+  }
+  h2 .n{
+    font-family:"IBM Plex Mono",monospace;font-size:.8rem;font-weight:500;
+    color:var(--muted);font-variant-numeric:tabular-nums;
+  }
+  .sub{color:var(--muted);font-size:.88rem;margin:0 0 1.15rem;max-width:44rem;}
+
+  .chip{
+    display:inline-block;font-family:"IBM Plex Mono",monospace;
+    font-size:.66rem;letter-spacing:.08em;padding:.16rem .5rem;border-radius:2px;
+    vertical-align:.12em;font-weight:500;white-space:nowrap;
+  }
+  .c-blocked{background:var(--blocked-wash);color:var(--blocked);}
+  .c-temp{background:var(--temp-wash);color:var(--temp);}
+  .c-wait{background:var(--wait-wash);color:var(--wait);}
+  .c-done{background:var(--gold-wash);color:var(--gold);}
+
+  /* ── 규격 카드 ─────────────────────────── */
+  .spec{
+    border:1px solid var(--line);border-left:3px solid var(--gold-bright);
+    background:var(--surface);border-radius:2px;padding:1.5rem 1.6rem;
+    box-shadow:var(--shadow);
+  }
+  .spec h3{
+    font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--gold);margin:0 0 1.1rem;font-weight:500;
+  }
+  .specgrid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));
+    gap:1.1rem 2rem;margin:0;
+  }
+  .specgrid div{border-top:1px solid var(--line-soft);padding-top:.65rem;}
+  .specgrid dt{font-size:.76rem;color:var(--muted);margin-bottom:.15rem;}
+  .specgrid dd{
+    margin:0;font-family:"IBM Plex Mono",monospace;font-size:.95rem;
+    font-weight:500;font-variant-numeric:tabular-nums;
+  }
+  .specgrid dd em{
+    font-style:normal;font-family:"IBM Plex Sans KR",sans-serif;
+    font-weight:300;font-size:.82rem;color:var(--muted);display:block;margin-top:.1rem;
+  }
+
+  /* ── 표 ───────────────────────────────── */
+  .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:2px;background:var(--surface);}
+  table{border-collapse:collapse;width:100%;font-size:.88rem;min-width:34rem;}
+  th,td{text-align:left;padding:.62rem .95rem;border-bottom:1px solid var(--line-soft);vertical-align:top;}
+  th{
+    font-family:"IBM Plex Mono",monospace;font-weight:500;font-size:.68rem;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+    background:var(--sunk);border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  tr:last-child td{border-bottom:0;}
+  td.k{font-family:"IBM Plex Mono",monospace;font-size:.82rem;white-space:nowrap;}
+  td.num{font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap;}
+  td .em{color:var(--ink);font-weight:500;}
+  code{
+    font-family:"IBM Plex Mono",monospace;font-size:.85em;
+    background:var(--sunk);padding:.08em .38em;border-radius:2px;
+  }
+
+  /* ── 정본 인용 ─────────────────────────── */
+  .canon{
+    margin:1.15rem 0 0;padding:.85rem 0 .85rem 1.1rem;
+    border-left:2px solid var(--gold-bright);
+    font-family:"Gowun Batang",serif;font-size:.95rem;line-height:1.7;color:var(--ink-soft);
+  }
+  .canon p{margin:0 0 .55rem;}
+  .canon p:last-child{margin-bottom:0;}
+  .canon .src{
+    font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.06em;
+    color:var(--gold);margin-right:.5rem;
+  }
+
+  .note{
+    margin-top:1.1rem;padding:.85rem 1rem;background:var(--sunk);
+    border-radius:2px;font-size:.85rem;color:var(--ink-soft);
+  }
+  .note strong{color:var(--ink);font-weight:600;}
+
+  hr{border:0;border-top:1px solid var(--line);margin:3.5rem 0 0;}
+  .foot{margin-top:1.4rem;font-size:.78rem;color:var(--muted);}
+  .foot code{background:transparent;padding:0;color:var(--ink-soft);}
+  a{color:var(--gold);}
+  a:focus-visible,th:focus-visible{outline:2px solid var(--gold-bright);outline-offset:2px;}
+</style>
+
+<style>
+  /* 이 문서에만 있는 것 — 나머지는 아트_발주서와 같은 계열을 그대로 쓴다 */
+  .warns{display:grid;gap:.85rem;margin-top:1.2rem;}
+  .warn{
+    border:1px solid var(--line);border-left:3px solid var(--wait);
+    background:var(--surface);border-radius:2px;padding:.85rem 1.05rem;font-size:.88rem;
+    color:var(--ink-soft);
+  }
+  .warn.hot{border-left-color:var(--blocked);background:var(--blocked-wash);}
+  .warn.cool{border-left-color:var(--temp);}
+  .warn b{display:block;color:var(--ink);font-weight:600;margin-bottom:.25rem;font-size:.9rem;}
+  .warn code{background:var(--paper);}
+
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(17rem,1fr));gap:1.1rem;margin-top:1.2rem;}
+
+  .ramp{display:flex;border:1px solid var(--line);border-radius:2px;overflow:hidden;margin-top:1.15rem;}
+  .ramp div{
+    flex:1;padding:.7rem .55rem .6rem;text-align:center;
+    font-family:"IBM Plex Mono",monospace;font-size:.7rem;line-height:1.5;
+    color:#f1efea;font-variant-numeric:tabular-nums;
+  }
+  .ramp div span{display:block;font-size:.62rem;opacity:.72;letter-spacing:.04em;}
+
+  ul.plain{margin:.9rem 0 0;padding-left:1.1rem;font-size:.9rem;color:var(--ink-soft);}
+  ul.plain li{margin-bottom:.4rem;}
+  ul.plain li:last-child{margin-bottom:0;}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">무채색 낙원 · 데모 · 2026-09-05 실측</p>
+  <h1>집 배경, 그리기 전에</h1>
+  <p class="lede">
+    집 배경은 <strong>데모 구현의 최우선 블로커</strong>입니다(F-3-4). 지금 집 안은 전부 같은 회색
+    더미 사각형이라, 조명도 탈출 압박도 <em>코드는 다 돌아가는데 눈으로 판정할 수가 없는</em> 상태입니다.
+    아래 치수는 씬을 배치모드로 열어 직접 잰 값이고, 「정본」 인용은 문단 번호를 그대로 달았습니다.
+  </p>
+
+  <div class="tally">
+    <div><b>222<span style="font-size:1rem">×</span>149</b><span>다락방 내부 (도트)</span></div>
+    <div><b>523<span style="font-size:1rem">×</span>180</b><span>집 안 내부 (도트)</span></div>
+    <div class="hot"><b>7</b><span>압박이 움직이는 벽·문틀</span></div>
+    <div><b>2</b><span>필터 버전 — 환상 · 현실</span></div>
+  </div>
+
+  <!-- ── 1. 고정 규격 ───────────────────── -->
+  <section>
+    <h2><span class="n">01</span> 고정 규격</h2>
+    <p class="sub">
+      데모 종료까지 바뀌지 않습니다. <code>Assets/Art/</code> 아래에 PNG 를 넣으면
+      임포트 설정은 자동으로 걸리므로 인스펙터를 만질 필요가 없습니다.
+    </p>
+
+    <div class="spec">
+      <h3>캔버스와 임포트</h3>
+      <dl class="specgrid">
+        <div>
+          <dt>화면 내부 해상도</dt>
+          <dd>640 × 360 <em>정수배로만 확대 · 남는 곳은 검은 띠</em></dd>
+        </div>
+        <div>
+          <dt>1 월드유닛</dt>
+          <dd>32 도트 <em>= 타일 한 칸. 이 문서의 모든 「도트」가 이 기준</em></dd>
+        </div>
+        <div>
+          <dt>PPU</dt>
+          <dd>32 <em>자동. <code>SpritePreset_Icon.preset</code></em></dd>
+        </div>
+        <div>
+          <dt>피벗</dt>
+          <dd>Center <em>배경·타일·오브젝트. 캐릭터만 바닥중앙</em></dd>
+        </div>
+        <div>
+          <dt>필터 · 밉맵 · 압축</dt>
+          <dd>Point · 없음 · 무압축 <em>자동</em></dd>
+        </div>
+        <div>
+          <dt>카메라 ortho</dt>
+          <dd>5.625 <em>⛔ 건드리면 정수배가 깨져 화면 전체가 떤다</em></dd>
+        </div>
+      </dl>
+    </div>
+
+    <div class="note">
+      <strong>넣는 곳.</strong> <code>Assets/Art/Tiles/House/_dummy/</code> 의 더미 12장을
+      <strong>같은 이름으로 덮으면</strong> 끝입니다. 새 파일도 <code>Assets/Art/</code> 아래이기만 하면
+      같은 프리셋이 걸립니다. ⛔ <code>Assets/Images/</code> 는 PPU 100 짜리 옛 폴더입니다. 거기 두면 안 됩니다.
+    </div>
+  </section>
+
+  <!-- ── 2. 방 치수 ─────────────────────── -->
+  <section>
+    <h2><span class="n">02</span> 방 치수 — 실측</h2>
+    <p class="sub">
+      마주 보는 벽의 중심 사이 거리입니다. 화면이 640 × 360 이므로
+      <strong>집 안(523)은 한 화면에 다 들어오고</strong>, 다락방(222 × 149)은 화면보다 작습니다.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>방</th><th>내부 (도트)</th><th>벽 두께</th><th>벽 오브젝트</th><th>압박 대상</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="k">다락방</td><td class="num em">222 × 149</td><td class="num">3</td><td class="num">4</td><td><span class="chip c-done">3개 배선됨</span></td></tr>
+          <tr><td class="k">집 안 (거실)</td><td class="num em">523 × 180</td><td class="num">4~5</td><td class="num">4</td><td><span class="chip c-done">3개 배선됨</span></td></tr>
+          <tr><td class="k">루의 방</td><td class="num em">202 × 253</td><td class="num">4~5</td><td class="num">4</td><td><span class="chip c-wait">안 걸림</span></td></tr>
+          <tr><td class="k">세라의 방</td><td class="num">—</td><td class="num">4</td><td class="num">1</td><td><span class="chip c-blocked">벽이 모자람</span></td></tr>
+          <tr><td class="k">유의 방</td><td class="num">—</td><td class="num">4~5</td><td class="num">2</td><td><span class="chip c-blocked">벽이 모자람</span></td></tr>
+          <tr><td class="k">부엌</td><td class="num">—</td><td class="num">—</td><td class="num">0</td><td><span class="chip c-blocked">벽이 없음</span></td></tr>
+          <tr><td class="k">마당</td><td class="num">—</td><td class="num">—</td><td class="num">1</td><td><span class="chip c-temp">실외 — 대상 아님</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="warn hot">
+      <b>「—」인 방은 마주 보는 벽이 없어서 크기를 못 냈습니다.</b>
+      부엌은 벽 오브젝트가 <strong>하나도 없고</strong>, 세라의 방과 유의 방은 한쪽 벽만 있습니다.
+      배경을 그리기 전에 <strong>이 방들의 벽부터 세워야</strong> 치수가 확정되고, 조임 연출도 걸 수 있습니다.
+    </div>
+
+    <div class="warn cool">
+      <b>마당은 씬에서 꺼져 있습니다.</b>
+      켜지 않고 렌더하면 빈 화면이 나와서 「배경이 없다」로 오판하게 됩니다. 마당은 실외라
+      조임 연출 대상이 아니고(C-14-2-2 문단 1054), 대신 <strong>문이 열릴 때 들어오는 빛</strong>이 이 씬의
+      핵심입니다(D-S#13 문단 406) — 세라의 화이트아웃과 <strong>색온도를 다르게</strong> 잡아야 합니다.
+    </div>
+  </section>
+
+  <!-- ── 3. 정본이 요구하는 것 ───────────── -->
+  <section>
+    <h2><span class="n">03</span> 정본이 요구하는 것</h2>
+    <p class="sub">제가 정한 게 아니라 정본 문장을 그대로 옮긴 것입니다. 괄호는 문단 번호입니다.</p>
+
+    <div class="canon">
+      <p><span class="src">C-3-5 · 368</span>교체 범위는 넓게 잡는다. 환상 세트와 현실 세트는 같은 물건의 색만 다른 모습이 아니라, <strong>다른 물건으로 보이는 수준</strong>까지 바꾼다.</p>
+      <p><span class="src">C-3-5 · 374</span>집 — <strong>화면 대부분이 바뀐다.</strong> 첫 전환이다. 두 세계가 실제로 다르다는 것을 여기서 학습시킨다.</p>
+      <p><span class="src">C-3-5 · 367</span>오브젝트의 좌표와 통행 가능 영역(콜리전)은 <strong>양쪽에서 동일하게 고정</strong>된다. 환상에서는 길인데 현실에서는 벽인 식의 구성은 불가하다.</p>
+      <p><span class="src">C-3-5 · 369</span>전환을 처음 보여주는 자리에서 화면이 거의 바뀌지 않으면 플레이어는 필터를 기능이 약한 장치로 판단하고 <strong>이후 쓰지 않는다.</strong></p>
+    </div>
+
+    <div class="note">
+      <strong>집은 2버전입니다</strong> — 환상 · 현실 (C-16-2 문단 1271). 무채색(neutral) 버전은
+      숲에서만 필요하므로 <strong>집에는 그리지 않습니다.</strong> 게이지가 중간값을 지나는 순간
+      조사하면 환상 버전으로 폴백합니다.
+    </div>
+
+    <p class="sub" style="margin-top:2rem;">D 시나리오 정본이 집 구간에 요구한 배경·오브젝트 목록입니다(문단 421~433).</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>항목</th><th>버전</th><th>비고</th></tr></thead>
+        <tbody>
+          <tr><td>다락방 배경</td><td class="k">환상 3 + 현실 1</td><td>앙각 진입 컷 / 와이드 / 부감. 현실은 S#12 의 0.5초 + 토글 개방 이후 상시</td></tr>
+          <tr><td>집 안 전역 배경</td><td class="k">현실</td><td>현관 · 부엌 · 거실</td></tr>
+          <tr><td>마당 배경</td><td class="k">현실</td><td class="em">뿌리 없이 흙에 꽂힌 꽃. 채택 확정</td></tr>
+          <tr><td>현관 배경 · 낮</td><td class="k">2</td><td>문 닫힌 상태 / 열린 상태(바깥 빛)</td></tr>
+          <tr><td>마당 → 정문 이동 구간</td><td class="k">1</td><td>S#04F 마당 에셋 확장</td></tr>
+          <tr><td>상자</td><td class="k">2</td><td>닫힌 상태 / 열린 상태(코트·라디오·단검 배치)</td></tr>
+          <tr><td>부엌 서랍</td><td class="k">1</td><td>열린 상태 내부 클로즈업</td></tr>
+          <tr><td>대비 오브젝트</td><td class="k">현실 3건</td><td>색만 빼는 것이 아니라 다른 그림으로</td></tr>
+          <tr><td>신발장 · 거실 서랍장 · 세라의 방 문</td><td class="k">1</td><td>탐색용 상호작용 오브젝트</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ── 4. 압박이 거는 조건 ─────────────── -->
+  <section>
+    <h2><span class="n">04</span> 탈출 압박이 벽에 거는 조건</h2>
+    <p class="sub">
+      S#12 부터 현관문을 나설 때까지, <strong>좌우 벽과 천장이 안쪽으로 들어옵니다</strong>
+      (C-14-2-2 문단 1058). 배선과 수치는 끝나 있고 지금은 회색 위에 회색이 움직이는 상태입니다.
+      그림이 들어오면 바로 보입니다.
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>방</th><th>오브젝트</th><th>지금 그림 크기</th><th>움직임</th></tr></thead>
+        <tbody>
+          <tr><td class="k">다락방</td><td class="k">벽_시각</td><td class="num">224 × 3</td><td>천장 → 아래로</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽 (1)_시각</td><td class="num">3 × 152</td><td>우 → 안쪽</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽 (2)_시각</td><td class="num">3 × 152</td><td>좌 → 안쪽</td></tr>
+          <tr><td class="k">집 안</td><td class="k">벽_시각</td><td class="num">325 × 4</td><td>천장 → 아래로</td></tr>
+          <tr><td class="k">집 안</td><td class="k">거실 벽_시각</td><td class="num">5 × 514</td><td>우 → 안쪽</td></tr>
+          <tr><td class="k">집 안</td><td class="k">식료품실벽_시각</td><td class="num">5 × 179</td><td>좌 → 안쪽</td></tr>
+          <tr><td class="k">현관</td><td class="k">현관문_시각</td><td class="num">39 × 7</td><td>폭이 39 → 34 → 30</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two">
+      <div class="spec">
+        <h3>이동량</h3>
+        <dl class="specgrid" style="grid-template-columns:1fr;">
+          <div><dt>3차 (65초)</dt><dd>6 도트 <em>벽 · 천장</em></dd></div>
+          <div><dt>4차 (80초)</dt><dd>12 도트 <em>벽 · 천장</em></dd></div>
+          <div><dt>문틀</dt><dd>4 → 8 도트 <em>폭이 줄어든다</em></dd></div>
+        </dl>
+      </div>
+      <div class="spec">
+        <h3>그림에 필요한 것</h3>
+        <dl class="specgrid" style="grid-template-columns:1fr;">
+          <div><dt>바깥쪽 여유</dt><dd>≥ 12 도트 <em>밀려도 뒤가 안 비게</em></dd></div>
+          <div><dt>콜라이더</dt><dd>안 움직임 <em>벽 본체에 그대로 남는다</em></dd></div>
+          <div><dt>붙는 자리</dt><dd>_시각 자식 <em>벽 본체의 그림은 꺼져 있다</em></dd></div>
+        </dl>
+      </div>
+    </div>
+
+    <div class="warn hot">
+      <b>벽 그림은 12도트 밀려도 뒤에 빈 곳이 보이면 안 됩니다.</b>
+      바깥쪽으로 최소 12도트의 여유를 두고 그리세요. 방 경계에 딱 맞춰 그리면
+      4차에서 벽과 화면 끝 사이에 틈이 생깁니다.
+    </div>
+
+    <div class="warn cool">
+      <b>그림과 통행 판정이 분리돼 있습니다.</b>
+      벽 본체(<code>벽</code>)에는 콜라이더만 남고 <strong>SpriteRenderer 는 꺼져 있습니다.</strong>
+      그림은 자식 <code>벽_시각</code> 에 있고 그것만 움직입니다.
+      「실제로 좁히면 통행 불가 구간이 생기고, 그것은 제한 시간이 아니라 벽이 된다」(C-14-2-2 문단 1050)가 근거입니다.
+    </div>
+  </section>
+
+  <!-- ── 5. 명도 예산 ───────────────────── -->
+  <section>
+    <h2><span class="n">05</span> 명도 예산</h2>
+    <p class="sub">
+      압박이 진행되면 화면 가장자리가 단계마다 어두워집니다. 아래는 지금 더미 배경(명도 126 단일)에서
+      실제로 렌더해 잰 값입니다. <strong>가장자리에 놓인 것은 4차에서 원래의 47% 까지 눌립니다.</strong>
+    </p>
+
+    <div class="ramp">
+      <div style="background:#7e7e7e;">126<span>0 · 1차</span></div>
+      <div style="background:#5c5c5c;">92<span>2차 · 73%</span></div>
+      <div style="background:#4c4c4c;">76<span>3차 · 60%</span></div>
+      <div style="background:#3b3b3b;">59<span>4차 · 47%</span></div>
+    </div>
+
+    <ul class="plain">
+      <li><strong>벽 · 바닥 · 가구는 서로 명도로 갈라야 합니다.</strong> 가장자리에서 절반 가까이 눌려도
+        남을 만큼 차이를 두세요. 도트 규격의 <strong>「명도 겹침 금지」</strong>가 여기서 실제로 걸립니다.</li>
+      <li>가운데는 끝까지 열려 있습니다(126 유지). 어두워지는 것은 테두리뿐입니다 —
+        「사방에서 안쪽. 쫓기는 느낌이 아니라 <strong>갇히는 느낌</strong>」(C-14-2 문단 1018).</li>
+      <li>⚠ <strong>Linear 색공간입니다.</strong> 알파 0.45 를 걸어도 화면에서는 22% 밖에 안 어두워집니다.
+        인스펙터 숫자와 눈에 보이는 값이 다릅니다.</li>
+    </ul>
+  </section>
+
+  <!-- ── 6. 바닥 ───────────────────────── -->
+  <section>
+    <h2><span class="n">06</span> 바닥은 다른 물건입니다</h2>
+    <p class="sub">
+      집의 <code>Floor</code> 는 스프라이트가 아니라 <strong>MeshRenderer + Quad + URP 3D <code>Lit</code></strong> 입니다
+      (992 × 517 도트). 그래서 <strong>Light2D 가 아예 안 걸립니다</strong> — 밤과 낮의 바닥 밝기가 둘 다 125 로 같습니다.
+    </p>
+
+    <div class="warn hot">
+      <b>바닥 아트가 조명 수정의 선행 조건입니다.</b>
+      머티리얼만 <code>Sprite-Lit-Default</code> 로 바꾸면 <strong>낮에 순백(254)</strong>이 되어 가구가 전부 묻힙니다.
+      바닥 그림이 먼저 있어야 이 문제를 닫을 수 있습니다. 같은 형태가 집에 2곳 · 마을에 2곳 있습니다.
+    </div>
+  </section>
+
+  <!-- ── 7. 두 갈래 ────────────────────── -->
+  <section>
+    <h2><span class="n">07</span> 타일맵이냐 낱장이냐 <span class="chip c-blocked">결정 필요</span></h2>
+    <p class="sub">시작하기 전에 정해야 합니다. 나중에 바꾸면 압박 배선을 다시 해야 합니다.</p>
+
+    <div class="two">
+      <div class="spec">
+        <h3>지금 있는 것 · 타일</h3>
+        <p style="margin:0;font-size:.88rem;color:var(--ink-soft);">
+          <code>Assets/Art/Tiles/House/</code> 에 <strong>32 × 32 더미 12종</strong>과 Tile 에셋이 있고,
+          씬에 <code>Tilemap_Ground / Wall / Overlay</code> 3층이 있습니다.
+          <strong>전부 비어 있습니다</strong> — 한 번도 칠한 적이 없습니다.
+        </p>
+      </div>
+      <div class="spec">
+        <h3>지금 쓰는 것 · 낱장</h3>
+        <p style="margin:0;font-size:.88rem;color:var(--ink-soft);">
+          실제 벽은 유니티 기본 <code>Square</code> 스프라이트를 늘려 만든
+          <strong>개별 오브젝트</strong>입니다. 압박 배선(<code>_시각</code> 7개)이 여기에 걸려 있습니다.
+        </p>
+      </div>
+    </div>
+
+    <div class="warn hot">
+      <b>벽을 타일맵으로 칠하면 복도 축소가 깨집니다.</b>
+      타일맵은 통째로만 움직여서 좌 · 우 벽이 <strong>같은 방향으로</strong> 갑니다.
+      압박을 유지하려면 좌 · 우 · 천장을 <strong>따로 있는 오브젝트로 두거나</strong>,
+      벽 타일맵을 <strong>3개로 나눠야</strong> 합니다. 바닥과 장식은 타일맵으로 칠해도 상관없습니다.
+    </div>
+  </section>
+
+  <!-- ── 8. 짚어둘 것 ───────────────────── -->
+  <section>
+    <h2><span class="n">08</span> 짚어둘 것</h2>
+    <p class="sub">전부 실제로 한 번씩 걸렸던 것들입니다.</p>
+
+    <div class="warns">
+      <div class="warn hot">
+        <b>벽 오브젝트의 localScale 이 12.44 같은 값으로 늘어나 있습니다.</b>
+        1 × 1 유닛짜리 <code>Square</code> 를 늘려 쓰고 있어서입니다. 진짜 도트를 그대로 넣으면
+        <strong>가로로 12배 늘어나고 세로로 찌그러집니다.</strong>
+        아트를 넣을 때 <strong>localScale 을 1 로 되돌리고 스프라이트를 실제 크기로 그리세요.</strong>
+      </div>
+
+      <div class="warn">
+        <b>벽을 두껍게 그리면 콜라이더를 따로 맞춰야 합니다.</b>
+        지금 벽 두께는 3~5 도트로 사실상 선입니다. 콜라이더는 벽 본체에 있고 그림과 분리돼 있으므로,
+        그림만 두꺼워지면 <strong>보이는 벽과 막히는 자리가 어긋납니다.</strong>
+      </div>
+
+      <div class="warn">
+        <b>피벗이 두 종류입니다.</b>
+        배경 · 타일 · 오브젝트는 <strong>Center</strong>, 캐릭터는 <strong>바닥중앙</strong>입니다.
+        섞으면 물건이 공중에 뜹니다. 타일이 Center 인 것은 Grid 셀 한가운데에 놓여야 이어 붙였을 때
+        틈이 없기 때문입니다.
+      </div>
+
+      <div class="warn">
+        <b>씬 배치가 0.5625배입니다.</b>
+        도트 규격 전환 때 월드를 통째로 줄였습니다. 씬 YAML 의 좌표를 그냥 더하면 틀립니다 —
+        위치를 확인할 일이 있으면 <strong>배치모드에서 <code>transform.position</code> 을 찍어</strong> 보세요.
+      </div>
+
+      <div class="warn">
+        <b>1080p 시절 값이 곳곳에 남아 있습니다.</b>
+        기준 해상도가 800×600 → 640×360 으로 바뀐 뒤 옛 값이 남아 화면을 넘긴 일이
+        지금까지 여러 번 있었습니다. <strong>크기가 이상해 보이면 먼저 이걸 의심하세요.</strong>
+      </div>
+
+      <div class="warn cool">
+        <b>루의 방은 벽 4개가 다 있는데 압박을 안 걸었습니다.</b>
+        이번 배선은 <strong>다락방과 집 안(거실) 두 곳뿐</strong>입니다.
+        90초 안에 루의 방으로 되돌아가면 그 방만 조임이 멈춰 보입니다.
+        걸지 말지는 정하지 않았습니다 — 방 벽을 세우는 작업과 함께 결정하면 됩니다.
+      </div>
+    </div>
+  </section>
+
+  <hr>
+  <p class="foot">
+    치수는 2026-09-05 에 <code>Home.unity</code> 를 배치모드로 열어 <code>Renderer.bounds</code> 로 잰 값입니다.
+    설계 근거는 <code>C-14</code>(탈출 압박) · <code>C-3-5</code>(필터 교체 범위) · <code>C-16-2</code>(버전 수),
+    수치는 <code>F-6</code>, 원고는 <code>D-1</code> 입니다. 도트 고정값은 저장소 <code>CLAUDE.md §11</code>.
+    캐릭터 · 아이콘 · 포트레이트 규격은 <code>아트_발주서.html</code> 에 따로 있습니다.
+  </p>
+
+</div>
