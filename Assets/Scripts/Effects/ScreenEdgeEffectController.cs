@@ -29,6 +29,12 @@ public class ScreenEdgeEffectController : MonoBehaviour
     static readonly Color MarshmallowColor = new Color(0.95f, 0.90f, 0.85f, 0.55f); // 따뜻한 흰빛
     static readonly Color HeartbeatColor   = new Color(0.75f, 0.10f, 0.10f, 0.60f); // 붉은색
 
+    /// <summary>
+    /// 원샷 연출이 파고드는 가장자리 폭. 지속형(압박)의 18/30/44% 사이에 둔다 —
+    /// 한 번 번쩍이는 것이므로 2차보다는 넓고 4차만큼 조이지는 않는다.
+    /// </summary>
+    const float OneShotEdgeRatio = 0.32f;
+
     // ── 내부 상태 ────────────────────────────────────────────────────────────
     Image   _edgeImage;
     Image   _sustainedImage;   // 지속형 전용. 원샷 연출과 레이어를 분리한다
@@ -53,9 +59,12 @@ public class ScreenEdgeEffectController : MonoBehaviour
 
     void BuildOverlay(Transform parent)
     {
-        // 전체 화면 크기 이미지 (테두리만 불투명, 중앙은 투명)
-        // 실제 테두리 번짐 효과는 스프라이트 또는 셰이더로 구현 가능하나
-        // 기본 구현에서는 단색 비네트 Image를 사용 (Inspector에서 Radial Gradient 스프라이트로 교체 권장)
+        // 전체 화면 크기 이미지. 스프라이트는 재생할 때 PlayEdge 가 끼운다.
+        //
+        // ⛔ 스프라이트를 안 끼우면 Image 는 <b>화면 전체를 단색으로</b> 칠한다. 2026-09-05 이전이
+        //    그랬고, 그래서 「테두리」라는 이름이 붙은 네 연출이 전부 전면 색필터로 나왔다 —
+        //    실측에서 중앙과 가장자리 밝기 차이가 넷 다 정확히 0 이었다. 마시멜로는 화면을
+        //    126 → 208 로 띄웠고, 심박은 붉은 펄스가 아니라 탁한 갈색 물이 됐다(채도 26).
         var go  = new GameObject("EdgeOverlay");
         go.transform.SetParent(parent, false);
         _edgeImage = go.AddComponent<Image>();
@@ -111,24 +120,26 @@ public class ScreenEdgeEffectController : MonoBehaviour
     // ── 퍼블릭 API ──────────────────────────────────────────────────────────
 
     /// <summary>마시멜로 씹기 연출: 따뜻한 흰빛 테두리 번짐 (duration초 페이드 인/아웃).</summary>
-    public static void ShowMarshmallow(float duration = 1.5f)
+    public static void ShowMarshmallow(float duration = 1.5f, float edgeRatio = OneShotEdgeRatio)
     {
         if (!IsEnabled()) return;
-        Instance.PlayEdge(MarshmallowColor, duration);
+        Instance.PlayEdge(MarshmallowColor, duration, edgeRatio);
     }
 
     /// <summary>심박/전투 붉은 테두리 펄스 (duration초마다 깜빡).</summary>
-    public static void ShowHeartbeat(float duration = 0.4f, Color? color = null)
+    public static void ShowHeartbeat(float duration = 0.4f, Color? color = null,
+                                     float edgeRatio = OneShotEdgeRatio)
     {
         if (!IsEnabled()) return;
-        Instance.PlayEdge(color ?? HeartbeatColor, duration);
+        Instance.PlayEdge(color ?? HeartbeatColor, duration, edgeRatio);
     }
 
     /// <summary>임의 색상 테두리 비네팅 (duration초 페이드 인/아웃).</summary>
-    public static void ShowEdge(Color color, float duration = 1.5f)
+    public static void ShowEdge(Color color, float duration = 1.5f,
+                                float edgeRatio = OneShotEdgeRatio)
     {
         if (!IsEnabled()) return;
-        Instance.PlayEdge(color, duration);
+        Instance.PlayEdge(color, duration, edgeRatio);
     }
 
     /// <summary>진행 중인 테두리 효과를 즉시 숨깁니다.</summary>
@@ -287,8 +298,13 @@ public class ScreenEdgeEffectController : MonoBehaviour
     static bool IsEnabled() =>
         SettingsManager.Instance == null || SettingsManager.Instance.screenEdgeEffectEnabled;
 
-    void PlayEdge(Color targetColor, float duration)
+    void PlayEdge(Color targetColor, float duration, float edgeRatio)
     {
+        // ⭐ 여기서 스프라이트를 끼워야 「테두리」가 된다. 안 끼우면 전면 단색이다.
+        //   지속형(압박)과 같은 비네트를 쓰므로 두 채널의 생김새가 한 계열로 맞는다.
+        _edgeImage.sprite = GetVignette(edgeRatio);
+        _edgeImage.type   = Image.Type.Simple;
+
         if (_activeCoroutine != null) StopCoroutine(_activeCoroutine);
         _activeCoroutine = StartCoroutine(EdgeRoutine(targetColor, duration));
     }
