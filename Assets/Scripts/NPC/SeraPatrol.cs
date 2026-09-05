@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -27,6 +28,13 @@ public class SeraPatrol : MonoBehaviour
         public float dwellSeconds = 20f;
         [Tooltip("세라가 이 구역에 들어오면 솔이 사라진다. 상점 구역에만 체크한다.")]
         public SeraApproachTrigger approachTrigger;
+
+        [Tooltip("이 구역으로 오는 도중 거쳐 갈 지점들. 비어 있으면 직선으로 간다.\n" +
+                 "⚠ 건물을 뚫고 지나가지 않게 하려고 둔다. 세라가 벽을 통과하면 몰입이 깨지고, " +
+                 "통과하는 동안에는 시야가 콜라이더 안에 갇혀 전방향이 막힌다.\n" +
+                 "⚠ 경유점을 넣어도 구간 전체 이동 시간은 moveDuration 그대로다(F-6 「구역 간 이동 5초」). " +
+                 "거리에 비례해 배분한다.")]
+        public Transform[] waypoints;
     }
 
     public static SeraPatrol Instance { get; private set; }
@@ -162,7 +170,7 @@ public class SeraPatrol : MonoBehaviour
                 PatrolZone zone = zones[i];
                 if (zone?.point == null) continue;
 
-                yield return MoveTo(zone.point.position);
+                yield return MoveVia(zone);
 
                 CurrentZone = zone;
                 SetAnimatorSpeed(0f);
@@ -192,11 +200,54 @@ public class SeraPatrol : MonoBehaviour
         }
     }
 
-    IEnumerator MoveTo(Vector3 target)
+    /// <summary>
+    /// 구역까지 경유점을 거쳐 이동합니다. 경유점이 없으면 직선입니다.
+    ///
+    /// ⚠ 구간 전체가 <see cref="moveDuration"/> 안에 끝난다 (F-6 「구역 간 이동 5초」).
+    ///   경유점마다 5초씩 쓰면 라운드가 110초에서 벗어난다. 거리에 비례해 나눠 쓴다.
+    /// </summary>
+    IEnumerator MoveVia(PatrolZone zone)
+    {
+        // 이미 그 자리에 서 있으면 움직이지 않는다. 재시작 직후(SnapToStart·ResetPatrol)가 그렇다.
+        // ⚠ 이 검사를 경유점 처리보다 먼저 해야 한다. 뒤에 두면 광장에 서 있는 세라가
+        //   광장의 경유점까지 걸어 나갔다 돌아오게 되어 「광장에서 점검 상태로 재시작」(C-14-3-6)이 깨진다.
+        if ((zone.point.position - transform.position).sqrMagnitude < 0.0001f)
+        {
+            SetAnimatorSpeed(0f);
+            yield break;
+        }
+
+        var legs = new List<Vector3>();
+        if (zone.waypoints != null)
+            foreach (var w in zone.waypoints)
+                if (w != null) legs.Add(w.position);
+        legs.Add(zone.point.position);
+
+        // 구간별 거리로 시간을 배분한다.
+        float total = 0f;
+        Vector3 from = transform.position;
+        var lengths = new float[legs.Count];
+        for (int i = 0; i < legs.Count; i++)
+        {
+            lengths[i] = Vector3.Distance(from, legs[i]);
+            total += lengths[i];
+            from = legs[i];
+        }
+
+        for (int i = 0; i < legs.Count; i++)
+        {
+            float share = total > 0.0001f ? moveDuration * (lengths[i] / total) : 0f;
+            yield return MoveTo(legs[i], share);
+        }
+    }
+
+    IEnumerator MoveTo(Vector3 target) => MoveTo(target, moveDuration);
+
+    IEnumerator MoveTo(Vector3 target, float duration)
     {
         Vector3 start   = transform.position;
         float   elapsed = 0f;
-        float   dur     = Mathf.Max(0.01f, moveDuration);
+        float   dur     = Mathf.Max(0.01f, duration);
 
         // 이미 그 자리에 서 있으면 이동하지 않는다. 시야도 점검 상태로 둔다.
         // 재시작 직후(SnapToStart·ResetPatrol)가 이 경우다 — 여기서 걸어버리면

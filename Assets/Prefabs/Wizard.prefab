@@ -20,6 +20,7 @@ GameObject:
   - component: {fileID: 6197859170624736353}
   - component: {fileID: 8319629660354658216}
   - component: {fileID: 5832371147580164110}
+  - component: {fileID: 6213240224656976459}
   m_Layer: 7
   m_Name: Wizard
   m_TagString: Player
@@ -325,6 +326,30 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!114 &6213240224656976459
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2978924516392596811}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4efe878837c4559408f9021f99d8ad98, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::LuShadow
+  radiusX: 0.2
+  radiusY: 0.09
+  groundOffset: -0.02
+  segments: 24
+  pullDistance: 0.85
+  pullSharpness: 2.5
+  releaseSpeed: 3
+  shadowColor: {r: 0.06, g: 0.06, b: 0.09, a: 1}
+  shadowAlpha: 0.38
+  alwaysVisible: 0
+  material: {fileID: 0}
+  sortingOrder: 10
 --- !u!1001 &7806009250454000519
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -156,11 +156,77 @@ public class ScreenEdgeEffectController : MonoBehaviour
     /// 호출하는 쪽에서 소리·공간 축소 등 다른 채널에 정보를 반드시 중복시켜야 합니다.
     /// </remarks>
     public static void SetSustainedLevel(Color color, float alpha01)
+        => SetSustainedLevel(color, alpha01, 0f);
+
+    /// <param name="edgeRatio">
+    /// 가장자리가 안쪽으로 파고드는 비율 0~1 (F-6 「가장자리 화면비 18% / 30% / 44%」).
+    /// 0 이면 예전처럼 화면 전체를 고르게 덮는다.
+    /// </param>
+    public static void SetSustainedLevel(Color color, float alpha01, float edgeRatio)
     {
         if (!IsEnabled()) return;
         var img = Instance._sustainedImage;
         if (img == null) return;
-        img.color = new Color(color.r, color.g, color.b, Mathf.Clamp01(alpha01));
+
+        // 폭이 지정되면 가장자리 그라디언트를, 아니면 단색을 쓴다.
+        img.sprite = edgeRatio > 0.001f ? GetVignette(edgeRatio) : null;
+        img.type   = Image.Type.Simple;
+        img.color  = new Color(color.r, color.g, color.b, Mathf.Clamp01(alpha01));
+    }
+
+    // ── 가장자리 그라디언트 ─────────────────────────────────────────────────
+    //
+    // 예전에는 지속형 오버레이가 화면 전체 단색이었다. 그래서 F-6 의 「가장자리 화면비」를
+    // 폭으로 쓰지 못하고 비율만 알파에 옮겨 담았고, 결과적으로 화면이 통째로 어두워졌다.
+    // C-14-2 문단 1018 은 「사방에서 안쪽. 쫓기는 느낌이 아니라 갇히는 느낌」이라고 못박았으므로
+    // 가운데는 열려 있고 테두리가 조여드는 그림이어야 한다.
+
+    static readonly System.Collections.Generic.Dictionary<int, Sprite> _vignetteCache = new();
+
+    /// <summary>폭을 0.02 단위로 반올림해 캐시한다. 전환 중에 매 프레임 텍스처를 만들지 않기 위해서다.</summary>
+    static Sprite GetVignette(float ratio)
+    {
+        int key = Mathf.RoundToInt(Mathf.Clamp(ratio, 0.02f, 0.9f) * 50f);
+        if (_vignetteCache.TryGetValue(key, out var cached) && cached != null) return cached;
+        var made = BuildVignette(key / 50f);
+        _vignetteCache[key] = made;
+        return made;
+    }
+
+    static Sprite BuildVignette(float ratio)
+    {
+        // 640x360 을 5분의 1로 줄인 크기. 부드러운 그라디언트라 이 해상도로 충분하고,
+        // 종횡비가 같아 늘려도 왜곡되지 않는다.
+        const int W = 128, H = 72;
+        var tex = new Texture2D(W, H, TextureFormat.RGBA32, false)
+        {
+            wrapMode   = TextureWrapMode.Clamp,
+            filterMode = FilterMode.Bilinear,
+            name       = $"Vignette{ratio:F2}",
+        };
+
+        var px = new Color32[W * H];
+        float r = Mathf.Max(0.0001f, ratio);
+        for (int y = 0; y < H; y++)
+        {
+            float v = (y + 0.5f) / H;
+            float dy = Mathf.Min(v, 1f - v) / r;
+            for (int x = 0; x < W; x++)
+            {
+                float u = (x + 0.5f) / W;
+                float dx = Mathf.Min(u, 1f - u) / r;
+
+                // 가장자리에서 0, 안쪽 경계에서 1. 두 축 중 가까운 쪽을 따른다.
+                float d = Mathf.Clamp01(Mathf.Min(dx, dy));
+                float a = 1f - Mathf.SmoothStep(0f, 1f, d);
+                px[y * W + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+            }
+        }
+        tex.SetPixels32(px);
+        tex.Apply(false, false);
+
+        return Sprite.Create(tex, new Rect(0, 0, W, H), new Vector2(0.5f, 0.5f), 100f,
+                             0, SpriteMeshType.FullRect);
     }
 
     /// <summary>지속형 비네팅을 즉시 걷어냅니다. 원샷 연출에는 영향을 주지 않습니다.</summary>

@@ -6,7 +6,8 @@ using UnityEngine.SceneManagement;
 /// 집 구간 탈출 압박 — 결계가 조인다 (C-14-2 / F-6 / 근거 A-13-3).
 ///
 /// S#11 에서 루가 "제가 아빠 데리러 갈게요" 라고 말한 직후 발동해 90초를 센다.
-/// 정문을 통과하면 해제, 시간이 다하면 현관문이 영구 폐쇄되고 배드 엔딩 ① 로 간다.
+/// 현관문을 통과하면 해제, 시간이 다하면 현관문이 영구 폐쇄되고 배드 엔딩 ① 로 간다.
+/// (F-6 「타이머·조임 정지 — 현관문 통과」 · 마당과 정문 앞은 압박 밖이다)
 ///
 /// 배치 불필요 — ScreenEdgeEffectController 와 같은 지연 자동 생성 방식이다.
 /// 씬에 직접 배치하면 그 인스턴스의 인스펙터 값이 쓰인다(수치 조정용).
@@ -53,40 +54,72 @@ public class HouseEscapePressureController : MonoBehaviour
     public float stageTransitionDuration = 0.4f;
 
     [Header("연출 — 화면")]
-    [Tooltip("지속형 비네팅 색. 알파는 아래 상한값으로 대체된다.")]
+    [Tooltip("지속형 비네팅 색. 알파는 아래 단계별 값으로 대체된다.")]
     public Color vignetteColor = new Color(0.02f, 0.02f, 0.04f);
-    [Tooltip("4차(최대) 시점의 알파 상한. ScreenEdgeEffectController 의 Image 는 현재 " +
-             "'가장자리'가 아니라 화면 전체 단색이므로 높이면 화면이 통째로 어두워진다.")]
-    [Range(0f, 1f)] public float vignetteMaxAlpha = 0.45f;
+    [Tooltip("단계별 가장자리 진하기 — 2차 / 3차 / 4차. 1차는 화면을 건드리지 않으므로 목록에 없다. " +
+             "⚠ 정본에 수치가 없어 정한 값이다 — F-6 이 규정한 것은 폭(18/30/44%)뿐이고 진하기는 없다. " +
+             "⭐ 그래도 폭만으로는 C-14-2-1 문단 1041 의 「4차 — 진행 방향 외에는 시야가 거의 남지 " +
+             "않는다」가 성립하지 않는다. 2026-09-05 배치모드 실측에서 0.45 고정이면 가장자리가 " +
+             "밝기 126 → 98, 22% 밖에 안 내려갔고 2·3·4차가 전부 같은 값이었다. " +
+             "⚠ 프로젝트가 Linear 색공간이라 알파를 그대로 밝기 감소로 읽으면 안 된다. 배경 126 기준 " +
+             "0.55 → 87 · 0.75 → 65 · 0.95 → 26 으로 떨어진다.")]
+    public Vector3 vignetteAlphas = new Vector3(0.55f, 0.75f, 0.95f);
 
     [Tooltip("F-6 「집 어두워짐 3단계 — 가장자리 화면비 18% / 30% / 44%」. 2·3·4차에 대응하며 " +
-             "1차는 화면을 건드리지 않는다.\n" +
-             "⚠ 현재 오버레이가 가장자리 그라디언트가 아니라 전면 단색이라 '화면비'를 그대로 그릴 수 없다. " +
-             "세 값의 비율만 알파에 옮기고 44% 를 vignetteMaxAlpha 에 맞춘다. " +
-             "가장자리 스프라이트가 나오면 이 값을 폭으로 직접 쓴다.")]
+             "1차는 화면을 건드리지 않는다. 화면 가장자리에서 안쪽으로 파고드는 폭이다.")]
     public Vector3 edgeRatios = new Vector3(0.18f, 0.30f, 0.44f);
 
     [Header("연출 — 공간 (C-14-2-2)")]
-    [Tooltip("F-6 「집 복도 축소 — 3차 −8% · 4차 −14%」. 3차와 4차에만 발생한다.\n" +
-             "⚠ 콜라이더와 이동 가능 범위는 바꾸지 않는다. 실제로 좁히면 통행 불가 구간이 생기고 " +
-             "그것은 제한 시간이 아니라 벽이 된다 (C-14-2-2).")]
-    public float corridorShrinkStage3 = 0.08f;
-    public float corridorShrinkStage4 = 0.14f;
+    [Tooltip("F-6 「집 복도 축소 — 좌우 벽·천장 스프라이트 안쪽 오프셋 3차 6px · 4차 12px」. " +
+             "3차와 4차에만 발생한다.\n" +
+             "⚠ 단위는 비율이 아니라 도트 픽셀이다. 1px = 0.5625/32 = 0.017578 월드유닛 " +
+             "(도트 PPU 32 · 씬 배치 0.5625배)이므로 12px 는 0.2109 유닛이다.\n" +
+             "⚠ 콜라이더와 카메라는 바꾸지 않는다. 실제로 좁히면 통행 불가 구간이 생기고 " +
+             "그것은 제한 시간이 아니라 벽이 된다 (C-14-2-2).\n" +
+             "⭐ 문틀(4차 8px · 3차 4px)과 비율이 0.5 로 같아진다 — 이 값을 6/12 가 아닌 것으로 " +
+             "바꾸면 문틀 3차가 다시 4px 에서 어긋난다.")]
+    public float corridorShrinkStage3 = 6f;
+    public float corridorShrinkStage4 = 12f;
 
     [Header("연출 — 저음")]
-    [Tooltip("AudioManager 에 등록된 드론 루프 이름. 비우면 아래 절차용 사인파를 대신 쓴다.")]
+    [Tooltip("AudioManager 에 등록된 드론 루프 이름. 비우면 아래 절차 생성 저음을 대신 쓴다.")]
     public string droneSoundName = "";
-    [Tooltip("절차 생성 드론의 기본 주파수(Hz). 밖에서 안으로 밀려드는 저음.")]
-    public float droneHz = 42f;
+
+    [Tooltip("F-6 「기본 대역 80~120Hz」 — 절차 생성 저음이 차지하는 대역의 아래끝(Hz).\n" +
+             "⚠ 이전의 42Hz 는 노트북 스피커의 재생 하한 아래라 아무 소리도 들리지 않았다. " +
+             "이 대역은 그것을 정본이 직접 올려 잡은 값이다.")]
+    public float droneBandLowHz = 80f;
+    [Tooltip("F-6 「기본 대역 80~120Hz」 — 대역의 위끝(Hz).")]
+    public float droneBandHighHz = 120f;
+    [Tooltip("대역 안에 흩을 성분의 개수. F-6 「순음을 쓰지 않는다」 — 1 로 두면 순음이 되므로 금지다.")]
+    [Range(3, 24)] public int dronePartials = 9;
     [Tooltip("4차 시점의 드론 볼륨 상한 (Ambient 볼륨에 곱해진다). F-6 「1차 진입 · 단계마다 +6dB」 이므로 " +
              "1차는 이 값의 1/8 에서 시작해 단계마다 두 배가 된다.")]
     [Range(0f, 1f)] public float droneMaxVolume = 0.5f;
+
+    [Tooltip("「단계 상승을 저음 볼륨만으로 만들지 않는다. 로우패스 컷오프를 함께 열어 배음이 늘어나게 한다」 " +
+             "(F-6 문단 792). 볼륨만 올리면 스피커 한계에서 변화가 멈춘다.\n" +
+             "⚠ 정본에 수치가 없어 정한 값이다. 1~4차 순서다.\n" +
+             "⭐ 단계마다 배음이 한 층씩 열리도록 맞춰 놓았다. 80~120Hz 대역에 4배음까지 쌓으면 " +
+             "내용물이 80~120 · 160~240 · 240~360 · 320~480Hz 에 놓이므로 컷오프도 그 사이를 짚는다.\n" +
+             "⚠ droneHarmonics 를 줄이면 위쪽 단계가 빈 대역을 열게 되어 아무 변화도 나지 않는다. " +
+             "실측으로 480Hz 위에는 성분이 없다 — 700Hz 같은 값을 넣으면 4차가 3차와 같아진다.")]
+    public float[] droneCutoffHz = { 150f, 250f, 370f, 500f };
+
+    [Tooltip("대역 위쪽 배음을 몇 배음까지 쌓을지. 1 이면 배음이 없어 로우패스가 무효가 된다. " +
+             "위의 컷오프 사다리가 이 값(4)을 전제로 짜여 있다.")]
+    [Range(1, 6)] public int droneHarmonics = 4;
+
+    [Tooltip("F-6 「4차에서 최대. 그 외 BGM은 낮춘다」 — 4차 시점의 BGM 배율. " +
+             "드론이 커지는 만큼 BGM 이 물러나야 저음이 들린다. " +
+             "⚠ 정본에 수치가 없어 정한 값이다(4차에서 약 -9dB). 단계 사이는 드론 세기에 비례한다.")]
+    [Range(0f, 1f)] public float bgmDuckAtStage4 = 0.35f;
 
     /// <summary>
     /// 공간 압박 강도(0~1) 변화 알림. 복도 축소·문틀 좁아짐처럼 씬 오브젝트를 움직이는 연출이
     /// <see cref="EscapePressureShrinker"/> 로 여기에 붙는다.
     ///
-    /// 1 은 <see cref="corridorShrinkStage4"/>(−14%) 에 해당한다. 즉 구독자의 눌린 상태는
+    /// 1 은 <see cref="corridorShrinkStage4"/>(12px) 에 해당한다. 즉 구독자의 눌린 상태는
     /// <b>4차 기준</b>으로 만들어 두면 되고, 3차는 그 비율만큼만 적용된다.
     ///
     /// ⚠ 단계가 바뀔 때만 발행된다. 단계 사이에는 호출되지 않는다 (C-14-2-1).
@@ -99,7 +132,7 @@ public class HouseEscapePressureController : MonoBehaviour
     /// </summary>
     public static event Action OnPressureBegan;
 
-    /// <summary>압박이 해제된 순간 발행된다(정문 통과·실패 처리 후).</summary>
+    /// <summary>압박이 해제된 순간 발행된다(현관문 통과·실패 처리 후).</summary>
     public static event Action OnPressureEnded;
 
     // ── 내부 상태 ────────────────────────────────────────────────────────────
@@ -115,8 +148,11 @@ public class HouseEscapePressureController : MonoBehaviour
 
     // 현재 적용 중인 연출값과 전환 시작값. 전환 구간에서만 둘 사이를 오간다.
     float _edgeAlpha,  _fromEdgeAlpha;
+    float _edgeRatio,  _fromEdgeRatio;
     float _shrink,     _fromShrink;
     float _droneLevel, _fromDroneLevel;
+    float _cutoff,     _fromCutoff;
+    AudioLowPassFilter _droneLowPass;
 
     /// <summary>압박이 진행 중인지 여부.</summary>
     public static bool IsActive => _instance != null && _instance._active;
@@ -132,14 +168,22 @@ public class HouseEscapePressureController : MonoBehaviour
 
     // ── 단계별 목표값 (F-6) ──────────────────────────────────────────────────
 
-    /// <summary>단계별 비네팅 알파. 1차는 화면을 건드리지 않으므로 0 이다 (C-14-2-1).</summary>
-    float TargetEdgeAlpha(int stage)
-    {
-        if (stage <= 1) return 0f;
-        float max = Mathf.Max(0.0001f, edgeRatios.z);
-        float ratio = stage == 2 ? edgeRatios.x : stage == 3 ? edgeRatios.y : edgeRatios.z;
-        return vignetteMaxAlpha * Mathf.Clamp01(ratio / max);
-    }
+    /// <summary>
+    /// 단계별 비네팅 진하기. 1차는 화면을 건드리지 않으므로 0 이다 (C-14-2-1).
+    ///
+    /// 폭(<see cref="TargetEdgeRatio"/>)과 진하기가 <b>함께</b> 자란다. F-6 이 규정한 것은 폭뿐이지만,
+    /// 폭만 키우면 4차에서도 가장자리가 22% 밖에 어두워지지 않아 C-14-2-1 문단 1041 의
+    /// 「진행 방향 외에는 시야가 거의 남지 않는다」에 닿지 못한다(2026-09-05 배치모드 실측).
+    ///
+    /// ⚠ 화면 전체를 고르게 덮는 것이 아니다. 어디까지나 가장자리에서 안쪽으로 파고드는 그라디언트이며,
+    ///   가운데는 끝까지 열려 있어야 「사방에서 안쪽」(C-14-2 문단 1018)이 성립한다.
+    /// </summary>
+    float TargetEdgeAlpha(int stage) =>
+        stage <= 1 ? 0f : stage == 2 ? vignetteAlphas.x : stage == 3 ? vignetteAlphas.y : vignetteAlphas.z;
+
+    /// <summary>단계별 가장자리 폭. F-6 「가장자리 화면비 18% / 30% / 44%」 — 2·3·4차에 대응한다.</summary>
+    float TargetEdgeRatio(int stage) =>
+        stage <= 1 ? 0f : stage == 2 ? edgeRatios.x : stage == 3 ? edgeRatios.y : edgeRatios.z;
 
     /// <summary>단계별 공간 축소량. 3차·4차에만 발생한다 (F-6).</summary>
     float TargetShrink(int stage)
@@ -154,6 +198,18 @@ public class HouseEscapePressureController : MonoBehaviour
     {
         if (stage <= 0) return 0f;
         return droneMaxVolume / Mathf.Pow(2f, 4 - Mathf.Clamp(stage, 1, 4));
+    }
+
+    /// <summary>
+    /// 단계별 로우패스 컷오프(Hz). F-6 문단 792 「로우패스 컷오프를 함께 열어 배음이 늘어나게 한다」.
+    /// 0 단계는 1차 값으로 둔다 — 드론 볼륨이 0 이라 들리지 않으므로 시작값이 무엇이든 상관없고,
+    /// 1차 진입 때 컷오프가 튀지 않아야 한다.
+    /// </summary>
+    float TargetDroneCutoff(int stage)
+    {
+        if (droneCutoffHz == null || droneCutoffHz.Length == 0) return 22000f;
+        int i = Mathf.Clamp(stage - 1, 0, droneCutoffHz.Length - 1);
+        return Mathf.Max(20f, droneCutoffHz[i]);
     }
 
     /// <summary>경과 시간이 몇 번째 단계에 해당하는지. F-6 의 임계를 넘은 개수다.</summary>
@@ -209,6 +265,11 @@ public class HouseEscapePressureController : MonoBehaviour
         //    막지 않으면 엔딩을 보는 동안 90초 타이머가 다시 시작된다.
         if (BadEndingDirector.IsPlaying) return;
 
+        // ⚠ 현관문을 이미 통과했으면 재개하지 않는다. 압박 구간은 현관문까지다(F-6 문단 788).
+        //    마당 정문 앞에 세이브 포인트가 있으므로(C-13-2), 막지 않으면 그 파일을 불러올 때마다
+        //    마당에서 90초가 다시 시작돼 깰 수 없는 파일이 된다(C-13-2 문단 965).
+        if (GameState.isFrontDoorPassed) return;
+
         // 집으로 돌아왔다 — 배드 엔딩 후 되감기 복귀이거나, S#11 이후 지점을 불러온 경우다.
         // 컷씬은 이미 지나갔으므로 OnResolved 가 다시 발행되지 않는다. 여기서 다시 걸지 않으면
         // 실패한 플레이어가 제한 시간 없이 걸어 나가게 된다.
@@ -232,6 +293,7 @@ public class HouseEscapePressureController : MonoBehaviour
         yield return null;
 
         if (BadEndingDirector.IsPlaying) yield break;
+        if (GameState.isFrontDoorPassed) yield break;
 
         if (!_active && GameState.isResolved)
             Begin(anchorRewindPoint: false);
@@ -261,11 +323,17 @@ public class HouseEscapePressureController : MonoBehaviour
         OnPressureBegan?.Invoke();
     }
 
-    /// <summary>정문을 통과했습니다. 압박을 해제합니다(C-14-2 성공 경로).</summary>
+    /// <summary>
+    /// 현관문을 통과했습니다. 타이머와 전 연출을 즉시 해제합니다
+    /// (F-6 「타이머·조임 정지 — 현관문 통과」 · C-14-2-2 문단 1060).
+    ///
+    /// ⚠ 정문이 아니라 현관문이다. 「출구는 정문이지만 제한 시간은 현관문에서 끝난다」(F-6 문단 788).
+    /// ⚠ 단계적으로 풀지 않는다. 서서히 풀면 조임이 실외까지 이어지는 것으로 읽힌다(문단 1064).
+    /// </summary>
     public static void NotifyEscaped()
     {
         if (_instance == null || !_instance._active) return;
-        Dbg.Log("[탈출압박] 정문 통과 — 해제");
+        Dbg.Log("[탈출압박] 현관문 통과 — 해제");
         _instance.Stop();
     }
 
@@ -276,6 +344,7 @@ public class HouseEscapePressureController : MonoBehaviour
         _active = false;
         _elapsed = 0f;
         StopDrone();
+        AudioManager.BgmDuck = 1f;          // 전역 상태다. 켠 쪽이 되돌린다.
         ScreenEdgeEffectController.ClearSustained();
         ResetStageState();
         OnLevelChanged?.Invoke(0f);
@@ -288,8 +357,10 @@ public class HouseEscapePressureController : MonoBehaviour
         _stage      = 0;
         _transition = 1f;
         _edgeAlpha  = _fromEdgeAlpha  = 0f;
+        _edgeRatio  = _fromEdgeRatio  = 0f;
         _shrink     = _fromShrink     = 0f;
         _droneLevel = _fromDroneLevel = 0f;
+        _cutoff     = _fromCutoff     = TargetDroneCutoff(1);
     }
 
     // ── 진행 ─────────────────────────────────────────────────────────────────
@@ -325,8 +396,10 @@ public class HouseEscapePressureController : MonoBehaviour
     {
         _stage          = stage;
         _fromEdgeAlpha  = _edgeAlpha;
+        _fromEdgeRatio  = _edgeRatio;
         _fromShrink     = _shrink;
         _fromDroneLevel = _droneLevel;
+        _fromCutoff     = _cutoff;
         _transition     = stageTransitionDuration > 0f ? 0f : 1f;
 
         Dbg.Log($"[탈출압박] {stage}차 조임 — 경과 {_elapsed:F1}초");
@@ -339,8 +412,10 @@ public class HouseEscapePressureController : MonoBehaviour
         _transition = Mathf.Clamp01(_transition + Time.deltaTime / Mathf.Max(0.0001f, stageTransitionDuration));
 
         _edgeAlpha  = Mathf.Lerp(_fromEdgeAlpha,  TargetEdgeAlpha(_stage),  _transition);
+        _edgeRatio  = Mathf.Lerp(_fromEdgeRatio,  TargetEdgeRatio(_stage),  _transition);
         _shrink     = Mathf.Lerp(_fromShrink,     TargetShrink(_stage),     _transition);
         _droneLevel = Mathf.Lerp(_fromDroneLevel, TargetDroneLevel(_stage), _transition);
+        _cutoff     = Mathf.Lerp(_fromCutoff,     TargetDroneCutoff(_stage), _transition);
 
         // 공간 — 전환 중에만 알린다. 단계 사이에는 구독자를 부르지 않는다.
         OnLevelChanged?.Invoke(_shrink);
@@ -353,7 +428,7 @@ public class HouseEscapePressureController : MonoBehaviour
     void ApplyStageValues()
     {
         // 화면 — ⚠ 접근성 설정으로 꺼질 수 있는 채널이다. 저음이 정보를 중복해서 전달한다.
-        ScreenEdgeEffectController.SetSustainedLevel(vignetteColor, _edgeAlpha);
+        ScreenEdgeEffectController.SetSustainedLevel(vignetteColor, _edgeAlpha, _edgeRatio);
 
         // 저음 — 밖에서 안으로 밀려드는 소리. 설정 볼륨을 매 프레임 반영하되
         // AudioManager 의 카테고리 풀에는 등록하지 않는다(ApplyVolume 이 개별 볼륨을 리셋한다).
@@ -362,6 +437,13 @@ public class HouseEscapePressureController : MonoBehaviour
             float ambient = SettingsManager.Instance != null ? SettingsManager.Instance.ambientVolume : 1f;
             _drone.volume = ambient * _droneLevel;
         }
+
+        // 배음을 여는 쪽 (F-6 문단 792). 볼륨과 함께 움직이되 값 자체는 단계 사이에 변하지 않는다.
+        if (_droneLowPass != null) _droneLowPass.cutoffFrequency = _cutoff;
+
+        // BGM 을 물린다 (F-6 문단 732 「그 외 BGM은 낮춘다」). 드론 세기에 비례하므로 단계 사이에는 값이 변하지 않는다.
+        float ratio = droneMaxVolume > 0.0001f ? Mathf.Clamp01(_droneLevel / droneMaxVolume) : 0f;
+        AudioManager.BgmDuck = Mathf.Lerp(1f, bgmDuckAtStage4, ratio);
     }
 
     System.Collections.IEnumerator FailRoutine()
@@ -381,26 +463,35 @@ public class HouseEscapePressureController : MonoBehaviour
         _stage      = 4;
         _transition = 1f;
         _edgeAlpha  = TargetEdgeAlpha(4);
+        _edgeRatio  = TargetEdgeRatio(4);
         _shrink     = TargetShrink(4);
         _droneLevel = TargetDroneLevel(4);
+        _cutoff     = TargetDroneCutoff(4);
         OnLevelChanged?.Invoke(_shrink);
         ApplyStageValues();
 
         yield return new WaitForSeconds(failLingerDuration);
 
         StopDrone();
-        OnLevelChanged?.Invoke(0f);
-        ResetStageState();
+        AudioManager.BgmDuck = 1f;          // 실패 경로에서도 되돌린다. 배드 엔딩이 BGM 을 쓴다.
         YarnDialogue.UnlockPlayer(ctrl);
 
-        // ⚠ ClearSustained 를 여기서 부르지 않는다. 정본 문단 460 이
-        //   「가장자리 어두워짐 · 복도 축소 · 문틀 좁아짐이 끝까지 갔다가 암전으로 닫힌다」로 못박았다.
-        //   조임이 걷힌 뒤 암전이 오면 그 연결이 끊긴다. 지우는 것은 BE#01-a 의 암전 안에서
-        //   BadEndingDirector 가 한다.
+        // ⚠ 조임을 여기서 걷지 않는다. D-BE#01-a 문단 463 이 「가장자리 어두워짐 · 복도 축소 ·
+        //   문틀 좁아짐이 끝까지 갔다가 암전으로 닫힌다」로 못박았다. 조임이 풀린 뒤에 암전이 오면
+        //   그 연결이 끊긴다. 화면(ClearSustained)과 공간(OnLevelChanged) 둘 다 해당한다.
+        //
+        //   ⛔ 2026-09-05 이전에는 여기서 OnLevelChanged(0f) 와 ResetStageState() 를 불러
+        //      복도 축소·문틀 좁아짐만 암전 직전에 원래 크기로 되돌아갔다. 바로 아래 주석이
+        //      금지한 것을 같은 함수 안에서 하고 있었다. 되돌리지 말 것.
 
         // 인형화 페널티 없음 (CLAUDE.md §2).
         // 정본 BE#01-a~d 컷씬을 재생한 뒤 디렉터가 TriggerBadEnding 까지 처리한다.
         yield return BadEndingDirector.PlayHouseSealed();
+
+        // 암전이 끝난 뒤에야 공간을 되돌린다. 되감기로 S#11 직후에 다시 들어오므로
+        // 여기서 반드시 풀어야 다음 발동이 기준값부터 시작한다.
+        OnLevelChanged?.Invoke(0f);
+        ResetStageState();
     }
 
     // ── 저음 드론 ────────────────────────────────────────────────────────────
@@ -413,6 +504,16 @@ public class HouseEscapePressureController : MonoBehaviour
             _drone.playOnAwake  = false;
             _drone.spatialBlend = 0f;
         }
+
+        // F-6 문단 792 — 단계 상승을 볼륨만으로 만들지 않는다. 컷오프를 함께 연다.
+        // ⚠ AudioLowPassFilter 는 같은 GameObject 의 AudioSource 에만 걸린다. 드론과 같은 GO 여야 한다.
+        if (_droneLowPass == null)
+        {
+            var existing = gameObject.GetComponent<AudioLowPassFilter>();
+            _droneLowPass = existing != null ? existing : gameObject.AddComponent<AudioLowPassFilter>();
+            _droneLowPass.lowpassResonanceQ = 1f;
+        }
+        _droneLowPass.cutoffFrequency = _cutoff > 0f ? _cutoff : TargetDroneCutoff(1);
 
         AudioClip clip = null;
         if (!string.IsNullOrEmpty(droneSoundName))
@@ -430,27 +531,86 @@ public class HouseEscapePressureController : MonoBehaviour
         if (_drone != null) _drone.Stop();
     }
 
+    /// <summary>
+    /// 절차 생성 저음을 만듭니다 (F-6 「기본 대역 80~120Hz · 순음을 쓰지 않는다」).
+    ///
+    /// ⚠ <b>사인파 하나로 만들지 말 것.</b> 순음은 '밖에서 밀려드는 소리'가 아니라
+    ///   '기기가 내는 신호음'으로 들린다. 대역 안에 성분을 흩고 위상을 어긋나게 해야 한다.
+    ///
+    /// ⚠ 성분 주파수를 <b>버퍼 기본 주파수의 정수배로 반올림</b>한다. 그래야 모든 성분이
+    ///   버퍼 끝에서 같은 위상으로 돌아와 루프 이음매에 딱 소리가 나지 않는다.
+    ///   버퍼가 2초면 기본 주파수가 0.5Hz 라 반올림 오차가 최대 0.25Hz 뿐이고 대역을 벗어나지 않는다.
+    /// </summary>
     AudioClip BuildDroneClip()
     {
-        const int rate = 44100;
-
-        // 루프 이음매에서 딱 소리가 나지 않도록 버퍼 길이를 정수 주기로 맞춘다.
-        // 섞는 성분 중 가장 낮은 것이 droneHz/2 이므로 그쪽 주기를 기준으로 삼는다.
-        float subHz  = Mathf.Max(1f, droneHz * 0.5f);
-        int   cycles = Mathf.Max(1, Mathf.RoundToInt(subHz * 2f));   // 약 2초
-        int   samples = Mathf.RoundToInt(rate * cycles / subHz);
-        var   data    = new float[samples];
-
-        // 기본 주파수 + 한 옥타브 아래를 살짝 섞어 '밀려드는' 느낌을 만든다.
-        for (int i = 0; i < samples; i++)
-        {
-            float t = (float)i / rate;
-            data[i] = Mathf.Sin(2f * Mathf.PI * droneHz * t) * 0.7f
-                    + Mathf.Sin(2f * Mathf.PI * droneHz * 0.5f * t) * 0.3f;
-        }
-
-        var clip = AudioClip.Create("EscapePressureDrone", samples, 1, rate, false);
+        var data = BuildDroneSamples(DroneRate);
+        var clip = AudioClip.Create("EscapePressureDrone", data.Length, 1, DroneRate, false);
         clip.SetData(data, 0);
         return clip;
+    }
+
+    /// <summary>절차 생성 저음의 표본율.</summary>
+    public const int DroneRate = 44100;
+
+    /// <summary>
+    /// 저음 파형을 만듭니다. <see cref="BuildDroneClip"/> 이 이것을 감쌉니다.
+    ///
+    /// ⚠ <b>클립 생성과 분리해 둔 이유</b> — 배치모드는 오디오 장치가 없어
+    ///   <c>AudioSettings.outputSampleRate</c> 가 0 이고 <c>AudioClip.Create</c> 가 빈 클립을 만든다.
+    ///   그래서 클립을 거치면 파형을 검증할 방법이 없다. 이쪽은 장치와 무관하게 돈다.
+    /// </summary>
+    public float[] BuildDroneSamples(int rate)
+    {
+        const float loopSeconds = 2f;
+
+        int   samples = Mathf.RoundToInt(rate * loopSeconds);
+        float f0      = 1f / loopSeconds;                 // 버퍼 기본 주파수
+        float lo      = Mathf.Min(droneBandLowHz, droneBandHighHz);
+        float hi      = Mathf.Max(droneBandLowHz, droneBandHighHz);
+        int   count   = Mathf.Max(3, dronePartials);      // 3 미만은 순음에 가까워진다
+
+        var data = new float[samples];
+
+        // ⚠ UnityEngine.Random 을 쓰지 않는다. 실행할 때마다 소리가 달라지면 검증을 못 한다.
+        var rng = new System.Random(20260904);
+
+        int harmonics = Mathf.Clamp(droneHarmonics, 1, 6);
+
+        for (int p = 0; p < count; p++)
+        {
+            float u  = (float)p / (count - 1);
+            float hz = Mathf.Round(Mathf.Lerp(lo, hi, u) / f0) * f0;
+
+            // 낮은 쪽을 두껍게 준다. 위로 갈수록 얇아져야 '저음'으로 읽힌다.
+            double amp0 = Mathf.Lerp(1f, 0.35f, u) * (0.7 + 0.3 * rng.NextDouble());
+
+            // 대역 위쪽 배음. 이것이 없으면 120Hz 위에 아무것도 없어서 로우패스를 열어도
+            // 드러날 것이 없고, F-6 문단 792 가 무효가 된다.
+            // ⚠ hz 가 이미 f0 의 정수배이므로 정수배음도 자동으로 f0 의 정수배다 —
+            //   루프 이음매에서 위상이 그대로 돌아온다.
+            for (int h = 1; h <= harmonics; h++)
+            {
+                // ⚠ 1/h 다. 1/h² 로 하면 3·4차 컷오프가 열어도 에너지가 0.97% · 0.16% 뿐이라
+                //   「배음이 늘어난다」가 귀에 닿지 않는다(실측). 톱니파와 같은 기울기로 둔다.
+                double amp   = amp0 / h;
+                double phase = rng.NextDouble() * System.Math.PI * 2.0;
+                double w     = 2.0 * System.Math.PI * (hz * h) / rate;
+
+                // 각도가 커지므로 float 로 누적하면 오차가 보인다. double 로 돌린다.
+                for (int i = 0; i < samples; i++)
+                    data[i] += (float)(System.Math.Sin(w * i + phase) * amp);
+            }
+        }
+
+        // 성분 수를 바꿔도 체감 크기가 유지되도록 최대 진폭을 맞춘다.
+        float peak = 0f;
+        for (int i = 0; i < samples; i++) peak = Mathf.Max(peak, Mathf.Abs(data[i]));
+        if (peak > 0.0001f)
+        {
+            float k = 0.9f / peak;
+            for (int i = 0; i < samples; i++) data[i] *= k;
+        }
+
+        return data;
     }
 }

@@ -9,7 +9,7 @@ using UnityEngine.UI;
 ///
 /// <para>
 /// <b>왜 BadEndingScene 이 아니라 Home 씬인가.</b> 정본이 BE#01-d 와 BE#02-c 의 식탁 컷을
-/// 「S#04A 와 완전히 같은 구도, 접시 수만 다름」으로 못박았습니다(정본 문단 497 · 658 · 669).
+/// 「S#04A 와 완전히 같은 구도, 접시 수만 다름」으로 못박았습니다(정본 문단 500 · 668 · 679).
 /// 빈 씬에 새로 그리면 그 대칭이 성립하지 않으므로 실제 부엌·식탁을 그대로 씁니다.
 /// BadEndingScene 은 연출이 끝난 뒤의 「다시 시도해 보시겠습니까?」 화면만 맡습니다.
 /// </para>
@@ -21,7 +21,7 @@ using UnityEngine.UI;
 /// </para>
 ///
 /// <para>
-/// ⚠ 인형화 페널티를 붙이지 않습니다(CLAUDE.md §2 · 정본 문단 449 · 621).
+/// ⚠ 인형화 페널티를 붙이지 않습니다(CLAUDE.md §2 · 정본 문단 452 · 631).
 /// 복귀 지점 계산은 <see cref="BadEndingSequence"/> 소관이며 여기서 손대지 않습니다.
 /// </para>
 /// </summary>
@@ -77,14 +77,14 @@ public class BadEndingDirector : MonoBehaviour
     [Header("식탁 접시 — 비워 두면 건드리지 않는다")]
     [Tooltip("BE#01-d. 접시 3개(루 · 세라 · 유) 상태.")]
     public GameObject platesThree;
-    [Tooltip("BE#02-c. 접시 2개(세라 · 유). 루의 자리는 처음부터 없었던 것처럼 차린다(정본 문단 663).")]
+    [Tooltip("BE#02-c. 접시 2개(세라 · 유). 루의 자리는 처음부터 없었던 것처럼 차린다(정본 문단 673).")]
     public GameObject platesTwo;
 
     // ── BE#01-b 조명 ────────────────────────────────────────────────────────
     [Header("BE#01-b — 거실의 시간 경과")]
     [Tooltip("각도만 움직일 조명. 비우면 대기만 한다.")]
     public Light2D livingLight;
-    [Tooltip("단계별 밝기. 정본은 '3~4단'을 요구한다(문단 513).")]
+    [Tooltip("단계별 밝기. 정본은 '3~4단'을 요구한다(문단 516).")]
     public float[] livingLightIntensities = { 1f, 0.72f, 0.48f, 0.3f };
     [Tooltip("한 단계마다 조명이 도는 각도(도).")]
     public float livingLightAngleStep = 9f;
@@ -93,7 +93,7 @@ public class BadEndingDirector : MonoBehaviour
 
     // ── 카메라 ──────────────────────────────────────────────────────────────
     [Header("BE#01-a — 문이 커지는 컷")]
-    [Tooltip("컷이 바뀔 때마다 줄어드는 orthoSize 단계(정본 문단 457). 비우면 줌을 쓰지 않는다.")]
+    [Tooltip("컷이 바뀔 때마다 줄어드는 orthoSize 단계(정본 문단 460). 비우면 줌을 쓰지 않는다.")]
     public float[] doorZoomStages = { 4.2f, 3.4f, 2.6f };
     [Tooltip("한 줌 단계에 걸리는 시간(초).")]
     public float doorZoomDuration = 0.9f;
@@ -102,9 +102,9 @@ public class BadEndingDirector : MonoBehaviour
     // ⚠ AudioManager 에 등록된 이름만 넣는다. 없는 이름을 지어내면 조용히 무음이 되는 것이 아니라
     //   경고만 남고 연출 의도가 사라진다. 미등록이면 빈 문자열로 두는 것이 정답이다.
     [Header("SFX — AudioManager 에 등록된 이름만. 비우면 무음")]
-    [Tooltip("BE#01-a. 열쇠가 헛도는 소리(정본 문단 455).")]
+    [Tooltip("BE#01-a. 열쇠가 헛도는 소리(정본 문단 458).")]
     public string sfxKeySlipName = "";
-    [Tooltip("BE#01-c. 현관문이 열리는 소리(정본 문단 481).")]
+    [Tooltip("BE#01-c. 현관문이 열리는 소리(정본 문단 484).")]
     public string sfxDoorOpenName = "";
     [Tooltip("BE#01-c. 장바구니를 내려놓는 소리.")]
     public string sfxBasketDownName = "";
@@ -214,15 +214,15 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 448: 「시간이 끝나는 순간 루가 어디에 있든 즉시 암전한 뒤 BE#01-a 를 현관 앞에서 연다.
+    /// 정본 문단 451: 「시간이 끝나는 순간 루가 어디에 있든 즉시 암전한 뒤 BE#01-a 를 현관 앞에서 연다.
     /// 루가 현관까지 내려가는 과정은 보여주지 않는다.」 그래서 이동은 암전 안에서 끝낸다.
-    /// 문단 460: 압박 연출의 마지막 단계가 그대로 암전으로 닫힌다 — 새 연출을 만들지 않는다.
+    /// 문단 463: 압박 연출의 마지막 단계가 그대로 암전으로 닫힌다 — 새 연출을 만들지 않는다.
     /// </remarks>
     IEnumerator RunBE01a_SealedDoor()
     {
         yield return FadeOut();
 
-        // 암전 중에 정리한다. 정본 문단 453 — 단검을 파지 중이었다면 발동과 동시에 해제한다.
+        // 암전 중에 정리한다. 정본 문단 456 — 단검을 파지 중이었다면 발동과 동시에 해제한다.
         DaggerFilterController.Instance?.SwitchToFantasyForced();
         FilterManager.Instance?.SetFilter(FilterType.Fantasy);
         ScreenEdgeEffectController.ClearSustained();
@@ -242,9 +242,9 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 474: 「페이드나 디졸브를 쓰지 않고 같은 컷 안에서 조명만 이동시킨다.」
+    /// 정본 문단 477: 「페이드나 디졸브를 쓰지 않고 같은 컷 안에서 조명만 이동시킨다.」
     /// 그래서 이 씬 <b>안에서는</b> 컷을 바꾸지 않는다. 거실로 옮기는 것은 앞 컷과의 전환이다.
-    /// 문단 476: '축적 없이 흐른다' 가 이 씬의 전부다 — 루의 자세도 바뀌지 않는다.
+    /// 문단 479: '축적 없이 흐른다' 가 이 씬의 전부다 — 루의 자세도 바뀌지 않는다.
     /// </remarks>
     IEnumerator RunBE01b_LivingWait()
     {
@@ -268,9 +268,9 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 482: BE#01-b 의 루 정면 컷을 그대로 유지한다. 세라를 따로 잡지 않는다 — 카메라를 옮기지 않는다.
-    /// 문단 489: 세라는 코트를 언급하지 않는다. <b>시선이 코트에 잠깐도 머물지 않아야 한다.</b>
-    /// 문단 491: 세라는 화내지 않는다. 두 배드 엔딩 모두 같은 규칙이다.
+    /// 정본 문단 485: BE#01-b 의 루 정면 컷을 그대로 유지한다. 세라를 따로 잡지 않는다 — 카메라를 옮기지 않는다.
+    /// 문단 492: 세라는 코트를 언급하지 않는다. <b>시선이 코트에 잠깐도 머물지 않아야 한다.</b>
+    /// 문단 494: 세라는 화내지 않는다. 두 배드 엔딩 모두 같은 규칙이다.
     /// </remarks>
     IEnumerator RunBE01c_SeraReturn()
     {
@@ -288,16 +288,16 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 497: 세 개의 접시를 <b>S#04A 와 완전히 같은 구도</b>로 잡는다. 아침과 저녁의 빛만 다르다.
-    /// 문단 505: 루가 유의 자리를 보는 시간을 길게 두지 않는다. 한 박자면 된다.
-    /// 문단 511: 코트를 벗는 장면은 두지 않는다.
+    /// 정본 문단 500: 세 개의 접시를 <b>S#04A 와 완전히 같은 구도</b>로 잡는다. 아침과 저녁의 빛만 다르다.
+    /// 문단 508: 루가 유의 자리를 보는 시간을 길게 두지 않는다. 한 박자면 된다.
+    /// 문단 514: 코트를 벗는 장면은 두지 않는다.
     /// </remarks>
     IEnumerator RunBE01d_ThreePlates()
     {
         yield return CutTo(diningSpawn);
 
         SetPlates(three: true);
-        // 정본 문단 501 — 세라가 "저녁 먹게 나오렴" 하고 부른 자리다. 부엌에 있다.
+        // 정본 문단 504 — 세라가 "저녁 먹게 나오렴" 하고 부른 자리다. 부엌에 있다.
         ShowSera(seraDiningSpawn);
         PlaySfxIfNamed(sfxTablewareName);
         yield return WaitBeat();
@@ -322,8 +322,8 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 648: 세라는 한 마디도 하지 않는다. 문을 열고, 웃고, 놓고, 닫는다. 네 동작뿐이다.
-    /// 문단 651: BE#01 에서 계속 말을 걸던 목소리가 전부 사라지고 웃음만 남는다 — 그래서 대사가 0줄이다.
+    /// 정본 문단 658: 세라는 한 마디도 하지 않는다. 문을 열고, 웃고, 놓고, 닫는다. 네 동작뿐이다.
+    /// 문단 661: BE#01 에서 계속 말을 걸던 목소리가 전부 사라지고 웃음만 남는다 — 그래서 대사가 0줄이다.
     /// </remarks>
     IEnumerator RunBE02b_LockedRoom()
     {
@@ -340,9 +340,9 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 660: 루는 나오지 못한다. 세라가 문을 잠갔으니까.
+    /// 정본 문단 670: 루는 나오지 못한다. 세라가 문을 잠갔으니까.
     /// 그래서 <b>루를 옮기지 않고 카메라만</b> 부엌으로 넘긴다. BE#01-d 와 같은 구도, 접시 수만 다르다.
-    /// 문단 663: 빈자리에 접시를 놓지 않는다. 치운 것이 아니라 처음부터 없었던 것처럼 차린다.
+    /// 문단 673: 빈자리에 접시를 놓지 않는다. 치운 것이 아니라 처음부터 없었던 것처럼 차린다.
     /// </remarks>
     IEnumerator RunBE02c_TwoPlates()
     {
@@ -373,7 +373,7 @@ public class BadEndingDirector : MonoBehaviour
 
         _lockedCtrl = YarnDialogue.LockPlayer();
 
-        // 정본 문단 456 · 627 — [UI] 없음. HideHUD 는 HUD 줄만 감추므로,
+        // 정본 문단 459 · 637 — [UI] 없음. HideHUD 는 HUD 줄만 감추므로,
         // 떠 있을 수 있는 목표 패널은 ResetCutscene 으로 먼저 지운다.
         ObjectiveManager.Instance?.ResetCutscene();
         ObjectiveManager.Instance?.HideHUD();
@@ -448,7 +448,7 @@ public class BadEndingDirector : MonoBehaviour
     /// <remarks>
     /// ⚠ 줌을 여기서 되돌린다. BE#01-a 가 문을 키우려고 orthoSize 를 좁혀 놓기 때문에,
     /// 그대로 두면 BE#01-d 의 식탁이 바짝 당겨진 화면으로 잡힌다 —
-    /// 정본이 요구하는 「S#04A 와 완전히 같은 구도」(문단 497)가 깨진다.
+    /// 정본이 요구하는 「S#04A 와 완전히 같은 구도」(문단 500)가 깨진다.
     /// 되돌리는 것은 암전 안에서 하므로 줌이 풀리는 과정이 보이지 않는다.
     /// </remarks>
     IEnumerator CutTo(Transform spawn)

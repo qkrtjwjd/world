@@ -38,9 +38,9 @@ public class FrontGateTrigger : MonoBehaviour
 
     IEnumerator PassGateRoutine()
     {
-        // 집을 벗어났다 — 결계의 조임이 여기서 끝난다(C-14-2 성공 경로).
-        // 씬 전환을 기다리지 않고 여기서 해제해야 lingerDuration 동안 90초가 다해도 실패하지 않는다.
-        HouseEscapePressureController.NotifyEscaped();
+        // ⚠ 여기서 탈출 압박을 끄지 않는다. 「출구는 정문이지만 제한 시간은 현관문에서 끝난다」
+        //   (F-6 문단 788 · C-14-2-2 문단 1060). 해제는 FrontDoorInteraction.DepartRoutine 이 한다.
+        //   마당은 이미 압박 밖이므로 이 지점에 남은 조임도 타이머도 없다.
 
         // 카메라를 따라가지 않게 한다 — 루가 화면에서 작아진다.
         // Follow 대상을 떼면 가상 카메라가 그 자리에 그대로 남는다.

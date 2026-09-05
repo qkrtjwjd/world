@@ -62,10 +62,32 @@ public class AudioManager : PersistentSingleton<AudioManager>
     public static void SetMuffle(float factor) => MuffleFactor = Mathf.Clamp01(factor);
     public static void ResetMuffle()           => MuffleFactor = 1f;
 
+    /// <summary>
+    /// BGM 감쇠 배율 0~1 (1 = 그대로). 다른 소리를 앞세워야 할 때 BGM 만 눌러 둔다.
+    ///
+    /// 집 구간 탈출 압박이 이걸 쓴다 — F-6 문단 732 「집 저음 레이어 … 4차에서 최대.
+    /// <b>그 외 BGM은 낮춘다</b>」. 드론이 커지는 만큼 BGM 이 물러나야 저음이 들린다.
+    ///
+    /// ⚠ 설정 볼륨과는 별개의 축이다. 플레이어가 조절한 bgmVolume 에 이 값을 곱한다.
+    /// ⚠ 전역 상태이므로 켠 쪽이 반드시 되돌려야 한다. 압박 해제·실패 처리에서 1 로 복원한다.
+    /// </summary>
+    public static float BgmDuck
+    {
+        get => _bgmDuck;
+        set
+        {
+            float v = Mathf.Clamp01(value);
+            if (Mathf.Approximately(v, _bgmDuck)) return;
+            _bgmDuck = v;
+            ApplyVolume(_bgmSources, (SettingsManager.Instance?.bgmVolume ?? 1f) * _bgmDuck);
+        }
+    }
+    static float _bgmDuck = 1f;
+
     // ── 등록 / 해제 API ──────────────────────────────────────────────────
     public static void RegisterSFX(AudioSource src)         => Register(_sfxSources,         src, () => SettingsManager.Instance?.sfxVolume         ?? 1f);
     public static void UnregisterSFX(AudioSource src)       => _sfxSources.Remove(src);
-    public static void RegisterBGM(AudioSource src)         => Register(_bgmSources,         src, () => SettingsManager.Instance?.bgmVolume         ?? 1f);
+    public static void RegisterBGM(AudioSource src)         => Register(_bgmSources,         src, () => (SettingsManager.Instance?.bgmVolume ?? 1f) * _bgmDuck);
     public static void UnregisterBGM(AudioSource src)       => _bgmSources.Remove(src);
     public static void RegisterVoice(AudioSource src)       => Register(_voiceSources,       src, () => SettingsManager.Instance?.voiceVolume       ?? 1f);
     public static void UnregisterVoice(AudioSource src)     => _voiceSources.Remove(src);
@@ -217,7 +239,8 @@ public class AudioManager : PersistentSingleton<AudioManager>
     }
 
     // ── 내부 ─────────────────────────────────────────────────────────────
-    void ApplyBGMVolume(float vol) => ApplyVolume(_bgmSources, vol);
+    // 설정에서 BGM 볼륨을 바꿔도 감쇠(BgmDuck)는 유지된다.
+    void ApplyBGMVolume(float vol) => ApplyVolume(_bgmSources, vol * _bgmDuck);
 
     static void ApplyVolume(List<AudioSource> list, float vol)
     {
@@ -274,6 +297,15 @@ public class AudioManager : PersistentSingleton<AudioManager>
             case VolumeCategory.GlitchNoise: UnregisterGlitchNoise(src); break;
         }
     }
+
+    /// <summary>
+    /// 그 이름이 등록되어 있는지. 경고를 찍지 않고 조용히 확인한다.
+    ///
+    /// 에셋이 아직 없는 소리에 절차 생성 폴백을 붙일 때 쓴다 — 등록되면 자동으로 그쪽을 타고,
+    /// 없는 동안에도 채널이 비지 않는다. 이름을 지어내는 것과는 다르다(CLAUDE.md §0-4).
+    /// </summary>
+    public bool HasSound(string soundName)
+        => !string.IsNullOrEmpty(soundName) && _lookup != null && _lookup.ContainsKey(soundName);
 
     bool TryGetClip(string soundName, out AudioClip clip)
     {

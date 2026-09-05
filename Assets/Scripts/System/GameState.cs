@@ -101,6 +101,13 @@ public static class GameState
     public static bool isFrontDoorKeyFound = false;
     /// <summary>S#12 현실/환상 필터 토글(F키) 조작권이 열렸는지 여부.</summary>
     public static bool isDaggerToggleUnlocked = false;
+    /// <summary>
+    /// S#13 현관문을 통과했는지 여부. 통과하는 순간 탈출 압박이 끝난다 (C-14-2-2 · F-6).
+    ///
+    /// ⚠ 저장되는 값이어야 한다. 마당 정문 앞에 세이브 포인트가 있으므로(C-13-2), 저장하지 않으면
+    ///   그 파일을 불러올 때 마당에서 90초가 다시 시작돼 깰 수 없는 파일이 된다(C-13-2 문단 965).
+    /// </summary>
+    public static bool isFrontDoorPassed = false;
     /// <summary>쉼터 작업대 잠금 여부. 데모에서는 항상 true. 본편 해금 시 false로 전환.</summary>
     public static bool isWorkbenchLocked = true;
     /// <summary>빵집 빵 반죽 획득 여부.</summary>
@@ -162,6 +169,7 @@ public static class GameState
         isDoorknobRefused        = false;
         isFrontDoorKeyFound      = false;
         isDaggerToggleUnlocked   = false;
+        isFrontDoorPassed        = false;
         isWorkbenchLocked        = true;
         isBreadDoughAcquired     = false;
         hasMerchantMetAtSquare   = false;

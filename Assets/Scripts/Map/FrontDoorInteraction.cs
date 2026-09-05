@@ -176,6 +176,16 @@ public class FrontDoorInteraction : MonoBehaviour
         if (!string.IsNullOrEmpty(yarnNode_departure))
             yield return YarnDialogue.PlayAndWait(yarnNode_departure, false);
 
+        // ── 현관문 통과 — 탈출 압박이 여기서 끝난다 (C-14-2-2 · F-6 「타이머·조임 정지 — 현관문 통과」) ──
+        //
+        // ⚠ 정문이 아니라 여기다. 「출구는 정문이지만 제한 시간은 현관문에서 끝난다」(F-6 문단 788).
+        // ⚠ 문이 열리는 프레임에 전부 끈다. 페이드로 서서히 풀지 않는다 — 서서히 풀면 조임이
+        //    실외까지 이어지는 것으로 읽힌다(C-14-2-2 문단 1064).
+        // ⚠ 이 줄이 아래 objectsToEnable 보다 앞에 있어야 한다. 「문이 열릴 때 들어오는 빛이 이 씬의
+        //    핵심」(D-S#13)인데 가장자리가 아직 어두우면 그 빛이 죽는다(F-6 문단 790).
+        GameState.isFrontDoorPassed = true;
+        HouseEscapePressureController.NotifyEscaped();
+
         foreach (var obj in objectsToEnable)
             if (obj != null) obj.SetActive(true);
         foreach (var obj in objectsToDisable)

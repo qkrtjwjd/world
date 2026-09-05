@@ -72,6 +72,17 @@ public class SaveData
     public bool isFrontDoorKeyFound;
     public bool isDaggerToggleUnlocked;
 
+    /// <summary>
+    /// S#13 현관문 통과 여부 (C-14-2-2 · F-6 「타이머·조임 정지 — 현관문 통과」).
+    ///
+    /// 마당 정문 앞에 세이브 포인트가 있으므로(C-13-2) 이 값을 저장하지 않으면 그 파일을 불러올 때
+    /// 마당에서 90초가 다시 시작돼 깰 수 없는 파일이 된다(C-13-2 문단 965).
+    ///
+    /// ⚠ saveVersion 을 올리지 않았다. 이 값이 없는 예전 세이브는 JsonUtility 가 false 로 두는데,
+    ///   그것이 곧 「아직 통과하지 않았다」로 예전과 같은 동작이라 마이그레이션이 필요 없다.
+    /// </summary>
+    public bool isFrontDoorPassed;
+
     // 처치된 적 ID (HashSet은 JSON 직렬화 불가 → List 사용)
     public List<string> defeatedEnemyIDs   = new List<string>();
 

@@ -90,6 +90,16 @@ public class SeraVision : MonoBehaviour
     /// <summary>현재 시야 안에 플레이어가 있는지. 1회차의 "그 자리를 벗어나면 넘어간다" 판정에 쓴다.</summary>
     public bool PlayerInSight { get; private set; }
 
+    /// <summary>
+    /// 발각까지의 진행도 0~1 (= 시야 안에 머문 시간 / <see cref="detectionTime"/>).
+    ///
+    /// ⚠ <b>게이지·아이콘·숫자로 표시하지 말 것.</b> C-14-3-2 문단 1117 과 F-6 문단 783 이
+    ///   이 2초의 표현을 <b>「루의 그림자가 세라 쪽으로 끌려가는 것」 하나로 못박았다.</b>
+    ///   이 값은 <see cref="LuShadow"/> 가 그림자를 늘리는 데만 쓴다.
+    /// </summary>
+    public float DetectionProgress =>
+        detectionTime <= 0f ? 0f : Mathf.Clamp01(_timeInSight / detectionTime);
+
     /// <summary>지금 어떤 시야인지. 바닥 빛 표시가 붙을 때 이 값으로 형태를 고른다.</summary>
     public SeraVisionState State { get; private set; } = SeraVisionState.Inspecting;
 
