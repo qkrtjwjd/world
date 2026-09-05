@@ -183,7 +183,13 @@ public class ScreenEdgeEffectController : MonoBehaviour
 
     static readonly System.Collections.Generic.Dictionary<int, Sprite> _vignetteCache = new();
 
-    /// <summary>폭을 0.02 단위로 반올림해 캐시한다. 전환 중에 매 프레임 텍스처를 만들지 않기 위해서다.</summary>
+    /// <summary>
+    /// 폭을 0.02 단위로 반올림해 캐시한다. 전환 중에 매 프레임 텍스처를 만들지 않기 위해서다.
+    ///
+    /// ⚠ 0.02 를 바꾸지 말 것. F-6 의 18% / 30% / 44% 가 이 눈금에 정확히 떨어진다(9 / 15 / 22).
+    ///   0.05 같은 값으로 성기게 하면 44% 가 45% 로 밀려 정본 수치가 깨진다.
+    /// ⚠ 텍스처가 640x360 이라 한 장이 약 0.9MB 다(예전 128x72 의 25배). 0.4초 전환 동안
+    ///   중간 폭이 생기므로 최대 스무 장 남짓 쌓인다. 씬을 넘어가도 살아 있는 정적 캐시다.</summary>
     static Sprite GetVignette(float ratio)
     {
         int key = Mathf.RoundToInt(Mathf.Clamp(ratio, 0.02f, 0.9f) * 50f);
@@ -193,15 +199,32 @@ public class ScreenEdgeEffectController : MonoBehaviour
         return made;
     }
 
+    /// <summary>
+    /// 알파 단계 수. 그라디언트를 이만큼으로 깎는다. 팔레트 48색 · 명도 겹침 금지라는
+    /// 도트 규격(CLAUDE.md §11)과 같은 방향이며, 계단이 도트 격자에 맞아떨어진다.
+    ///
+    /// ⚠ <b>2026-09-05 에 셋을 찍어 비교하고 고른 값이다. 줄이지 말 것.</b>
+    ///   · 16단 + Bayer 디더 → 가장자리 전체에 격자 얼룩이 뜬다(세로 흔들림 6). 지저분하다
+    ///   · 16단 계단만      → 동심 사각 띠가 보인다(계단 6). 포토샵 효과처럼 읽힌다
+    ///   · <b>32단 계단만   → 계단 3 · 얼룩 0.</b> 이걸 골랐다
+    /// </summary>
+    const int VignetteLevels = 32;
+
     static Sprite BuildVignette(float ratio)
     {
-        // 640x360 을 5분의 1로 줄인 크기. 부드러운 그라디언트라 이 해상도로 충분하고,
-        // 종횡비가 같아 늘려도 왜곡되지 않는다.
-        const int W = 128, H = 72;
+        // ⭐ 내부 해상도 그대로 만든다. 텍셀 1개 = 도트 1개여야 한다 (CLAUDE.md §11).
+        //
+        // ⛔ 예전에는 128x72 를 Bilinear 로 늘렸다. 그러면 그라디언트가 도트 격자에 안 맞고
+        //    보간으로 부드러워져, 나머지가 전부 계단진 픽셀인 화면 위에 <b>사진 비네트</b>만
+        //    따로 논다. 2026-09-05 실측에서 640도트 구간의 밝기가 대부분 1씩만 올라가는
+        //    연속 그라디언트로 나왔다 — 밴딩이 없다는 것이 여기서는 흠이다.
+        //    크기를 줄이거나 FilterMode 를 Bilinear 로 되돌리지 말 것.
+        const int W = 640, H = 360;
+
         var tex = new Texture2D(W, H, TextureFormat.RGBA32, false)
         {
             wrapMode   = TextureWrapMode.Clamp,
-            filterMode = FilterMode.Bilinear,
+            filterMode = FilterMode.Point,   // ⭐ 도트. 보간하지 않는다
             name       = $"Vignette{ratio:F2}",
         };
 
@@ -219,7 +242,12 @@ public class ScreenEdgeEffectController : MonoBehaviour
                 // 가장자리에서 0, 안쪽 경계에서 1. 두 축 중 가까운 쪽을 따른다.
                 float d = Mathf.Clamp01(Mathf.Min(dx, dy));
                 float a = 1f - Mathf.SmoothStep(0f, 1f, d);
-                px[y * W + x] = new Color32(255, 255, 255, (byte)Mathf.RoundToInt(a * 255f));
+
+                // 단계로 깎는다. 256단 연속 그라디언트는 도트 화면 위에서 사진처럼 떠 보인다.
+                int level = Mathf.Clamp(Mathf.RoundToInt(a * (VignetteLevels - 1)),
+                                        0, VignetteLevels - 1);
+                byte alpha = (byte)(level * 255 / (VignetteLevels - 1));
+                px[y * W + x] = new Color32(255, 255, 255, alpha);
             }
         }
         tex.SetPixels32(px);
