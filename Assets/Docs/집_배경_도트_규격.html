@@ -302,7 +302,7 @@
     <div class="scroll">
       <table>
         <thead>
-          <tr><th>방</th><th>내부 (도트)</th><th>벽 두께</th><th>벽 오브젝트</th><th>압박 대상</th></tr>
+          <tr><th>방</th><th>내부 (도트)</th><th>지금 두께 <span style="text-transform:none;letter-spacing:0;">(더미)</span></th><th>벽 오브젝트</th><th>압박 대상</th></tr>
         </thead>
         <tbody>
           <tr><td class="k">다락방</td><td class="num em">222 × 149</td><td class="num">3</td><td class="num">4</td><td><span class="chip c-done">3개 배선됨</span></td></tr>
@@ -317,6 +317,11 @@
     </div>
 
     <div class="warn hot">
+      <b>「벽 오브젝트 4개」는 콜라이더가 넷이라는 뜻이지, 벽을 넷 그린다는 뜻이 아닙니다.</b>
+      아래 <strong>02-1</strong> 을 먼저 보세요.
+    </div>
+
+    <div class="warn hot">
       <b>「—」인 방은 마주 보는 벽이 없어서 크기를 못 냈습니다.</b>
       부엌은 벽 오브젝트가 <strong>하나도 없고</strong>, 세라의 방과 유의 방은 한쪽 벽만 있습니다.
       배경을 그리기 전에 <strong>이 방들의 벽부터 세워야</strong> 치수가 확정되고, 조임 연출도 걸 수 있습니다.
@@ -327,6 +332,61 @@
       켜지 않고 렌더하면 빈 화면이 나와서 「배경이 없다」로 오판하게 됩니다. 마당은 실외라
       조임 연출 대상이 아니고(C-14-2-2 문단 1054), 대신 <strong>문이 열릴 때 들어오는 빛</strong>이 이 씬의
       핵심입니다(D-S#13 문단 406) — 세라의 화이트아웃과 <strong>색온도를 다르게</strong> 잡아야 합니다.
+    </div>
+  </section>
+
+  <!-- ── 2-1. 장르 관습 ─────────────────── -->
+  <section>
+    <h2><span class="n">02-1</span> 벽면으로 그리는 것은 <em style="font-style:normal;">위쪽 하나</em>뿐입니다</h2>
+    <p class="sub">
+      이 게임은 <strong>쯔꾸루 계열 2D 탑다운</strong>입니다 — 4방향 걷기(<code>lu_walk_down / left / up</code> ·
+      <code>dir</code> 0아래 1옆 2위), 바닥은 평면, 캐릭터는 32 × 48 직립.
+      그래서 방의 네 변이 하는 일이 서로 다릅니다. <strong>이 절이 아래 04 · 08 절의 전제입니다.</strong>
+    </p>
+
+    <div class="scroll">
+      <table>
+        <thead><tr><th>방향</th><th>그림</th><th>씬 오브젝트</th><th>조임</th></tr></thead>
+        <tbody>
+          <tr>
+            <td class="k">위</td>
+            <td><span class="em">벽면으로 그린다.</span> 유일하게 벽의 얼굴이 보이는 곳</td>
+            <td class="k">벽 · 루방벽 …</td>
+            <td><span class="chip c-done">움직임</span></td>
+          </tr>
+          <tr>
+            <td class="k">좌 · 우</td>
+            <td>가장자리. 벽의 옆면이거나 바닥이 끝나는 선</td>
+            <td class="k">거실 벽 · 식료품실벽 …</td>
+            <td><span class="chip c-done">움직임</span></td>
+          </tr>
+          <tr>
+            <td class="k">아래</td>
+            <td class="em">그리지 않는다</td>
+            <td class="k">현관벽 · 벽 (3)</td>
+            <td><span class="chip c-temp">안 움직임</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="warn">
+      <b>아래쪽은 벽이 아니라 바닥이 끝나는 자리입니다.</b>
+      탑다운에서 앞벽을 그리면 방 안이 가려집니다. <code>현관벽</code> · <code>벽 (3)</code> 은
+      <strong>통행을 막는 콜라이더 줄</strong>이지 그려질 벽이 아닙니다.
+      지금 회색 막대로 보이는 것은 더미 <code>Square</code> 라서지 아트 의도가 아닙니다.
+    </div>
+
+    <div class="canon">
+      <p><span class="src">C-14-2-2 · 1058</span>실내 — <strong>좌우 벽과 천장</strong>이 안쪽으로 온다. 문틀이 좁아진다.</p>
+      <p><span class="src">C-14-2 · 1018</span>방향 — <strong>사방에서 안쪽.</strong> 쫓기는 느낌이 아니라 갇히는 느낌이어야 한다.</p>
+    </div>
+
+    <div class="note">
+      정본의 <strong>「천장」이 곧 위쪽 벽</strong>입니다. 이 장르에는 천장이 없고, 위쪽 벽이 그 자리를 대신합니다.
+      그래서 <strong>조임은 3면</strong>(위 · 좌 · 우)이 맞습니다.
+      문단 1018 의 「사방에서 안쪽」 중 아래쪽은 벽이 아니라
+      <strong>가장자리 어두워짐이 덮습니다</strong> — 그쪽은 이미 네 변을 다 두르고 있습니다(05 절).
     </div>
   </section>
 
@@ -371,19 +431,19 @@
   <section>
     <h2><span class="n">04</span> 탈출 압박이 벽에 거는 조건</h2>
     <p class="sub">
-      S#12 부터 현관문을 나설 때까지, <strong>좌우 벽과 천장이 안쪽으로 들어옵니다</strong>
+      S#12 부터 현관문을 나설 때까지, <strong>위 · 좌 · 우 벽이 안쪽으로 들어옵니다</strong>
       (C-14-2-2 문단 1058). 배선과 수치는 끝나 있고 지금은 회색 위에 회색이 움직이는 상태입니다.
       그림이 들어오면 바로 보입니다.
     </p>
 
     <div class="scroll">
       <table>
-        <thead><tr><th>방</th><th>오브젝트</th><th>지금 그림 크기</th><th>움직임</th></tr></thead>
+        <thead><tr><th>방</th><th>오브젝트</th><th>지금 크기 <span style="text-transform:none;letter-spacing:0;">(더미)</span></th><th>움직임</th></tr></thead>
         <tbody>
-          <tr><td class="k">다락방</td><td class="k">벽_시각</td><td class="num">224 × 3</td><td>천장 → 아래로</td></tr>
+          <tr><td class="k">다락방</td><td class="k">벽_시각</td><td class="num">224 × 3</td><td>위쪽 벽 → 아래로</td></tr>
           <tr><td class="k">다락방</td><td class="k">벽 (1)_시각</td><td class="num">3 × 152</td><td>우 → 안쪽</td></tr>
           <tr><td class="k">다락방</td><td class="k">벽 (2)_시각</td><td class="num">3 × 152</td><td>좌 → 안쪽</td></tr>
-          <tr><td class="k">집 안</td><td class="k">벽_시각</td><td class="num">325 × 4</td><td>천장 → 아래로</td></tr>
+          <tr><td class="k">집 안</td><td class="k">벽_시각</td><td class="num">325 × 4</td><td>위쪽 벽 → 아래로</td></tr>
           <tr><td class="k">집 안</td><td class="k">거실 벽_시각</td><td class="num">5 × 514</td><td>우 → 안쪽</td></tr>
           <tr><td class="k">집 안</td><td class="k">식료품실벽_시각</td><td class="num">5 × 179</td><td>좌 → 안쪽</td></tr>
           <tr><td class="k">현관</td><td class="k">현관문_시각</td><td class="num">39 × 7</td><td>폭이 39 → 34 → 30</td></tr>
@@ -395,8 +455,8 @@
       <div class="spec">
         <h3>이동량</h3>
         <dl class="specgrid" style="grid-template-columns:1fr;">
-          <div><dt>3차 (65초)</dt><dd>6 도트 <em>벽 · 천장</em></dd></div>
-          <div><dt>4차 (80초)</dt><dd>12 도트 <em>벽 · 천장</em></dd></div>
+          <div><dt>3차 (65초)</dt><dd>6 도트 <em>위 · 좌 · 우</em></dd></div>
+          <div><dt>4차 (80초)</dt><dd>12 도트 <em>위 · 좌 · 우</em></dd></div>
           <div><dt>문틀</dt><dd>4 → 8 도트 <em>폭이 줄어든다</em></dd></div>
         </dl>
       </div>
@@ -406,6 +466,7 @@
           <div><dt>바깥쪽 여유</dt><dd>≥ 12 도트 <em>밀려도 뒤가 안 비게</em></dd></div>
           <div><dt>콜라이더</dt><dd>안 움직임 <em>벽 본체에 그대로 남는다</em></dd></div>
           <div><dt>붙는 자리</dt><dd>_시각 자식 <em>벽 본체의 그림은 꺼져 있다</em></dd></div>
+          <div><dt>위쪽 벽 높이</dt><dd>64~96 도트 <em>2~3 타일. 지금 3~5 는 더미다</em></dd></div>
         </dl>
       </div>
     </div>
@@ -490,7 +551,7 @@
     <div class="warn hot">
       <b>벽을 타일맵으로 칠하면 복도 축소가 깨집니다.</b>
       타일맵은 통째로만 움직여서 좌 · 우 벽이 <strong>같은 방향으로</strong> 갑니다.
-      압박을 유지하려면 좌 · 우 · 천장을 <strong>따로 있는 오브젝트로 두거나</strong>,
+      압박을 유지하려면 위 · 좌 · 우 벽을 <strong>따로 있는 오브젝트로 두거나</strong>,
       벽 타일맵을 <strong>3개로 나눠야</strong> 합니다. 바닥과 장식은 타일맵으로 칠해도 상관없습니다.
     </div>
   </section>
@@ -508,10 +569,19 @@
         아트를 넣을 때 <strong>localScale 을 1 로 되돌리고 스프라이트를 실제 크기로 그리세요.</strong>
       </div>
 
+      <div class="warn hot">
+        <b>지금 벽 두께 3~5 도트를 규격으로 읽지 마세요. 더미 값입니다.</b>
+        1 × 1 유닛짜리 <code>Square</code> 를 얇게 눌러 놓은 것이라 사실상 선입니다.
+        쯔꾸루식 뒷벽은 보통 <strong>2~3 타일 = 64~96 도트</strong> 높이입니다.
+        <strong>이게 조임이 읽히느냐를 가릅니다</strong> — 12 도트가 들어오는 것을
+        4 도트짜리 선에서 보는 것과 80 도트짜리 벽면에서 보는 것은 완전히 다릅니다.
+        벽면이 있어야 「좁아진다」가 보입니다.
+      </div>
+
       <div class="warn">
         <b>벽을 두껍게 그리면 콜라이더를 따로 맞춰야 합니다.</b>
-        지금 벽 두께는 3~5 도트로 사실상 선입니다. 콜라이더는 벽 본체에 있고 그림과 분리돼 있으므로,
-        그림만 두꺼워지면 <strong>보이는 벽과 막히는 자리가 어긋납니다.</strong>
+        콜라이더는 벽 본체에 있고 그림과 분리돼 있어서, 그림만 두꺼워지면
+        <strong>보이는 벽과 막히는 자리가 어긋납니다.</strong>
       </div>
 
       <div class="warn">
@@ -534,7 +604,7 @@
       </div>
 
       <div class="warn cool">
-        <b>루의 방은 벽 4개가 다 있는데 압박을 안 걸었습니다.</b>
+        <b>루의 방은 위 · 좌 · 우 벽이 다 있는데 압박을 안 걸었습니다.</b>
         이번 배선은 <strong>다락방과 집 안(거실) 두 곳뿐</strong>입니다.
         90초 안에 루의 방으로 되돌아가면 그 방만 조임이 멈춰 보입니다.
         걸지 말지는 정하지 않았습니다 — 방 벽을 세우는 작업과 함께 결정하면 됩니다.
