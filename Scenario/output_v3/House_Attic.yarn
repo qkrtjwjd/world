@@ -36,14 +36,14 @@ title: House_Attic_Box
 
 title: House_Coat_Key
 ---
-{$이름}: …아빠. …밖에서 안 들어올 바람. 코트가 왜 여기 있어요.
+{$이름}: …아빠. …밖에서 안 들어올 바라. 코트가 왜 여기 있어요.
 ===
 
 title: House_Radio_Yu_First
 ---
 radio_yu: {$이름}. 아빠가 잠깐 나갈 일이 생겨서. 금방 올게. 아빠 없는 동안 엄마 잘 봐줘. 엄마는 자꾸 혼자 다 하려고 하니까.
 radio_yu: …그리고 {$이름}. 무섭게 보이면 그게 진짜야. 예쁜 건 한번 의심해봐. 기억해둬.
-{$이름}: …금방 온다면서 지금 몇 년째인지 알아요? 무슨 일이 생긴 거죠? 제가 아빠 데리러 갈게요. 이전처럼 셋이서 밥도 먹고, 놀러도 가요.
+{$이름}: …금방 온다면서 지금 몇 년째인지 알아요? 무슨 일이 생긴 거죠? 제가 아빠 데리러 갈게요. 다시 셋이서 지내요.
 ===
 
 title: House_Dagger_Flash
@@ -57,9 +57,9 @@ title: House_FrontDoor_Depart
 ===
 
 // ── 판정 실패 (UNCLASSIFIED) — 사람이 확인할 것 ──
-// UNCLASSIFIED [문단421 S#13] 4. 신규 필요 에셋
-// UNCLASSIFIED [문단422 S#13] 배경 · 오브젝트
-// UNCLASSIFIED [문단434 S#13] 아이템 스프라이트
-// UNCLASSIFIED [문단440 S#13] 루 스프라이트 · 컷
-// UNCLASSIFIED [문단445 S#13] 화면 효과 · 음향
-// UNCLASSIFIED [문단450 S#13] 집 구간 배드 엔딩 — BE#01
+// UNCLASSIFIED [문단424 S#13] 4. 신규 필요 에셋
+// UNCLASSIFIED [문단425 S#13] 배경 · 오브젝트
+// UNCLASSIFIED [문단437 S#13] 아이템 스프라이트
+// UNCLASSIFIED [문단443 S#13] 루 스프라이트 · 컷
+// UNCLASSIFIED [문단448 S#13] 화면 효과 · 음향
+// UNCLASSIFIED [문단453 S#13] 집 구간 배드 엔딩 — BE#01

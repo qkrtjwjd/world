@@ -9,11 +9,20 @@ v2 와의 차이:
   v3 은 화이트리스트다. 통과시킬 4종만 정의하고, 나머지는 전부 차단하거나
   // UNCLASSIFIED 주석으로 남긴다. 조용히 새는 경로가 없다.
 
-통과시키는 4종:
-  ① 화자 대사   — 첫 run 볼드 + 허용 화자 8종 + 잔여가 따옴표로 시작
+통과시키는 3종:
+  ① 화자 대사   — 첫 run 볼드 + 허용 화자 + 잔여가 따옴표로 시작
   ② 루 독백     — 문단 전체 이탤릭 + (루): '...'  또는  첫 run 볼드 + 루 (속으로) "..."
-  ③ 쪽지 텍스트 — S#04D 안의 무서식 줄 (대화창이 아니라 전용 UI로 출력)
-  ④ 나레이션    — node_map.json 의 narration_whitelist 에 등재된 것만
+  ③ 나레이션    — [자막] 태그가 붙은 지문만 (F-8-9 문단 988)
+
+v3.1 (F v1.22 · E v4.3) 에서 나레이션 판정이 바뀌었다.
+  구: node_map.json 의 narration_whitelist 에 등재된 문구로 시작하면 통과.
+  신: [자막] 태그가 붙은 지문만 통과. 붙지 않은 지문은 전부 미표시가 기본값이다.
+  화이트리스트를 병행하면 태그 없는 지문이 통과하는 경로가 영구히 남아
+  '기본값 미표시' 가 성립하지 않으므로 whitelist 경로를 폐지했다.
+
+읽는 물건([읽기] 블록)은 파싱 대상이 아니다 (F-8-9 문단 987 · D 문단 1288).
+노드도 문자열도 만들지 않고 블록째 건너뛴다 — 문구까지 그려 넣은 이미지 1장으로
+만들며 게임이 원고에서 문자열을 읽어오지 않는다. 판정 실패로 잡지 않는다.
 
 입력은 정본 .docx 다. 볼드·이탤릭이 화이트리스트의 판정 근거인데 그 정보는
 docx 에만 있고 중간 .txt 에는 없다. word/document.xml 을 직접 읽는다.
@@ -33,9 +42,17 @@ import zipfile
 from dataclasses import dataclass, field
 from typing import Optional
 
+# 콘솔이 cp949 라 게이트 리포트의 em dash 에서 UnicodeEncodeError 로 죽는다.
+# tools/read_canon.py 와 같은 처리다.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # ---------------------------------------------------------------------------
 # 정본은 항상 이 문서다. 인자를 생략하면 이 경로를 쓴다.
-DEFAULT_DOCX = r"C:\Users\ThinkPlant\Desktop\낙원\files (1)\D_무채색_낙원_시나리오_정본.docx"
+DEFAULT_DOCX = r"D:\낙원\file\D_무채색_낙원_시나리오_정본.docx"
 
 # ---------------------------------------------------------------------------
 # 허용 화자 — 이 8종 외에는 대사로 통과하지 않는다.
@@ -61,6 +78,12 @@ SPEAKERS: dict[str, tuple[str, str, Optional[str]]] = {
 # 조건은 Item.condition 으로 남기고 화자는 앞부분으로 판정한다.
 SPEAKER_WITH_CONDITION = re.compile(r"^(.+?)\s*[·ㆍ・]\s*(.+)$")
 
+# 부엉이는 화자로 등록하지 않는다. S#01 한 줄만 예외로 대사창에 띄우고
+# 그 외의 울음은 전부 SFX 전용이다 (F-4-4 문단 384 · D 문단 20 · 58).
+# 허용 씬을 여기 한 곳에만 적는다 — 파서가 씬을 보고 거른다.
+OWL_SPEAKER_ID = "부엉이"
+OWL_DIALOGUE_SCENE = "S#01"
+
 MONOLOGUE_SPEAKER_ID = "루독백"     # 포트레이트 없음. 대사창 이탤릭(런타임 적용)
 
 # 루 독백의 원고 표기는 두 가지다.
@@ -71,6 +94,17 @@ MONOLOGUE_BOLD_LABEL = "루(속으로)"      # 공백 제거 후 비교
 
 # 문단 시작 기호로 차단하는 것들
 BLOCK_PREFIXES = ("▶", "※", "·")
+
+# D-4 표기 규약이 신설한 두 태그 (F-8-9 문단 987~988)
+#   [읽기] — 읽는 물건의 문구. 파싱 대상이 아니며 블록째 건너뛴다.
+#   [자막] — 화면에 뜨는 지문. 이것이 붙은 지문만 출력한다.
+READING_TAG  = "[읽기]"
+SUBTITLE_TAG = "[자막]"
+
+# [읽기] 블록의 끝. 다음 지시·주석·태그·씬 헤더가 나오면 블록이 닫힌다.
+# 씬 헤더와 구간 표제는 classify() 앞쪽에서 이미 상태를 되돌리므로 여기 없어도 된다.
+def _closes_reading(s: str) -> bool:
+    return s.startswith(BLOCK_PREFIXES) or s.startswith("[") or s.startswith("【")
 
 # 연출 데이터로 빼내는 태그 (텍스트 아님)
 #
@@ -220,7 +254,6 @@ def read_docx(path: str) -> list[Para]:
 
 KIND_DIALOGUE = "dialogue"
 KIND_MONOLOGUE = "monologue"
-KIND_NOTE = "note"
 KIND_NARRATION = "narration"
 KIND_STAGING = "staging"
 KIND_BLOCKED = "blocked"
@@ -270,7 +303,6 @@ class ObjectSpec:
 class SceneBucket:
     scene: str
     dialogue: list[Item] = field(default_factory=list)
-    note: list[Item] = field(default_factory=list)
     narration: list[Item] = field(default_factory=list)
     staging: list[Item] = field(default_factory=list)
     unclassified: list[Item] = field(default_factory=list)
@@ -279,10 +311,9 @@ class SceneBucket:
 class Classifier:
     """판정 순서가 곧 로직이다. 위에서부터 처음 맞는 규칙에서 확정한다."""
 
-    def __init__(self, narration_whitelist: list[str], note_scene: str) -> None:
-        self.narration_whitelist = narration_whitelist
-        self.note_scene = note_scene
+    def __init__(self) -> None:
         self.scene: Optional[str] = None
+        self.in_reading = False                  # [읽기] 블록 안인가 (F-8-9)
         # D-4 전용 상태
         self.section: Optional[str] = None       # 현재 구간 표제 (D-1 … D-4)
         self.obj_sub: Optional[str] = None       # D-4 안의 구간 (집 · 마을 · 숲)
@@ -298,8 +329,10 @@ class Classifier:
         m = SCENE_HEADER_BRACKET.match(s) or SCENE_HEADER_PLAIN.match(s)
         if m:
             self.scene = m.group(1)
+            self.in_reading = False
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="씬 헤더")
         if s.startswith("【"):
+            self.in_reading = False
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="씬 헤더")
 
         # 1b. 구간 표제 — D-1 / D-2 / D-3 / D-4 …
@@ -308,11 +341,40 @@ class Classifier:
             self.section = m.group(0).rstrip(".")
             self.obj_sub = None
             self._obj = None
+            self.in_reading = False
             # ⚠ D-4 는 씬이 아니다. 여기서 self.scene 을 끊지 않으면 D-4 의 모든 문단이
             #   직전 씬(S#20) 소속으로 남아 그 씬의 카운트·UNCLASSIFIED 에 섞인다.
             if self.section == OBJECT_SECTION:
                 self.scene = None
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="구간 표제")
+
+        # 1c. [읽기] — 파싱 대상이 아니다 (F-8-9 문단 987 · D 문단 1288).
+        #     헤더뿐 아니라 블록 안의 문구까지 통째로 건너뛴다. 읽는 물건은 문구까지
+        #     그려 넣은 이미지 1장이므로 게임이 원고에서 문자열을 읽어오지 않는다.
+        #     ⚠ 판정 실패(UNCLASSIFIED)로 잡지 않는다 — 정본이 의도한 표기다.
+        #     ⚠ D-4 안에서는 열지 않는다. 두 태그를 정의하는 「표기 규약」 문단이
+        #       D-4 에 있어 (「[읽기] — 읽는 물건의 문구」 · 「[자막] — 화면에 뜨는 지문」),
+        #       여기서 받으면 규약 설명 자체가 쪽지·자막으로 새어 나온다.
+        #       D-4 는 _classify_object 가 표제·규약으로 이미 차단한다.
+        if s.startswith(READING_TAG) and self.section != OBJECT_SECTION:
+            self.in_reading = True
+            return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="읽기 블록")
+        if self.in_reading:
+            if _closes_reading(s):
+                self.in_reading = False
+            else:
+                return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="읽기 블록 본문")
+
+        # 1d. [자막] — 화면에 뜨는 지문 (F-8-9 문단 988 · D 문단 1292~1294).
+        #     기본값은 미표시다. 이 태그가 붙지 않은 지문은 전부 출력하지 않는다.
+        #     ⚠ 문장 단위로 자르지 않는다. 태그 뒤 전체가 그대로 한 줄이다 —
+        #       분리가 필요한 자리는 원고가 줄을 나눠 온다 (F-4-10 D-1).
+        #     태그 판정이므로 서식(이탤릭 차단)보다 반드시 위다.
+        if s.startswith(SUBTITLE_TAG) and self.section != OBJECT_SECTION:
+            body = s[len(SUBTITLE_TAG):].strip()
+            if not body:
+                return Item(KIND_UNCLASSIFIED, p.idx, self.scene, s)
+            return Item(KIND_NARRATION, p.idx, self.scene, body)
 
         # 2. ▶ 연출 — 볼드 여부 무관 (원고에 볼드 누락 10건)
         # 3. ※ 집필 주석
@@ -342,22 +404,18 @@ class Classifier:
         # 7. 화이트리스트 ① — 화자 대사
         item = self._try_speaker(p, s)
         if item is not None:
+            # 부엉이는 화자로 등록하지 않는다. S#01 한 줄만 예외로 대사창에 띄운다.
+            # 그 외 씬의 부엉이 울음은 SFX 전용이므로 통과시키지 않고 드러낸다 —
+            # 조용히 버리면 원고에 다시 들어와도 아무도 모른다 (F-4-4 문단 384).
+            if item.speaker_id == OWL_SPEAKER_ID and self.scene != OWL_DIALOGUE_SCENE:
+                return Item(KIND_UNCLASSIFIED, p.idx, self.scene, s)
             return item
 
-        # 8. 화이트리스트 ③ — 쪽지 (S#04D 안의 무서식 줄)
-        if self.scene == self.note_scene and not p.first_bold and not p.all_italic:
-            return Item(KIND_NOTE, p.idx, self.scene, s)
-
-        # 9. 화이트리스트 ④ — 나레이션 예외 (이탤릭이므로 10번보다 위)
-        for allowed in self.narration_whitelist:
-            if s.startswith(allowed):
-                return Item(KIND_NARRATION, p.idx, self.scene, allowed)
-
-        # 10. 이탤릭 지문 → 차단
+        # 8. 이탤릭 지문 → 차단. [자막]이 붙지 않은 지문은 전부 여기서 멈춘다
         if p.all_italic:
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="이탤릭 지문")
 
-        # 11. 판정 실패 — 버리지 않고 남긴다
+        # 9. 판정 실패 — 버리지 않고 남긴다
         return Item(KIND_UNCLASSIFIED, p.idx, self.scene, s)
 
     # ------------------------------------------------------------------
@@ -556,7 +614,7 @@ class Converter:
     # ------------------------------------------------------------------
     def run(self, docx_path: str, out_dir: str) -> int:
         paras = read_docx(docx_path)
-        cls = Classifier(self.map["narration_whitelist"], self.map["note_scene"])
+        cls = Classifier()
 
         for p in paras:
             item = cls.classify(p)
@@ -577,8 +635,6 @@ class Converter:
             if item.kind in (KIND_DIALOGUE, KIND_MONOLOGUE):
                 item.scene = scene
                 b.dialogue.append(item)
-            elif item.kind == KIND_NOTE:
-                b.note.append(item)
             elif item.kind == KIND_NARRATION:
                 b.narration.append(item)
             elif item.kind == KIND_STAGING:
@@ -594,7 +650,6 @@ class Converter:
         self._check_object_gate()
         self._emit_yarn(out_dir, assigned)
         self._emit_staging(out_dir)
-        self._emit_notes(out_dir)
         self._emit_objects(out_dir)
         self._emit_unclassified(out_dir)
         self._emit_diff(out_dir, assigned)
@@ -663,7 +718,7 @@ class Converter:
     # ------------------------------------------------------------------
     def _check_gate(self) -> None:
         totals = self.map["expected_totals"]
-        d = n = r = 0
+        d = r = 0
         self._speaker_totals: dict[str, int] = {}
 
         for spec in self.map["scenes"]:
@@ -672,7 +727,6 @@ class Converter:
             got = len(b.dialogue) if b else 0
             d += got
             if b:
-                n += len(b.note)
                 r += len(b.narration)
             if got != spec["expected"]:
                 self.failures.append(
@@ -683,25 +737,23 @@ class Converter:
         known = {s["scene"] for s in self.map["scenes"]}
         for scene in self.order:
             b = self.buckets[scene]
-            if scene not in known and (b.dialogue or b.note or b.narration):
+            if scene not in known and (b.dialogue or b.narration):
                 self.failures.append(
-                    "%s : node_map 에 없는 씬인데 통과 항목이 있음 (대사 %d / 쪽지 %d / 나레이션 %d)"
-                    % (scene, len(b.dialogue), len(b.note), len(b.narration)))
+                    "%s : node_map 에 없는 씬인데 통과 항목이 있음 (대사 %d / 나레이션 %d)"
+                    % (scene, len(b.dialogue), len(b.narration)))
                 d += len(b.dialogue)
-                n += len(b.note)
                 r += len(b.narration)
 
         for label, got, want in (("대사", d, totals["dialogue"]),
-                                 ("쪽지", n, totals["note"]),
                                  ("나레이션", r, totals["narration"])):
             if got != want:
                 self.failures.append("합계 %s : %d (기대 %d)" % (label, got, want))
 
-        if d + n + r != totals["all"]:
+        if d + r != totals["all"]:
             self.failures.append(
-                "총 표시 줄 : %d (기대 %d)" % (d + n + r, totals["all"]))
+                "총 표시 줄 : %d (기대 %d)" % (d + r, totals["all"]))
 
-        self._counts = (d, n, r)
+        self._counts = (d, r)
 
     # ------------------------------------------------------------------
     def _check_by_speaker(self, spec: dict, b: Optional[SceneBucket]) -> None:
@@ -835,22 +887,6 @@ class Converter:
             )
             self._write(out_dir, "%s_staging.json" % stem,
                         json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-
-    # ------------------------------------------------------------------
-    def _emit_notes(self, out_dir: str) -> None:
-        rows = []
-        for scene in self.order:
-            for it in self.buckets[scene].note:
-                text = self.convert_name(it.text) if self.convert_name else it.text
-                rows.append({"scene": scene, "para": it.para, "text": text})
-        data = {
-            "_about": ("읽는 물건 텍스트. 대화창이 아니라 전용 UI 로 출력한다. "
-                       "현재 KitchenTriggerCutscene.noteCloseupImage 는 이미지만 켜고 끄므로 "
-                       "텍스트 컴포넌트 배선이 필요하다 (Assets/Docs/유니티_수동작업.md)."),
-            "notes": rows,
-        }
-        self._write(out_dir, "notes.json",
-                    json.dumps(data, ensure_ascii=False, indent=2) + "\n")
 
     # ------------------------------------------------------------------
     def _emit_unclassified(self, out_dir: str) -> None:
@@ -1106,7 +1142,7 @@ class Converter:
 
     # ------------------------------------------------------------------
     def _emit_gate(self, out_dir: str) -> int:
-        d, n, r = self._counts
+        d, r = self._counts
         ok = not self.failures
         st = getattr(self, "_speaker_totals", {})
         mono = st.get(MONOLOGUE_SPEAKER_ID, 0)
@@ -1115,8 +1151,8 @@ class Converter:
             "",
             "결과: %s" % ("PASS" if ok else "FAIL"),
             "",
-            "대사 %d (화자대사 %d + %s %d) / 쪽지 %d / 나레이션 %d  →  총 %d"
-            % (d, d - mono, MONOLOGUE_SPEAKER_ID, mono, n, r, d + n + r),
+            "대사 %d (화자대사 %d + %s %d) / 나레이션 %d  →  총 %d"
+            % (d, d - mono, MONOLOGUE_SPEAKER_ID, mono, r, d + r),
             "UNCLASSIFIED %d 건 (실패 조건 아님 — unclassified.txt 확인)"
             % getattr(self, "_unclassified_total", 0),
             "D-4 오브젝트 %d 건 (씬 카운트와 별개 — objects.json 확인)"

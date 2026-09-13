@@ -29,6 +29,8 @@
     "아모":     { "display": "아모",     "portrait": "left",  "style": null },
     "radio_yu": { "display": "라디오",   "portrait": null,    "style": { "italic": true, "color": "#d4c97a" } },
     "루독백":   { "display": "",         "portrait": null,    "style": { "italic": true } },
+    "나레이션": { "display": "",         "portrait": null,    "style": { "italic": true },
+                 "_note": "화자가 아니라 예약 키다. [자막] 나레이션은 yarn 에 화자 없이 한 줄로 나가므로 CharacterName 이 비어 있고, SpeakerStylePresenter 가 그 줄을 이 키로 찾는다. 이름창 없음 · 이탤릭 (F-8-9 · F-4-5)." },
     "_원고표기": [
       "정본에서 루독백으로 판정되는 표기는 두 가지다.",
       "  (루): '...'   — 문단 전체 이탤릭 (집 구간. 현재 D 에는 S#01·S#03 2건)",
@@ -36,28 +38,21 @@
     ]
   },
 
-  "narration_whitelist": [
-    "못 본 척해야 한다. 언제나처럼. 창밖에 던지거나 삼키거나."
-  ],
-  "_narration_whitelist_note": [
-    "S#04D 항목 — 정본 문단은 두 문장이 이어져 있으나 앞부분만 출력한다.",
-    "  출력   : \"못 본 척해야 한다. 언제나처럼. 창밖에 던지거나 삼키거나.\"",
-    "  미출력 : \"그런데 손은 주머니 속에 챙긴다.\"  ← 손 동작 연출이지 표시 텍스트가 아니다.",
-    "파서는 startswith 로 판정하고 등재된 문자열만 텍스트로 삼으므로 분할이 이미 강제된다."
-  ],
-  "note_scene": "S#04D",
   "expected_totals": {
     "_about": [
-      "⭐ D 실측 기준이다. CLAUDE.md §6 게이트 표와 일치한다.",
-      "  집 구간 D-1 (S#01~S#13) : 64 = 대사 61(화자대사 59 + 루독백 2) + 쪽지 2 + 나레이션 1",
-      "  마을 구간 D-2 (S#14~S#15) : 21 = 화자대사 19 + 루독백 2",
-      "  숲 구간 D-3 (S#16A~S#17E) : 48 = 화자대사 48 (루독백 없음)",
-      "  숲 구간 D-3 (S#19A~S#19E) : 36 = 화자대사 36 (루 15 · 쿠루 21)",
-      "  데모 총계 169",
-      "⚠ dialogue 카운트에 루독백이 섞여 들어간다. 집의 61은 화자대사 59 + 루독백 2다.",
-      "   화자별 배분(by_speaker) 대조를 함께 걸어 이 혼동을 막는다.",
+      "⭐ D 실측 기준이다. 현재 요약 (2026-09-14 · F v1.25 4-6 과 대조 완료):",
+      "  집 구간 D-1 (S#01~S#13)    : 60 = 대사 59(화자대사 57 + 루독백 2) + 나레이션 1",
+      "  배드 엔딩 BE#01-a~d        :  6 = 세라 3 · 루 3",
+      "  마을 구간 D-2 (S#14~S#15)  : 20 = 화자대사 18 + 루독백 2",
+      "  배드 엔딩 BE#02-a~c        :  1 = 세라 1",
+      "  숲 구간 D-3 (S#16A~S#20)   : 135 = S#16A~S#17E 47 · S#19A~S#19E 36 · S#20 52",
+      "  데모 총계 222 = 대사 221(화자대사 217 + 루독백 4) + 나레이션 1. 쪽지는 세지 않는다([읽기], F-8-9).",
+      "⚠ F-4-6 「게이트 기준 62」는 집 60 에 S#07 승격 2줄을 미리 계상한 값이다(F 도 「승격 반영 전 실측은 60」).",
+      "   F-4-6 단서의 BE 포함 여부 — 이 파일은 BE 를 씬 노드로 따로 잡는다. 집 60 에 BE 7줄이 섞이지 않는다.",
+      "⚠ dialogue 카운트에 루독백이 섞여 들어간다. 화자별 배분(by_speaker) 대조를 함께 걸어 이 혼동을 막는다.",
       "⚠ S#07 승격분 2줄은 아직 D 에 없다. CLAUDE.md §9-1 — D 가 정본이므로 현재 기준은 '없음'.",
-      "   D 에 들어간 뒤에 S#07 0→2 · 집 64→66 · 총계 169→171 로 올린다. 미리 올리지 않는다.",
+      "   D 에 들어간 뒤에 S#07 0→2 · 집 60→62 · 총계 222→224 로 올린다. 미리 올리지 않는다.",
+      "아래는 개정 이력이다. 당시 숫자이며 현재 값은 위 요약을 본다.",
       "2026-08-15 — D 에 숲 원고 S#16A~S#17E 가 들어와 등재했다(대사 48 · 13노드).",
       "   그 전까지는 '원고 미작성 · 뼈대만' 이라 비워 두었고, 등재 전에는 게이트가",
       "   'node_map 에 없는 씬인데 통과 항목이 있음' 으로 8건 FAIL 했다.",
@@ -87,10 +82,17 @@
       "   247 은 지문이라 UNCLASSIFIED 로만 떨어졌고, 868 은 쿠루의 「아~주~ 곤란해」였다.",
       "   기대값은 내리지 않고 정본 쪽을 고쳤다(스킬 절대 규칙). 복구 후 게이트 PASS.",
       "⚠ 정본이 이 경로로 다시 개정되면 같은 손상이 재발한다. 개정본을 받으면 본문에 '*' 가 박힌",
-      "   문단과 vertAlign run 이 있는지 먼저 훑을 것."
+      "   문단과 vertAlign run 이 있는지 먼저 훑을 것.",
+      "2026-09-13 — D 개정(바람→바라 · [읽기] · [자막])을 반영했다. 대사 219→221 · 쪽지 2→0 · 나레이션 1 · 총계 222.",
+      "   D 실측 근거: S#03 부엉이 −1(문단 58, SFX 전용) / S#04G 세라 −1 / S#17D 쿠루 −1(「차차 알아가게 될 거야」)",
+      "   / S#20-A 쿠루 각설탕 건네기 +5(0~30 쿠루2·루1 · 31+ 쿠루2). 나머지는 글자만 바뀌어 수가 같다.",
+      "   쪽지 2줄은 [읽기] 블록이 되어 파싱하지 않는다 — note 기대값과 note_scene · narration_whitelist 를 없앴다.",
+      "   나레이션은 [자막] 태그 단일 판정이다(S#04D 문단 186).",
+      "⚠ 같은 개정본이 Word 편집 중 볼드를 잃었다(볼드 문단 742→2). 사용자가 복구했으나 S#17B 문단 838 은",
+      "   「쿠루 」만 볼드여서 「· 방어」가 화자 칸에서 떨어져 판정 ①을 못 넘었다. 정본 서식을 고쳤다.",
+      "   개정본을 받으면 볼드 문단 수와 화자 칸 run 분할부터 확인할 것."
     ],
-    "dialogue": 219,
-    "note": 2,
+    "dialogue": 221,
     "narration": 1,
     "all": 222
   },
@@ -136,17 +138,18 @@
       "by_speaker": { "세라": 4, "루": 1 },
       "nodes": [
         { "node": "House_Sera_Lock_Enter",  "count": 3, "anchor": "루. 아가, 아직 안 자고 있니?" },
-        { "node": "House_Sera_Lock_Window", "count": 1, "anchor": "밖은 위험해." },
-        { "node": "House_Sera_Lock_Tuck",   "count": 1, "anchor": "엄마가 있으니까 괜찮아." }
+        { "node": "House_Sera_Lock_Window", "count": 1, "anchor": "위험해. 루, 알잖니." },
+        { "node": "House_Sera_Lock_Tuck",   "count": 1, "anchor": "푹 자." }
       ]
     },
     {
-      "scene": "S#03", "expected": 2, "file": "House_Opening",
-      "by_speaker": { "부엉이": 1, "루독백": 1 },
+      "scene": "S#03", "expected": 1, "file": "House_Opening",
+      "by_speaker": { "루독백": 1 },
       "nodes": [
-        { "node": "House_Unheard_Owl",   "count": 1, "anchor": "후우…" },
+        { "node": "House_Unheard_Owl",   "count": 0, "anchor": null },
         { "node": "House_Unheard_Close", "count": 1, "anchor": "소리가 나네." }
-      ]
+      ],
+      "_note": "2026-09-13 — D 문단 58 이 S#03 부엉이 울음을 대사창에서 뺐다(SFX 전용). House_Unheard_Owl 은 NightSequenceManager 가 부르므로 노드는 남기고 대사만 0 이다."
     },
     {
       "scene": "S#04A", "expected": 2, "file": "House_Opening",
@@ -181,7 +184,7 @@
         { "node": "House_Note",       "count": 3, "anchor": "루? 내려와서 밥 먹어. 식겠네." },
         { "node": "House_Note_Table", "count": 0, "anchor": null }
       ],
-      "_note": "쪽지 2줄과 나레이션 1줄은 대사 배분과 별도로 집계된다. 쪽지는 대화창이 아니라 전용 UI."
+      "_note": "[자막] 나레이션 1줄은 대사 배분과 별도로 집계된다. 쪽지 문구는 [읽기] 블록이라 파싱하지 않는다(이미지 1장, F-8-9)."
     },
     {
       "scene": "S#04E", "expected": 2, "file": "House_Opening",
@@ -198,11 +201,11 @@
       ]
     },
     {
-      "scene": "S#04G", "expected": 8, "file": "House_Opening",
-      "by_speaker": { "세라": 6, "루": 2 },
+      "scene": "S#04G", "expected": 7, "file": "House_Opening",
+      "by_speaker": { "세라": 5, "루": 2 },
       "nodes": [
         { "node": "House_Yard_Refuse",  "count": 4, "anchor": "…꽃? 왜 갑자기 꽃이야?" },
-        { "node": "House_Yard_Refuse2", "count": 4, "anchor": "마당인데요." }
+        { "node": "House_Yard_Refuse2", "count": 3, "anchor": "마당인데요." }
       ]
     },
     {
@@ -254,7 +257,7 @@
       "scene": "S#10", "expected": 1, "file": "House_Attic",
       "by_speaker": { "루": 1 },
       "nodes": [
-        { "node": "House_Coat_Key", "count": 1, "anchor": "…아빠. …밖에서 안 들어올 바람." }
+        { "node": "House_Coat_Key", "count": 1, "anchor": "…아빠. …밖에서 안 들어올 바라." }
       ]
     },
     {
@@ -432,7 +435,7 @@
         { "node": "Forest_Wolf_Tutorial",     "count": 5, "anchor": "루, 잘 들어 저건 개가 아니야" },
         { "node": "Forest_Wolf_Guard_Praise", "count": 1, "anchor": "잘했어" },
         { "node": "Forest_Wolf_React_Attack", "count": 1, "anchor": "위험했지만 잘했어. 공격은 항상 신중하게 해. 공격을 할 땐 방어를 할 수 없으니까." },
-        { "node": "Forest_Wolf_React_Guard",  "count": 1, "anchor": "그래 뭘 하기 애매한 땐 방어가 가장 낫지 잘했어" },
+        { "node": "Forest_Wolf_React_Guard",  "count": 1, "anchor": "그래 뭘 하기 애매한 땐 방어가 가장 낫지" },
         { "node": "Forest_Wolf_React_Pet",    "count": 1, "anchor": "…미쳤어? 상대가 어떻게 나올지 모른다면 공격이나 방어를 해야지! 진짜로 죽을 수도 있다고" },
         { "node": "Forest_Wolf_Pet2",         "count": 1, "anchor": "…진심이야? 계속 쓰다듬으면 저 개가 너한테 꼬리라도 흔들 거 같아?" },
         { "node": "Forest_Wolf_Pet3",         "count": 1, "anchor": "난… 이제 모르겠다. 너 마음대로 해라" }
@@ -458,10 +461,10 @@
       "_note": "루가 피해를 입은 직후 1회만. 아이템 사용이 턴을 소모한다는 규칙을 여기서 처음 가르친다."
     },
     {
-      "scene": "S#17D", "expected": 6, "file": "Forest_Demo",
-      "by_speaker": { "루": 2, "쿠루": 4 },
+      "scene": "S#17D", "expected": 5, "file": "Forest_Demo",
+      "by_speaker": { "루": 2, "쿠루": 3 },
       "nodes": [
-        { "node": "Forest_Wolf_KillEnd", "count": 6, "anchor": "생각보다 별거 아니지?" }
+        { "node": "Forest_Wolf_KillEnd", "count": 5, "anchor": "생각보다 별거 아니지?" }
       ],
       "_note": "[공격] 마무리 분기. 검은 구슬 획득 · 인형화 +2. 붉은 결정은 나오지 않는다."
     },
@@ -493,7 +496,7 @@
       "scene": "S#19C", "expected": 2, "file": "Forest_Demo",
       "by_speaker": { "쿠루": 2 },
       "nodes": [
-        { "node": "Forest_Wolf2_Weakpoint", "count": 1, "anchor": "잘했어 내가 저 녀석의 약점을 알아내서 표시해줄게" },
+        { "node": "Forest_Wolf2_Weakpoint", "count": 1, "anchor": "내가 저 녀석의 약점을 알아내서 표시해줄게" },
         { "node": "Forest_Wolf2_Finisher",  "count": 1, "anchor": "…끝났네, 잘했어. 마지막은 완전히 숨통을 끊어버려" }
       ],
       "_note": [
@@ -520,11 +523,11 @@
       "_note": "불살 마무리(2초 미입력 → 적 도주). 붉은 결정 획득 · 인형화 -2 · 심리 +5. 판정은 S#17E 와 같은 1회 성립이다."
     },
     {
-      "scene": "S#20", "expected": 47, "file": "Forest_Demo",
-      "by_speaker": { "솔": 18, "루": 14, "쿠루": 15 },
+      "scene": "S#20", "expected": 52, "file": "Forest_Demo",
+      "by_speaker": { "솔": 18, "루": 15, "쿠루": 19 },
       "nodes": [
-        { "node": "Forest_Sol_Reunion_Low",         "count": 4, "anchor": "둘이 같이 있네." },
-        { "node": "Forest_Sol_Reunion_High",        "count": 7, "anchor": "둘이 같이 있네." },
+        { "node": "Forest_Sol_Reunion_Low",         "count": 7, "anchor": "둘이 같이 있네." },
+        { "node": "Forest_Sol_Reunion_High",        "count": 9, "anchor": "둘이 같이 있네." },
         { "node": "Forest_Sol_Reject_Sugar_Low",    "count": 4, "anchor": "저… 쿠루, 이거 팔아도 돼요?" },
         { "node": "Forest_Sol_Reject_Sugar_High",   "count": 7, "anchor": "왜? 각설탕 또 줘?" },
         { "node": "Sol_Trade_Reject_Contaminated",  "count": 1, "anchor": "오염된 건 안 받아." },
@@ -543,7 +546,7 @@
         "파서의 SCENE_KEY 가 S# 계열에 하이픈을 열지 않기 때문이다(위 _about 의 S#19C-2 경고와 같은 이유).",
         "",
         "14노드는 원고 등장 순서 그대로다. 변환기가 순서대로 잘라 배분하므로 순서를 바꾸면 배분이 밀린다.",
-        "  A 조우      : Reunion_Low 4 / Reunion_High 7",
+        "  A 조우      : Reunion_Low 7 / Reunion_High 9  (2026-09-13 쿠루 각설탕 건네기 3+2줄 추가)",
         "  B 각설탕 거절 : Reject_Sugar_Low 4 / Reject_Sugar_High 7",
         "  C 검은 구슬  : 1 (분기 없음 — 사유가 등급이 아니라 오염이라 루의 상태와 무관하다)",
         "  D 상시 대화  : Faster 5/4 · Stock Intro1+1/1+Common2 · Outside Intro1+5/4",

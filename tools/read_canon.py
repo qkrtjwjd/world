@@ -38,7 +38,7 @@ for _stream in (sys.stdout, sys.stderr):
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # 정본 원본 위치 — 저장소 밖이다. 경로를 아는 곳은 여기 한 곳으로 둔다.
-CANON_DIR = r"C:\Users\ThinkPlant\Desktop\낙원\files (1)"
+CANON_DIR = r"D:\낙원\file"
 
 # docx 파싱은 기존 파서를 재사용한다 (표준 zipfile + 정규식, 외부 의존성 없음).
 sys.path.insert(0, os.path.join(
