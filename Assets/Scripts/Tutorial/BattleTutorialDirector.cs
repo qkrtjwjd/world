@@ -29,10 +29,10 @@ public class BattleTutorialDirector : MonoBehaviour
     [Tooltip("몰살 시 지급. 원고의 「검은 구체」와 같은 물건이다")]
     public string blackOrbPath   = "Items/BlackOrb";
 
-    [Tooltip("몰살 시 인형화 증가량")]
-    public float corruptionOnKill  = +2f;
-    [Tooltip("불살 시 인형화 감소량")]
-    public float corruptionOnSpare = -2f;
+    [Tooltip("몰살 시 인형화 증가량. 데모 고정값 +1 (F-2-6 · 데모 범위 v0.5 4절)")]
+    public float corruptionOnKill  = +1f;
+    [Tooltip("불살 시 인형화 감소량. 데모 고정값 -1 (F-2-6 · 데모 범위 v0.5 4절)")]
+    public float corruptionOnSpare = -1f;
     [Tooltip("불살 시 심리 게이지 증가량 (C-3-3)")]
     public float gaugeOnSpare      = +5f;
 

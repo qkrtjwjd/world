@@ -144,8 +144,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BattleTutorialDirector
   redCrystalPath: Items/RedCrystal
   blackOrbPath: Items/BlackOrb
-  corruptionOnKill: 2
-  corruptionOnSpare: -2
+  corruptionOnKill: 1
+  corruptionOnSpare: -1
   gaugeOnSpare: 5
 --- !u!1 &4459117955348097843
 GameObject:

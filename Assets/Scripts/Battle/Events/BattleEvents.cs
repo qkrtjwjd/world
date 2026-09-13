@@ -94,7 +94,7 @@ public enum BattleActionKind
 
 /// <summary>
 /// 전투 종료 방식. 턴제·액션 공통이며 보상이 여기서 갈린다 (F-2-6).
-/// 불살 → 붉은 결정 · 인형화 -2 · 심리 +5 / 몰살 → 검은 구슬 · 인형화 +2.
+/// 불살 → 붉은 결정 · 인형화 -1 · 심리 +5 / 몰살 → 검은 구슬 · 인형화 +1.
 /// </summary>
 public enum BattleOutcome
 {

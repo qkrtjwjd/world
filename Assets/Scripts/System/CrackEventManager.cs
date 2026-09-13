@@ -7,6 +7,14 @@ public class CrackEventManager : MonoBehaviour
 
     public event System.Action OnCrackEvent;
 
+    // ── 인형화 데모 고정값 ────────────────────────────────────────────
+    // 굴복 +2 는 「데모 범위 확정」 v0.5 4절 · F-2-6 문단 144 의 고정값이다.
+    // C 의 범위값(3~5)을 데모에서 굴리지 않는다 — 상한 32 안에 들어가야 하고,
+    // 31 돌파가 균열 굴복 한 방으로 확정돼 있어(C-2-4) 값이 흔들리면 안 된다.
+    const float CorruptionOnSubmit = +2f;
+    // ⚠ 저항 값은 고정값 목록에 없다. 종전 동작(-1~-2 난수)을 그대로 둔다.
+    //   확정되면 여기 상수로 올린다.
+
     [Header("1급 균열 사운드")]
     [SerializeField] private AudioClip seraVoiceClip;
 
@@ -115,7 +123,7 @@ public class CrackEventManager : MonoBehaviour
 
     void OnSubmit()
     {
-        float delta = Random.Range(3f, 5f);
+        const float delta = CorruptionOnSubmit;
         GameStateManager.Instance?.AddDollification(delta);
         Dbg.Log($"[CrackEvent] 굴복 — 인형화 +{delta:F1}");
         _choiceResolved = true;

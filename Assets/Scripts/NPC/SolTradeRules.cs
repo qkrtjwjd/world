@@ -133,6 +133,24 @@ public static class SolTradeRules
     const string ResourceFolder = "TradeItems";
     static Dictionary<ItemData, TradeItem> _bySource;
 
+    /// <summary>
+    /// 루의 보유 품목 칸에 올리지 않는 것 (C-15-4 · F-7-1). 값은 <b>ItemData 에셋 이름</b>이며
+    /// 표시명이 아니다 — 이 파일에 품목 이름을 문자열로 넣지 않는다는 금지에 걸리지 않는다.
+    ///
+    /// <para>지금은 이것들에 TradeItem 에셋이 없어서 자연히 빠져 있다. 그 상태에만 기대면
+    /// 누가 TradeItem 을 하나 만드는 순간 조용히 새므로 판정을 코드에 남긴다.</para>
+    ///
+    /// <para>「녹슨 열쇠」는 루가 8살 때 만든 쉼터 열쇠이며 다락방 열쇠·현관문 열쇠와 다른
+    /// 물건이다(D 문단 327 · F-7-1). 쉼터가 데모 미수록이라 ItemData 자체가 없어 여기 없다.</para>
+    /// </summary>
+    static readonly HashSet<string> ExcludedSourceAssets = new HashSet<string>
+    {
+        "radio",         // 라디오(유)
+        "dagger",        // 단검
+        "AtticKey",      // 다락방 열쇠
+        "FrontDoorKey",  // 현관문 열쇠
+    };
+
     /// <summary>씬 재진입·도메인 리로드 시 캐시를 버린다.</summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => _bySource = null;
@@ -160,6 +178,12 @@ public static class SolTradeRules
         foreach (var trade in all)
         {
             if (trade == null || trade.source == null) continue;
+            if (ExcludedSourceAssets.Contains(trade.source.name))
+            {
+                Debug.LogWarning($"[SolTradeRules] '{trade.source.name}' 는 거래 제외 품목입니다(C-15-4 · F-7-1). " +
+                                 $"TradeItem '{trade.name}' 를 카탈로그에서 뺍니다. 에셋을 지우거나 제외 목록을 고치세요.");
+                continue;
+            }
             if (_bySource.ContainsKey(trade.source))
             {
                 Debug.LogWarning($"[SolTradeRules] ItemData '{trade.source.name}' 에 TradeItem 이 둘 이상 연결돼 있습니다. " +

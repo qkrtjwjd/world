@@ -10,7 +10,7 @@ using UnityEngine;
 public class LockedDoorInteraction : MonoBehaviour
 {
     [Header("잠금 해제에 필요한 아이템 이름 (ItemData.itemName 과 일치해야 함)")]
-    public string requiredItemName = "AtticKey";
+    public string requiredItemName = "다락방 열쇠";
 
     [Header("잠겨있을 때 Yarn 노드 이름")]
     public string yarnNode_locked;
