@@ -107,13 +107,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public float heldBreathSilence = 1.5f;
 
     [Header("S#04D — 쪽지")]
-    public Image noteCloseupImage;
-    [Tooltip("쪽지 본문 텍스트. 손글씨 폰트를 지정한 TMP_Text (noteCloseupImage 자식). " +
-             "비우면 본문이 화면에 뜨지 않는다.")]
-    public TMPro.TMP_Text noteBodyText;
-    [Tooltip("쪽지 본문. 대화창이 아니라 이 UI 로 출력한다(정본 S#04D). " +
-             "출처는 Scenario/output_v3/notes.json. 줄당 한 항목.")]
-    [TextArea] public string[] noteLines;
+    // 쪽지 표시는 House_Note 노드의 <<show_readable "kuru_note">> 가 맡는다 (ReadableOverlay · F-8-9).
+    // 문구를 문자열로 띄우던 noteCloseupImage · noteBodyText · noteLines 는 폐지했다 —
+    // 읽는 물건은 문구까지 그려 넣은 이미지 1장이며 텍스트 출력이 없다 (F-4-4 v1.25).
     [Tooltip("획득할 아이템. 비워두면 획득을 건너뛴다.")]
     public ItemData kuruNoteItem;
     public ItemData sugarCubeItem;
@@ -157,7 +153,6 @@ public class KitchenTriggerCutscene : MonoBehaviour
     // ── 캐싱된 WaitForSeconds ─────────────────────
     private static readonly WaitForSeconds _wait03s = new WaitForSeconds(0.3f);
     private static readonly WaitForSeconds _wait05s = new WaitForSeconds(0.5f);
-    private static readonly WaitForSeconds _wait08s = new WaitForSeconds(0.8f);
     private static readonly WaitForSeconds _wait1s  = new WaitForSeconds(1f);
 
     // ─────────────────────────────────────────────
@@ -288,21 +283,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
     // 루의 독백과 손의 동작이 어긋나는 것이 이 컷의 전부다.
     IEnumerator RunS4D_Note()
     {
-        // 쪽지 본문은 대화창이 아니라 전용 UI 로 나간다. 결계 안 UI 와 다른 폰트여야
-        // '밖에서 들어온 물건' 이라는 것이 전달된다 (정본 S#04D ▶ 스프라이트).
-        if (noteBodyText != null)
-            noteBodyText.text = noteLines != null ? string.Join("\n", noteLines) : string.Empty;
-
-        if (noteCloseupImage != null)
-        {
-            noteCloseupImage.gameObject.SetActive(true);
-            yield return _wait08s;
-        }
-
+        // 쪽지는 노드 안에서 원고 순서대로 뜬다 — 세라의 첫 부름 뒤, [자막] 앞.
+        //   <<show_readable "kuru_note">> 가 전체화면 이미지를 띄우고 플레이어가 닫을 때까지 멈춘다.
         yield return YarnDialogue.PlayAndWait(yarnNode_S4D_Note, false);
-
-        if (noteCloseupImage != null) noteCloseupImage.gameObject.SetActive(false);
-        if (noteBodyText != null) noteBodyText.text = string.Empty;
 
         // 못 본 척해야 한다. 그런데 손은 주머니 속에 챙긴다.
         GiveItem(kuruNoteItem);

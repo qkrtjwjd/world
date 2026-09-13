@@ -31,6 +31,10 @@ public class SpeakerStylePresenter : DialoguePresenterBase
 {
     const string StylePath = "Dialogue/SpeakerStyle";
 
+    // 화자 없는 줄의 매핑 키. yarn 에서 화자 없이 나가는 줄은 [자막] 나레이션뿐이다 (F-8-9).
+    // 이름창은 LinePresenter 가 이미 끄므로 여기서는 서식(이탤릭)을 입히는 것이 목적이다.
+    const string NarrationStyleId = "나레이션";
+
     [Tooltip("이름창·본문을 소유한 LinePresenter. 비우면 같은 오브젝트에서 찾는다.")]
     [SerializeField] LinePresenter linePresenter;
 
@@ -126,8 +130,9 @@ public class SpeakerStylePresenter : DialoguePresenterBase
         CacheBaseline();
 
         string id = line?.CharacterName;
-        Entry style = null;
-        if (!string.IsNullOrEmpty(id)) Styles.TryGetValue(id, out style);
+        // LinePresenter 와 같은 판정(IsNullOrWhiteSpace)이어야 이름창을 끈 줄과 어긋나지 않는다.
+        if (string.IsNullOrWhiteSpace(id)) id = NarrationStyleId;
+        Styles.TryGetValue(id, out Entry style);
 
         var body = linePresenter.lineText;
         var nameText = linePresenter.characterNameText;

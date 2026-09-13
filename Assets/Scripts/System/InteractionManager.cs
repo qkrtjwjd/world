@@ -95,6 +95,10 @@ public class InteractionManager : MonoBehaviour
             RefreshClosest();
         }
 
+        // 읽는 물건이 떠 있는 동안은 상호작용하지 않는다 (F-8-9). 닫는 키가 상호작용 키와 같아서
+        // 여기서 막지 않으면 쪽지를 닫는 프레임에 근처 물건이 함께 조사된다.
+        if (ReadableOverlay.IsOpen) return;
+
         // 입력 감지 (리바인딩 가능 키)
         KeyCode interactKey = SettingsManager.Instance?.keyInteract ?? KeyCode.E;
         if (Input.GetKeyDown(interactKey))

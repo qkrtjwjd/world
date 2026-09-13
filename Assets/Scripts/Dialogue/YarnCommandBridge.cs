@@ -425,6 +425,18 @@ public class YarnCommandBridge : MonoBehaviour
         CutsceneCGView.Instance?.Hide();
     }
 
+    // ── 읽는 물건 ([읽기]) ──────────────────────────────────────────────
+    // F-8-9 — 문구까지 그려 넣은 이미지 1장을 전체화면으로 띄우고, 플레이어가 닫을 때까지
+    // 대사 진행을 멈춘다. 문구를 문자열로 출력하지 않는다. 그림은 Assets/Resources/Readables/{id}.png.
+    // ⚠ 그림이 없으면 일러 컷과 같이 경고만 남기고 곧바로 넘어간다.
+
+    // <<show_readable "kuru_note">>
+    [YarnCommand("show_readable")]
+    public static IEnumerator ShowReadable(string id)
+    {
+        yield return ReadableOverlay.Instance.ShowAndWait(id);
+    }
+
     // ── 필터 ─────────────────────────────────────────────────────────────
 
     // <<set_filter "fantasy"|"reality"|"none" [intensity=1.0]>>
