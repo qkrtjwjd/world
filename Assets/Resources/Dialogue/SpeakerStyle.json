@@ -9,6 +9,7 @@
     { "id": "아모", "display": "아모", "italic": false, "color": "" },
     { "id": "radio_yu", "display": "라디오", "italic": true, "color": "#d4c97a" },
     { "id": "루독백", "display": "", "italic": true, "color": "" },
+    { "id": "세라목소리", "display": "", "italic": false, "color": "" },
     { "id": "나레이션", "display": "", "italic": true, "color": "" }
   ]
 }

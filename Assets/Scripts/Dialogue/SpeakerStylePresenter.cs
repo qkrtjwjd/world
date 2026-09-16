@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using TMPro;
 using UnityEngine;
@@ -38,8 +38,26 @@ public class SpeakerStylePresenter : DialoguePresenterBase
     [Tooltip("이름창·본문을 소유한 LinePresenter. 비우면 같은 오브젝트에서 찾는다.")]
     [SerializeField] LinePresenter linePresenter;
 
+    [Tooltip("이름창의 배경 상자. 비우면 배경은 건드리지 않는다. " +
+             "⚠ LinePresenter 의 characterNameContainer 가 이름 '텍스트' 만 가리키고 있어서 " +
+             "필요하다. 배경과 텍스트가 형제라 텍스트만 꺼지면 빈 상자가 남는다.")]
+    [SerializeField] GameObject nameBackground;
+
     [Tooltip("끄면 매핑을 적용하지 않는다. 원인 격리용.")]
     [SerializeField] bool applyStyles = true;
+
+    /// <summary>
+    /// 이름 배경 상자를 켜고 끈다.
+    ///
+    /// <para>이름 텍스트와 배경이 <b>형제</b>라서 따로 꺼야 한다. Yarn 의
+    /// <c>characterNameContainer</c> 는 텍스트만 가리키고 있어, 그것만 끄면
+    /// 빈 상자가 화면에 남는다 — 세라의 목소리(S#21C)처럼 이름을 띄우지 않는 줄에서
+    /// 「대사창에 문장만 뜬다」(E-62-4)가 성립하지 않는다.</para>
+    /// </summary>
+    void SetNameBackground(bool on)
+    {
+        if (nameBackground != null) nameBackground.SetActive(on);
+    }
 
     // 프리팹 기본값. 매핑이 없는 화자에서 여기로 되돌린다.
     FontStyles _baseFontStyle;
@@ -144,6 +162,9 @@ public class SpeakerStylePresenter : DialoguePresenterBase
         {
             // 매핑에 없는 화자(루 등). 이름은 LinePresenter 가 쓴 그대로 두고 서식만 되돌린다.
             RestoreBaseline();
+            // ⚠ 배경은 되돌려 준다. 앞 줄이 이름 없는 화자였으면 꺼진 채로 남아,
+            //   이름만 배경 없이 뜨는 그림이 된다.
+            SetNameBackground(!string.IsNullOrWhiteSpace(line?.CharacterName));
             return;
         }
 
@@ -153,10 +174,12 @@ public class SpeakerStylePresenter : DialoguePresenterBase
         if (string.IsNullOrEmpty(style.display))
         {
             if (nameBox != null) nameBox.SetActive(false);
+            SetNameBackground(false);
         }
         else if (nameText != null)
         {
             if (nameBox != null) nameBox.SetActive(true);
+            SetNameBackground(true);
             nameText.text = style.display;
         }
 
