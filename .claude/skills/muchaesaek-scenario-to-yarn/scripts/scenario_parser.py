@@ -86,6 +86,14 @@ OWL_DIALOGUE_SCENE = "S#01"
 
 MONOLOGUE_SPEAKER_ID = "루독백"     # 포트레이트 없음. 대사창 이탤릭(런타임 적용)
 
+# 데모 종료의 세라 목소리. 화자 이름도 포트레이트도 띄우지 않는다 (E-62-4 · F-7-5).
+# 원고가 그 확정을 표기에 그대로 옮겨 화자 칸 없는 무서식 한 줄로 온다 (D 문단 1266).
+# 손상이 아니라 정본이 의도한 표기이므로 부엉이와 같은 방식으로 씬을 보고 좁게 연다 —
+# 화자 ID 를 따로 두는 것은 F 가 요구하는 「세라 목소리 처리 프리셋」을 걸 자리가
+# 필요하기 때문이다. SPEAKERS 에는 넣지 않는다. 화자 칸 표기가 아니다.
+VOICE_SPEAKER_ID = "세라목소리"
+VOICE_DIALOGUE_SCENE = "S#21C"
+
 # 루 독백의 원고 표기는 두 가지다.
 #   ① (루): '...'        — 문단 전체 이탤릭     (집 구간)
 #   ② 루 (속으로) "..."  — 첫 run 볼드          (마을 구간. 정본 [UI] "독백 처리. 대사창 이탤릭")
@@ -410,6 +418,20 @@ class Classifier:
             if item.speaker_id == OWL_SPEAKER_ID and self.scene != OWL_DIALOGUE_SCENE:
                 return Item(KIND_UNCLASSIFIED, p.idx, self.scene, s)
             return item
+
+        # 7b. 화이트리스트 ④ — 무명 목소리 (세라. E-62-4)
+        #     화자 칸이 없는 무서식 한 줄이라 ①②③ 어디에도 걸리지 않는다.
+        #     허용 씬 한 곳에서만 연다 — 부엉이와 같은 방식이다. 씬을 보지 않으면
+        #     아무 무서식 따옴표 줄이나 통과하는 길이 영구히 남는다.
+        #     ①보다 아래인 것은 화자 칸이 있는 줄을 가로채지 않기 위해서고,
+        #     이탤릭 차단보다 위인 것은 ②-A 와 같은 이유다.
+        if (self.scene == VOICE_DIALOGUE_SCENE
+                and not p.first_bold and not p.all_italic and s[0] in DQUOTE):
+            body = s[1:]
+            if body and body[-1] in DQUOTE:
+                body = body[:-1]
+            return Item(KIND_DIALOGUE, p.idx, self.scene, body.strip(),
+                        speaker_id=VOICE_SPEAKER_ID, display="", side=None)
 
         # 8. 이탤릭 지문 → 차단. [자막]이 붙지 않은 지문은 전부 여기서 멈춘다
         if p.all_italic:

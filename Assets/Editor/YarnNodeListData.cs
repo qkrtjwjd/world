@@ -22,6 +22,13 @@ public class YarnNodeListData : ScriptableObject
         //   House_lu_star_r — 구 라디오 반응 대사. House_lu_sofa — 배선 없는 고아 노드.
         //   Village_Sol_Radio — 정본 D-2 15-F 삭제(E 3.0).
         //   Sol_Trade_Success — 정본에 거래 성립 대사가 없다(D-3 S#20 · F-7-1).
+        //
+        // ── 2026-09-16 전수 재대조 ──
+        //   실제 .yarn 의 title 과 이 목록이 어긋나 있었다. S#19 2차 전투 6개와 S#20 솔 거래
+        //   19개, Village_Sera_Captured · Village_Sol_TalkMenu, House_BadEnd_* 3개가 빠져 있었다.
+        //   전부 채웠다. 이후에도 .yarn 의 title 목록과 맞춘다.
+        //   삭제: Forest_GoldenThorns · Forest_Camp_Night — S#21 원고가 들어와 노드를 지웠다.
+        //   _Declarations 는 변수 선언 노드이므로 드롭다운에 넣지 않는다.
 
         // Intro.yarn
         "Intro",
@@ -49,6 +56,9 @@ public class YarnNodeListData : ScriptableObject
         // Village_Demo.yarn
         "Village_Sol_Square", "Village_FlowerShop", "Village_Bakery",
         "BakeryNPC_Loop_Normal", "BakeryNPC_Loop_Dagger", "Sol_BreadDoughReject",
+        "Village_Sera_Captured", "Village_Sol_TalkMenu",
+        // House_BadEnding.yarn (BE#01 · BE#02)
+        "House_BadEnd_Sealed_Door", "House_BadEnd_Sera_Return", "House_BadEnd_ThreePlates",
         // D-2 정본 신규 노드 (Scenario/node_map.json 의 S#14·S#15) — 아직 .yarn 미작성
         "Village_Sol_Talk_Purity", "Village_Sol_Talk_Since", "Village_Sol_Talk_Money",
         "Village_Sera_Spotted", "Village_Square_Children",
@@ -59,8 +69,21 @@ public class YarnNodeListData : ScriptableObject
         "Forest_Wolf_React_Attack", "Forest_Wolf_React_Guard", "Forest_Wolf_React_Pet",
         "Forest_Wolf_Pet2", "Forest_Wolf_Pet3", "Forest_Wolf_Hurt",
         "Forest_Wolf_KillEnd", "Forest_Wolf_PurifyEnd",
-        // 구 원고 잔존분 — S#18 이후 원고가 나오면 교체 대상
-        "Forest_GoldenThorns", "Forest_Camp_Night",
+        // S#19 2차 전투
+        "Forest_Wolf2_Encounter", "Forest_Wolf2_Reveal", "Forest_Wolf2_Weakpoint",
+        "Forest_Wolf2_Finisher", "Forest_Wolf2_KillEnd", "Forest_Wolf2_SpareEnd",
+        // S#20 솔 재조우 · 거래 (접미 없는 것은 인형화 분기 디스패처)
+        "Forest_Sol_Reunion", "Forest_Sol_Reunion_Low", "Forest_Sol_Reunion_High",
+        "Forest_Sol_Reject_Sugar", "Forest_Sol_Reject_Sugar_Low", "Forest_Sol_Reject_Sugar_High",
+        "Forest_Sol_TalkMenu",
+        "Forest_Sol_Talk_Faster", "Forest_Sol_Talk_Faster_Low", "Forest_Sol_Talk_Faster_High",
+        "Forest_Sol_Talk_Stock", "Forest_Sol_Talk_Stock_Intro", "Forest_Sol_Talk_Stock_Low",
+        "Forest_Sol_Talk_Stock_High", "Forest_Sol_Talk_Stock_Common",
+        "Forest_Sol_Talk_Outside", "Forest_Sol_Talk_Outside_Intro",
+        "Forest_Sol_Talk_Outside_Low", "Forest_Sol_Talk_Outside_High",
+        // S#21 데모 종료 (S#21B 는 폐기 — 만들지 말 것)
+        "Forest_Barrier_Arrival", "Forest_Barrier_Reinforced",
+        "Forest_Sera_Voice", "Forest_Demo_End",
         // 솔 거래 노드 (아직 .yarn 미작성)
         "Sol_Trade_Reject_Village", "Sol_Trade_Reject_GradeMismatch",
         "Sol_Trade_Reject_Contaminated", "Sol_Trade_Reject_Empty", "Sol_Trade_Reject_PlayerWithdraws"

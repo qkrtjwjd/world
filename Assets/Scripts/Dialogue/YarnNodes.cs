@@ -17,7 +17,7 @@ public static class YarnNodes
     public const string BakeryNPC_Loop_Dagger    = "BakeryNPC_Loop_Dagger";
 
     // Forest_Demo.yarn
-    // D-3 정본 (S#16~S#17). 전투 노드는 TutorialBattleManager 가 조건별로 호출한다.
+    // D-3 정본 (S#16~S#21). 전투 노드는 TutorialBattleManager 가 조건별로 호출한다.
     public const string Forest_Entrance            = "Forest_Entrance";
     public const string Forest_Kuru_Greet          = "Forest_Kuru_Greet";
     public const string Forest_Kuru_Radio          = "Forest_Kuru_Radio";
@@ -42,9 +42,40 @@ public static class YarnNodes
     public const string Forest_Wolf2_KillEnd       = "Forest_Wolf2_KillEnd";
     public const string Forest_Wolf2_SpareEnd      = "Forest_Wolf2_SpareEnd";
 
-    // 구 원고(명세서 v7) 잔존분 — 정본에 S#18 이후 원고가 없어 남겨둔 것. 나오면 교체한다.
-    public const string Forest_GoldenThorns        = "Forest_GoldenThorns";
-    public const string Forest_Camp_Night          = "Forest_Camp_Night";
+    // S#20 솔 재조우 · 거래. 2026-08-27 D 개정분. 인형화 판정은 진입 시 1회다(F-4-8) —
+    //   _Low / _High 앞의 디스패처 노드(Forest_Sol_Reunion 등)는 정본 대사가 0줄인 수기 허브라
+    //   node_map.json 에 등재하지 않는다. 여기에는 상수를 둔다 — .yarn 에 실재하는 노드다.
+    public const string Forest_Sol_Reunion              = "Forest_Sol_Reunion";
+    public const string Forest_Sol_Reunion_Low          = "Forest_Sol_Reunion_Low";
+    public const string Forest_Sol_Reunion_High         = "Forest_Sol_Reunion_High";
+    public const string Forest_Sol_Reject_Sugar         = "Forest_Sol_Reject_Sugar";
+    public const string Forest_Sol_Reject_Sugar_Low     = "Forest_Sol_Reject_Sugar_Low";
+    public const string Forest_Sol_Reject_Sugar_High    = "Forest_Sol_Reject_Sugar_High";
+    public const string Forest_Sol_TalkMenu             = "Forest_Sol_TalkMenu";
+    public const string Forest_Sol_Talk_Faster          = "Forest_Sol_Talk_Faster";
+    public const string Forest_Sol_Talk_Faster_Low      = "Forest_Sol_Talk_Faster_Low";
+    public const string Forest_Sol_Talk_Faster_High     = "Forest_Sol_Talk_Faster_High";
+    public const string Forest_Sol_Talk_Stock           = "Forest_Sol_Talk_Stock";
+    public const string Forest_Sol_Talk_Stock_Intro     = "Forest_Sol_Talk_Stock_Intro";
+    public const string Forest_Sol_Talk_Stock_Low       = "Forest_Sol_Talk_Stock_Low";
+    public const string Forest_Sol_Talk_Stock_High      = "Forest_Sol_Talk_Stock_High";
+    public const string Forest_Sol_Talk_Stock_Common    = "Forest_Sol_Talk_Stock_Common";
+    public const string Forest_Sol_Talk_Outside         = "Forest_Sol_Talk_Outside";
+    public const string Forest_Sol_Talk_Outside_Intro   = "Forest_Sol_Talk_Outside_Intro";
+    public const string Forest_Sol_Talk_Outside_Low     = "Forest_Sol_Talk_Outside_Low";
+    public const string Forest_Sol_Talk_Outside_High    = "Forest_Sol_Talk_Outside_High";
+
+    // S#21 데모 종료. 2026-09-16 D 개정분. 아직 배선 전이며 호출하는 곳이 없다.
+    //   ⚠ S#21B 는 폐기됐다(E-62-2). 번호를 재배열하지 않아 자리가 비어 있다 — 만들지 말 것.
+    public const string Forest_Barrier_Arrival     = "Forest_Barrier_Arrival";
+    public const string Forest_Barrier_Reinforced  = "Forest_Barrier_Reinforced";
+    public const string Forest_Sera_Voice          = "Forest_Sera_Voice";
+    public const string Forest_Demo_End            = "Forest_Demo_End";
+
+    // 2026-09-16 — Forest_GoldenThorns · Forest_Camp_Night 삭제. 다시 만들지 말 것.
+    //   구 원고(명세서 v7)로 데모 종료 자리를 임시로 메우던 노드다. D 에 S#21 원고가
+    //   들어와 위 4개로 교체했고 .yarn 의 노드도 함께 지웠다. 삭제 근거는
+    //   Forest_Demo.yarn 의 S#21 블록 머리 주석에 있다.
     // 2026-08-30 — 구 라디오 반응 시스템을 걷어내며 Radio_* 상수 18개를 삭제했다.
     //   다시 만들지 말 것. E-39-2 가 반응 대상 16종 목록을, E-52 가 [라디오] 선택지
     //   방식을 폐기했다. 유의 반응은 이제 대비 오브젝트 노드 안에서 $라디오소지 로

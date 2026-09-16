@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using System.Collections.Generic;
 
 /// <summary>
@@ -170,6 +170,9 @@ public static class GameState
         isFrontDoorKeyFound      = false;
         isDaggerToggleUnlocked   = false;
         isFrontDoorPassed        = false;
+        // S#21C 의 필터 토글 봉인은 GameState 필드가 아니라 컨트롤러의 정적 값이다.
+        // 새 게임·되감기에서 함께 풀지 않으면 봉인이 다음 회차로 넘어간다.
+        DaggerFilterController.UnsealToggle();
         isWorkbenchLocked        = true;
         isBreadDoughAcquired     = false;
         hasMerchantMetAtSquare   = false;

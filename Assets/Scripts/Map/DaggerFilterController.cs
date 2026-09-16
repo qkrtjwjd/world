@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -34,6 +34,24 @@ public class DaggerFilterController : MonoBehaviour
     /// 2026-08-27 에 DarkReality 씬을 폐기하면서 이쪽으로 옮겼다.</para>
     /// </summary>
     public static bool IsRealityView => Instance != null && Instance.IsReality;
+
+    /// <summary>
+    /// 필터 토글이 봉인됐는가. S#21C 에서 결계가 강화되는 순간 세라가 필터까지 밀어붙이며
+    /// <b>이후 토글 입력을 받지 않는다</b>(D-3 S#21C · F-6 · C-3-2). 데모는 그 상태로 끝난다.
+    ///
+    /// <para>⚠ <see cref="GameState.isDaggerToggleUnlocked"/> 를 내리는 것으로 대신하지 않는다.
+    /// 그쪽은 「S#12 에서 조작권이 열렸는가」라는 다른 사실이고, 내리면 S#12 이전으로
+    /// 되돌리는 것이 되어 힌트 로직까지 함께 바뀐다. 봉인은 별개의 사실이므로 별개로 둔다.</para>
+    ///
+    /// <para>⚠ 잠겼다는 UI 표시를 두지 않는다(정본 ▶조작). 키가 그냥 듣지 않을 뿐이다.</para>
+    /// </summary>
+    public static bool IsToggleSealed { get; private set; }
+
+    /// <summary>토글을 봉인한다. 환상으로 덮은 뒤에 부르는 것이 순서다 — 봉인이 먼저면 전환이 막힌다.</summary>
+    public static void SealToggle() => IsToggleSealed = true;
+
+    /// <summary>봉인을 푼다. 데모에는 푸는 자리가 없고, 씬 재시작·되감기 복구용이다.</summary>
+    public static void UnsealToggle() => IsToggleSealed = false;
 
     private RealityFilterObject[] _filterObjects = new RealityFilterObject[0];
     private Coroutine _fadeCoroutine;
@@ -93,6 +111,10 @@ public class DaggerFilterController : MonoBehaviour
     void Update()
     {
         KeyCode daggerKey = SettingsManager.Instance?.keyDagger ?? KeyCode.F;
+
+        // S#21C 결계 강화 이후로는 토글이 봉인된다. 환상으로 덮인 채 데모가 끝난다(F-6).
+        // 여기서 return 해도 고착 방지 로직을 건너뛰지 않는다 — 봉인 시점에 이미 환상이다.
+        if (IsToggleSealed) return;
 
         // S#12(다락방 · 단검)에서 토글 조작권이 열리기 전에는 F키 자체가 없는 것으로 취급한다.
         // 정본: "단검 획득 → 현실/환상 필터 토글 조작권 개방"
