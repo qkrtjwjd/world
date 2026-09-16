@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 
 /// <summary>
 /// 게임 전체 설정 관리 싱글톤 (DontDestroyOnLoad 자동 생성).
@@ -123,7 +123,10 @@ public class SettingsManager : MonoBehaviour
     public float dialogueSpeed           = 1f;
     public bool  autoDialogue            = false;
     public int   textSize                = 1;  // 0=소, 1=중, 2=대
-    public float textBgOpacity           = 0.5f;
+    // 0.5 는 스프라이트 알파(0.86)와 곱해져 최종 0.43 이 되어 대사창 뒤가 훤히 비쳤다.
+    // 0.85 면 최종 0.73 으로, 글자가 묻히지 않으면서 배경이 은은하게 남는다.
+    // ⚠ 플레이어가 설정에서 조절하는 값이다. 여기는 기본값일 뿐이며 범위를 좁히지 않는다.
+    public float textBgOpacity           = 0.85f;
     public bool  showInputReverseAlert   = true;
 
     // 💾 저장
@@ -638,7 +641,7 @@ public class SettingsManager : MonoBehaviour
         dialogueSpeed         = PlayerPrefs.GetFloat(KEY_DIALOGUE_SPEED,  1f);
         autoDialogue          = PlayerPrefs.GetInt(KEY_AUTO_DIALOGUE,     0) == 1;
         textSize              = PlayerPrefs.GetInt(KEY_TEXT_SIZE,         1);
-        textBgOpacity         = PlayerPrefs.GetFloat(KEY_TEXT_BG_OPACITY, 0.5f);
+        textBgOpacity         = PlayerPrefs.GetFloat(KEY_TEXT_BG_OPACITY, 0.85f);
         showInputReverseAlert = PlayerPrefs.GetInt(KEY_INPUT_REVERSE_ALERT, 1) == 1;
 
         // 저장
