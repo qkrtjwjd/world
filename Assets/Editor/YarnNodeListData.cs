@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -82,7 +82,7 @@ public class YarnNodeListData : ScriptableObject
         "Forest_Sol_Talk_Outside", "Forest_Sol_Talk_Outside_Intro",
         "Forest_Sol_Talk_Outside_Low", "Forest_Sol_Talk_Outside_High",
         // S#21 데모 종료 (S#21B 는 폐기 — 만들지 말 것)
-        "Forest_Barrier_Arrival", "Forest_Barrier_Reinforced",
+        "Forest_Barrier_Arrival", "Forest_Barrier_KeyCheck", "Forest_Barrier_Reinforced",
         "Forest_Sera_Voice", "Forest_Demo_End",
         // 솔 거래 노드 (아직 .yarn 미작성)
         "Sol_Trade_Reject_Village", "Sol_Trade_Reject_GradeMismatch",

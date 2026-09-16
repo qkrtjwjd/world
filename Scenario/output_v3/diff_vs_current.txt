@@ -1,7 +1,7 @@
 === 현행 Assets/Dialogue 대비 표시 텍스트 diff ===
 '-' 현행에만 있음 (반영하면 사라짐)   '+' 이번 산출물에만 있음
 커맨드·주석은 비교 대상이 아니다 (이번 산출물에는 애초에 없다).
-삭제 52 줄 / 추가 0 줄
+삭제 53 줄 / 추가 0 줄
 
 ### House_Opening
 
@@ -112,6 +112,8 @@
   [Forest_Sol_Talk_Outside_High]
     -tags: ingame
   [Forest_Barrier_Arrival]
+    -tags: ingame
+  [Forest_Barrier_KeyCheck]
     -tags: ingame
   [Forest_Barrier_Reinforced]
     -tags: cutscene

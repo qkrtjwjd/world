@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -208,14 +208,24 @@ public class ForestBarrierDirector : MonoBehaviour
 
         Dbg.Log("[S#21] 결계 도달 — 데모 종료 연출 시작");
 
-        // ── S#21A 결계 앞 ───────────────────────────────────────────────────
+        // ── S#21A 1/2 — 결계 도달 ───────────────────────────────────────────
         // [FILTER] 직전 씬의 필터를 유지한다. 강제하지 않으며 어떤 값도 건드리지 않는다(F 문단 813).
         //   여기서 set_filter 를 부르지 않는 것이 그 지시다.
         //
-        // 열쇠를 댄 자리만 국소적으로 드러난다. 전면 가시화(③)와 구분돼야 한다.
+        // ⚠ 결계는 아직 보이지 않는다. 루가 「아무것도 안 보이는데요」라고 말하는 자리다.
+        yield return YarnDialogue.PlayAndWait(YarnNodes.Forest_Barrier_Arrival, false);
+
+        // ── 열쇠를 댄다 ─────────────────────────────────────────────────────
+        // 정본 문단 1238 — 「쿠루가 은색 열쇠를 허공에서 꺼내 결계에 가져다 댄다.」
+        // 접촉면을 중심으로 그 자리만 드러난다. 세라의 결계 점검(F-6-1)과 같은 원리이며
+        // 새 규칙이 아니다. 범위와 지속을 크게 쓰지 않는다 — 강화(③)의 전면 가시화와
+        // 구분돼야 한다(F-6-2).
+        //
+        // ⚠ 이 자리가 노드를 둘로 나눈 이유다. 앞 노드에서 켜면 대사와 화면이 어긋난다.
         SetVisible(barrierTouch, true);
 
-        yield return YarnDialogue.PlayAndWait(YarnNodes.Forest_Barrier_Arrival, false);
+        // ── S#21A 2/2 — 열쇠를 댄 뒤 ────────────────────────────────────────
+        yield return YarnDialogue.PlayAndWait(YarnNodes.Forest_Barrier_KeyCheck, false);
 
         // ── 결계 강화 ───────────────────────────────────────────────────────
         // 쿠루가 고개를 돌리는 순간이다. 「…뭐?」 바로 뒤.

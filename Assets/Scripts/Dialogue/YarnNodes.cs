@@ -1,4 +1,4 @@
-public static class YarnNodes
+﻿public static class YarnNodes
 {
     // 2026-08-30 — 죽은 상수 8개 삭제. 다시 만들지 말 것.
     //   House_Start · House_Kitchen · House_Kitchen_Noise · House_Kitchen_After ·
@@ -68,6 +68,7 @@ public static class YarnNodes
     // S#21 데모 종료. 2026-09-16 D 개정분. 아직 배선 전이며 호출하는 곳이 없다.
     //   ⚠ S#21B 는 폐기됐다(E-62-2). 번호를 재배열하지 않아 자리가 비어 있다 — 만들지 말 것.
     public const string Forest_Barrier_Arrival     = "Forest_Barrier_Arrival";
+    public const string Forest_Barrier_KeyCheck    = "Forest_Barrier_KeyCheck";
     public const string Forest_Barrier_Reinforced  = "Forest_Barrier_Reinforced";
     public const string Forest_Sera_Voice          = "Forest_Sera_Voice";
     public const string Forest_Demo_End            = "Forest_Demo_End";
