@@ -87,13 +87,70 @@ public class ForestBarrierDirector : MonoBehaviour
     [Tooltip("밀려오는 데 걸리는 시간(초).")]
     public float reinforcedPushDuration = 1.2f;
 
-    // ── 화면 효과 ───────────────────────────────────────────────────────────
-    [Header("화면 효과")]
-    [Tooltip("강화 순간 화면 가장자리에 번지는 황금색.")]
-    public Color reinforceEdgeColor = new Color(0.95f, 0.78f, 0.30f, 0.55f);
+    // ── 강화 연출 (정본 문단 1259) ──────────────────────────────────────────
+    [Header("강화 — 황금 광막")]
+    [Tooltip("황금빛의 기준 색. 피크에서는 흰빛 쪽으로 섞여 「눈이 부실 만큼」이 된다.")]
+    public Color glowColor = new Color(0.98f, 0.85f, 0.45f);
 
-    [Tooltip("번짐이 이어지는 시간(초).")]
-    public float reinforceEdgeDuration = 1.4f;
+    [Tooltip("① 결계가 눈에 들어온 직후의 밝기(0~1).")]
+    [Range(0f, 1f)] public float revealAlpha = 0.22f;
+
+    [Tooltip("② 푸른빛이 튕겨나가는 순간의 번쩍임(0~1).")]
+    [Range(0f, 1f)] public float repelFlashAlpha = 0.6f;
+
+    [Tooltip("④ 「눈이 부실 만큼 찬란한 광명」의 피크(0~1). " +
+             "⚠ 1 에 가까우면 화면이 완전히 하얘진다. 순간이므로 높아도 되지만, " +
+             "여기서 오래 머물면 안 된다 — 두꺼워지는 것은 결계이지 화면이 아니다.")]
+    [Range(0f, 1f)] public float surgePeakAlpha = 0.92f;
+
+    [Tooltip("피크 뒤에 남는 잔광(0~1). 데모가 끝날 때까지 이 값으로 유지된다. " +
+             "⚠ 이후 대사가 이 위에 뜬다. 너무 높으면 글자가 묻힌다.")]
+    [Range(0f, 1f)] public float afterglowAlpha = 0.18f;
+
+    [Header("강화 — 박자와 흔들림")]
+    [Tooltip("② 푸른빛을 튕겨내는 글리치 길이(초).")]
+    public float repelGlitchDuration = 0.45f;
+
+    [Tooltip("② 튕겨낼 때의 카메라 흔들림 세기.")]
+    public float repelShake = 0.35f;
+
+    [Tooltip("③ 쿠루가 열쇠를 회수할 때의 시간 배율. 1 이면 슬로모션 없음.")]
+    [Range(0.1f, 1f)] public float recoverSlowmoScale = 0.45f;
+
+    [Tooltip("③ 슬로모션이 이어지는 시간(초).")]
+    public float recoverSlowmoDuration = 0.5f;
+
+    [Tooltip("④ 광명이 두꺼워지는 데 걸리는 시간(초). 흔들림도 같은 길이로 간다.")]
+    public float surgeDuration = 1.6f;
+
+    [Tooltip("④ 강화 순간의 카메라 흔들림 세기. " +
+             "⚠ 흔들기만 쓴다. 줌은 정사영 크기를 바꿔 픽셀 정수배를 깨뜨린다(F-6 · §11).")]
+    public float surgeShake = 0.6f;
+
+    [Header("강화 — 물러섬과 시선")]
+    [Tooltip("③ 쿠루가 열쇠를 회수하며 물러나는 거리(월드 유닛).")]
+    public float kuruStepBack = 0.35f;
+
+    [Tooltip("⑤ 둘이 「몇 발자국」 물러나는 거리(월드 유닛).")]
+    public float pairStepBack = 0.6f;
+
+    [Tooltip("⑥ 루가 고개를 올리기까지의 사이(초). 「천천히」가 이 값이다.")]
+    public float lookUpDelay = 0.7f;
+
+    [Tooltip("애니메이터 dir 값 — 카메라 쪽(뒤를 돌아본다).")]
+    public int dirDown = 0;
+
+    [Tooltip("애니메이터 dir 값 — 위(고개를 올려본다).")]
+    public int dirUp = 2;
+
+    [Header("강화 — 가장자리 보조 채널")]
+    [Tooltip("잔광이 가장자리에 남는 진하기(0~1). " +
+             "⚠ 접근성 설정으로 꺼질 수 있는 채널이다. 강화 자체는 광막이 전달하므로 " +
+             "여기에만 정보를 싣지 않는다.")]
+    [Range(0f, 1f)] public float afterglowEdgeAlpha = 0.3f;
+
+    [Tooltip("가장자리가 안쪽으로 파고드는 비율(0~1). F-6 의 18% / 30% / 44% 눈금을 따른다.")]
+    [Range(0f, 1f)] public float afterglowEdgeRatio = 0.3f;
 
     // ── 박자 ────────────────────────────────────────────────────────────────
     [Header("박자")]
@@ -149,6 +206,7 @@ public class ForestBarrierDirector : MonoBehaviour
     float _nextCheck;
     ClearSky.SimplePlayerController _lockedCtrl;
     Vector3 _reinforcedOrigin;
+    GameObject _glowRoot;
 
     void Awake()
     {
@@ -265,53 +323,104 @@ public class ForestBarrierDirector : MonoBehaviour
     }
 
     /// <summary>
-    /// 결계 강화. 필터를 환상으로 밀고 토글을 봉인한다.
+    /// 결계 강화 — 정본 문단 1259 의 여섯 단계를 순서대로 만든다.
     ///
-    /// <para>미는 주체는 세라다. 결계를 강화하는 힘이 필터까지 밀며, 마시멜로가 게이지를
-    /// 환상 극값으로 옮기는 것과 같은 계통이다(C-3-2 · S#04E) — 새 규칙이 아니라
-    /// 기존 강제 전환의 세 번째 발생원이다.</para>
+    /// <para>
+    /// 「쿠루가 고개를 돌리는 순간 결계가 황금색으로 확실하게 눈에 들어온다.
+    /// 쿠루의 푸른빛을 전부 튕겨내며 열쇠까지 집어삼키려고 한다. 쿠루가 열쇠를 회수하며
+    /// 뒤로 물러난다. <b>황금빛은 눈이 부실 만큼 찬란한 광명이 되어 두꺼워지기 시작한다.</b>
+    /// 쿠루와 루가 뒤로 몇 발자국 물러난다. 결계가 강화된다. 루가 천천히 고개를 위로 올려본다.」
+    /// </para>
     ///
-    /// <para>⚠ 순서가 중요하다. 환상으로 덮은 <b>뒤에</b> 봉인한다. 봉인이 먼저면 전환이 막힌다.</para>
+    /// <para>
+    /// <b>여기가 이 씬에서 유일하게 화려해도 되는 자리다.</b> 정본이 직접 「눈이 부실 만큼
+    /// 찬란한 광명」이라고 쓴다. 나머지는 전부 절제를 요구한다 — 걷는 중의 황금색 복선은
+    /// 강조하지 않고, 돌아보기는 시선을 모으지 않으며, 종료 화면은 한 줄이다.
+    /// </para>
+    ///
+    /// <para>
+    /// ⚠ 광막은 <b>자체 오버레이</b>로 그린다. <see cref="ScreenEdgeEffectController"/> 는
+    /// 접근성 설정이 꺼지면 아무것도 하지 않으므로 거기에만 실으면 설정을 끈 플레이어에게
+    /// 강화가 전혀 전달되지 않는다. 가장자리는 보조 채널로만 함께 쓴다.
+    /// </para>
+    ///
+    /// <para>⚠ 필터는 환상으로 덮은 <b>뒤에</b> 봉인한다. 봉인이 먼저면 전환 자체가 막힌다.</para>
+    /// <para>⚠ 카메라 정사영 크기를 바꾸지 않는다. 흔들기는 되고 줌은 안 된다(F-6 · CLAUDE.md §11).</para>
     /// </summary>
     IEnumerator ReinforceBarrier()
     {
-        PlaySfxIfNamed(sfxReinforce);
+        GameObject glow = BuildGlow();
+        var glowImage = glow != null ? glow.GetComponentInChildren<Image>() : null;
 
-        // 강화된 결계가 전면으로 드러난다. 국소 가시화는 여기서 넘겨준다.
+        // ── ① 결계가 황금색으로 확실하게 눈에 들어온다 ──────────────────────
+        Dbg.Log("[S#21] (1) 결계가 눈에 들어온다");
         SetVisible(barrierTouch, false);
         SetVisible(barrierIdle, false);
         SetVisible(barrierReinforced, true);
+        PlaySfxIfNamed(sfxReinforce);
+        yield return FadeGlow(glowImage, 0f, revealAlpha, 0.25f, glowColor);
 
-        // 필터 강제 — 루가 단검을 파지한 상태여도 환상으로 덮인다.
-        //   컷이 아니라 번지는 형태로 처리해 S#12 의 「끊긴 것」과 구분한다.
-        //   현실 필터로 버티며 온 플레이어일수록 강하게 걸린다. 유도 연출을 따로 만들지 않는다 —
-        //   데려온 것이 아니라 빼앗은 것이다.
+        // ── ② 쿠루의 푸른빛을 전부 튕겨낸다 · 열쇠까지 집어삼키려 한다 ──────
+        Dbg.Log("[S#21] (2) 푸른빛을 튕겨낸다");
+        YarnCommandBridge.PlaySnap();
+        YarnCommandBridge.PlayGlitch(repelGlitchDuration);
+        CameraDirector.YarnCamShake(repelShake, repelGlitchDuration);
+        // 튕겨나가는 순간의 번쩍임. 흰빛에 가까울수록 「부시다」에 가깝다.
+        yield return FadeGlow(glowImage, revealAlpha, repelFlashAlpha, 0.12f,
+                              Color.Lerp(glowColor, Color.white, 0.6f));
+        yield return FadeGlow(glowImage, repelFlashAlpha, revealAlpha, 0.22f, glowColor);
+
+        // ── ③ 쿠루가 열쇠를 회수하며 뒤로 물러난다 ──────────────────────────
+        Dbg.Log("[S#21] (3) 쿠루가 열쇠를 회수하며 물러난다");
+        CameraDirector.YarnCamSlowmo(recoverSlowmoScale, recoverSlowmoDuration);
+        Transform kuru = FindCompanion();
+        yield return PushAway(kuru, kuruStepBack, 0.35f);
+
+        // ── ④ 눈이 부실 만큼 찬란한 광명이 되어 두꺼워지기 시작한다 ─────────
+        //    결계가 강화되는 지점이다. [FILTER] 가 「강화 발동과 동시에」라고 못박는다.
+        Dbg.Log("[S#21] (4) 광명이 두꺼워진다 — 필터 환상 강제 · 토글 봉인");
+
+        // 미는 주체는 세라다. 마시멜로가 게이지를 환상 극값으로 옮기는 것과 같은 계통이며
+        // (C-3-2 · S#04E) 새 규칙이 아니라 기존 강제 전환의 세 번째 발생원이다.
+        // 루가 단검을 파지한 상태여도 덮인다.
         DaggerFilterController.Instance?.SwitchToFantasyForced();
         FilterManager.Instance?.SetFilter(FilterType.Fantasy);
-
-        // 이후 토글 입력을 받지 않는다. 잠겼다는 UI 표시를 두지 않는다(정본 ▶조작).
         DaggerFilterController.SealToggle();
 
-        ScreenEdgeEffectController.ShowEdge(reinforceEdgeColor, reinforceEdgeDuration);
+        CameraDirector.YarnCamShake(surgeShake, surgeDuration);
+        StartCoroutine(PushBarrierInward());          // 스프라이트 오프셋으로만(F-6)
 
-        Dbg.Log("[S#21] 결계 강화 — 필터 환상 강제 · 토글 봉인");
+        // 피크까지 올렸다가 잔광으로 내려앉힌다. 계속 덮어두면 이후 대사가 안 보인다 —
+        // 두꺼워지는 것은 결계이지 화면이 아니다.
+        yield return FadeGlow(glowImage, revealAlpha, surgePeakAlpha, surgeDuration * 0.55f,
+                              Color.Lerp(glowColor, Color.white, 0.75f));
+        ScreenEdgeEffectController.SetSustainedLevel(glowColor, afterglowEdgeAlpha, afterglowEdgeRatio);
+        yield return FadeGlow(glowImage, surgePeakAlpha, afterglowAlpha, surgeDuration * 0.45f, glowColor);
 
-        // 화면 안쪽으로 밀려온다. 스프라이트 오프셋으로만 만든다(F-6).
-        if (barrierReinforced == null || reinforcedPushIn <= 0f)
-        {
-            yield return new WaitForSeconds(reinforceEdgeDuration * 0.5f);
-            yield break;
-        }
+        // ── ⑤ 쿠루와 루가 뒤로 몇 발자국 물러난다 ───────────────────────────
+        Dbg.Log("[S#21] (5) 둘이 몇 발자국 물러난다");
+        StartCoroutine(PushAway(kuru, pairStepBack, 0.5f));
+        yield return PushAway(player, pairStepBack, 0.5f);
+
+        // ── ⑥ 루가 천천히 고개를 위로 올려본다 ─────────────────────────────
+        Dbg.Log("[S#21] (6) 루가 천천히 고개를 올려본다");
+        yield return new WaitForSeconds(lookUpDelay);
+        FaceDirection(player, dirUp);
+    }
+
+    /// <summary>강화된 결계가 화면 안쪽으로 밀려온다. 스프라이트 오프셋으로만 만든다(F-6).</summary>
+    IEnumerator PushBarrierInward()
+    {
+        if (barrierReinforced == null || reinforcedPushIn <= 0f) yield break;
 
         Transform t = barrierReinforced.transform;
         _reinforcedOrigin = t.localPosition;
 
-        // 플레이어가 있는 쪽으로 민다. 없으면 결계의 아래쪽(화면 안쪽)으로 본다.
         Vector3 dir = player != null
             ? (Vector3)((Vector2)(player.position - barrier.position)).normalized
             : Vector3.down;
-
         Vector3 to = _reinforcedOrigin + dir * reinforcedPushIn;
+
         float elapsed = 0f;
         while (elapsed < reinforcedPushDuration)
         {
@@ -323,29 +432,102 @@ public class ForestBarrierDirector : MonoBehaviour
         t.localPosition = to;
     }
 
+    /// <summary>결계 반대쪽으로 물러난다. 상해가 아니라 물러서는 정도다.</summary>
+    IEnumerator PushAway(Transform who, float distance, float duration)
+    {
+        if (who == null || distance <= 0f) yield break;
+
+        Vector2 away = (Vector2)(who.position - barrier.position);
+        if (away.sqrMagnitude < 0.0001f) yield break;
+        away.Normalize();
+
+        Vector3 from = who.position;
+        Vector3 to   = from + (Vector3)(away * distance);
+        var rb = who.GetComponent<Rigidbody2D>();
+
+        float t = 0f;
+        while (t < duration && who != null)
+        {
+            t += Time.deltaTime;
+            Vector3 pos = Vector3.Lerp(from, to, Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / duration)));
+            if (rb != null) rb.MovePosition(pos); else who.position = pos;
+            yield return null;
+        }
+    }
+
     /// <summary>
     /// 둘이 동시에 뒤를 돌아본다.
     ///
     /// <para>소리가 난 방향을 본 것이 아니라 어디서 나는지 몰라서 돌아본 것이므로
     /// 시선을 한 지점으로 모으지 않는다. 그리고 아무것도 없다 — S#16A 의 회수다.</para>
     ///
-    /// <para>전용 스프라이트가 없으므로 지금은 좌우 반전으로만 표현한다.
-    /// 「뒤를 돌아보는 동작」 에셋이 들어오면 여기서 그것으로 바꾼다(D-3 S#21 신규 에셋).</para>
+    /// <para>⚠ 좌우 반전으로 만들지 않는다. 탑다운에서 그건 옆을 보는 것이지 뒤가 아니다.
+    /// 애니메이터의 <c>dir</c> 로 정면(카메라 쪽)을 향하게 한다.</para>
     /// </summary>
     void LookBack()
     {
-        FlipHorizontally(player);
-        var companion = FindFirstObjectByType<CompanionFollow>();
-        if (companion != null) FlipHorizontally(companion.transform);
-
+        FaceDirection(player, dirDown);
+        FaceDirection(FindCompanion(), dirDown);
         Dbg.Log("[S#21] 둘이 돌아본다 — 아무것도 없다");
     }
 
-    static void FlipHorizontally(Transform t)
+    Transform FindCompanion()
     {
-        if (t == null) return;
-        var sr = t.GetComponentInChildren<SpriteRenderer>();
-        if (sr != null) sr.flipX = !sr.flipX;
+        var c = FindFirstObjectByType<CompanionFollow>();
+        return c != null ? c.transform : null;
+    }
+
+    /// <summary>애니메이터의 dir 을 바꾼다. 파라미터가 없으면 아무 일도 하지 않는다.</summary>
+    static void FaceDirection(Transform who, int dir)
+    {
+        if (who == null) return;
+        var anim = who.GetComponentInChildren<Animator>();
+        if (anim == null || !anim.isActiveAndEnabled) return;
+        foreach (var p in anim.parameters)
+        {
+            if (p.name != "dir") continue;
+            if (p.type == AnimatorControllerParameterType.Int)        anim.SetInteger("dir", dir);
+            else if (p.type == AnimatorControllerParameterType.Float) anim.SetFloat("dir", dir);
+            return;
+        }
+    }
+
+    /// <summary>황금 광막. 결계 스프라이트가 없어도 강화가 화면에 전달되게 하는 주 채널이다.</summary>
+    GameObject BuildGlow()
+    {
+        var root = new GameObject("S21 BarrierGlow [Auto]");
+        var canvas = root.AddComponent<Canvas>();
+        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 96;            // 가장자리 효과(95) 위, 페이드(999) 아래
+        UiCanvasScale.Add(root);
+
+        var imgGo = new GameObject("Glow");
+        imgGo.transform.SetParent(root.transform, false);
+        var img = imgGo.AddComponent<Image>();
+        img.color = new Color(glowColor.r, glowColor.g, glowColor.b, 0f);
+        img.raycastTarget = false;
+        var rt = imgGo.GetComponent<RectTransform>();
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+
+        _glowRoot = root;
+        return root;
+    }
+
+    static IEnumerator FadeGlow(Image img, float from, float to, float duration, Color color)
+    {
+        if (img == null) yield break;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.unscaledDeltaTime;     // 슬로모션 중에도 빛은 제 속도로 간다
+            float a = Mathf.Lerp(from, to, Mathf.Clamp01(t / duration));
+            img.color = new Color(color.r, color.g, color.b, a);
+            yield return null;
+        }
+        img.color = new Color(color.r, color.g, color.b, to);
     }
 
     IEnumerator PlayClickingTwice()
