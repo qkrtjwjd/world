@@ -35,6 +35,33 @@ $out    = $proj
 if (-not (Test-Path $csc)) {
     throw "Roslyn csc not found at $csc - check the Unity version in `$editor."
 }
+
+# --- dotnet host -----------------------------------------------------------
+#   csc.dll needs a .NET host to run. `dotnet` is NOT on PATH on this machine -
+#   the only runtime present is the one Unity ships. The bare command used to be
+#   hardcoded here and failed with CommandNotFoundException, so resolve it instead.
+#
+#   Unity's bundled runtime comes first on purpose: csc.dll is from that same
+#   Unity install, so its host is the one guaranteed to match. A standalone SDK
+#   is only a fallback.
+$dotnetCandidates = @(
+    "$editor\NetCoreRuntime\dotnet.exe"
+    (Get-Command dotnet -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Source)
+    "$env:DOTNET_ROOT\dotnet.exe"
+    "$env:ProgramFiles\dotnet\dotnet.exe"
+    "${env:ProgramFiles(x86)}\dotnet\dotnet.exe"
+    "$env:LOCALAPPDATA\Microsoft\dotnet\dotnet.exe"
+)
+$dotnet = $null
+foreach ($c in $dotnetCandidates) {
+    if ($c -and (Test-Path $c)) { $dotnet = $c; break }
+}
+if (-not $dotnet) {
+    throw ("dotnet host not found. Looked in:`n  " + ($dotnetCandidates -join "`n  ") +
+           "`nUnity ships one at <Editor>\Data\NetCoreRuntime - if that path is missing, " +
+           "the Unity version in `$editor is wrong or that install is incomplete.")
+}
+Write-Output ('dotnet host: ' + $dotnet)
 if (-not (Test-Path "$proj\Library\ScriptAssemblies")) {
     throw "Library\ScriptAssemblies missing. Open the project in Unity once so package assemblies exist."
 }
@@ -95,7 +122,7 @@ $lines += $refs    | ForEach-Object { '-r:"' + $_ + '"' }
 $lines += $sources | ForEach-Object { '"' + $_ + '"' }
 Set-Content -Path $rsp -Value $lines -Encoding utf8
 
-& dotnet $csc "@$rsp" 2>&1 | Tee-Object -FilePath "$out\csc-output.txt" | Out-Null
+& $dotnet $csc "@$rsp" 2>&1 | Tee-Object -FilePath "$out\csc-output.txt" | Out-Null
 
 $errors = Select-String -Path "$out\csc-output.txt" -Pattern 'error CS'
 Write-Output ''
