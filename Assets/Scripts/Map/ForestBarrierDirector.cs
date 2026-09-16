@@ -245,10 +245,20 @@ public class ForestBarrierDirector : MonoBehaviour
         StartCoroutine(PlayDemoEnding());
     }
 
-    /// <summary>디버그·에디터에서 거리와 무관하게 강제로 재생한다.</summary>
+    /// <summary>
+    /// 디버그·에디터에서 거리와 무관하게 강제로 재생한다.
+    ///
+    /// <para>⚠ Update 를 거치지 않으므로 <see cref="player"/> 를 여기서 채운다.
+    /// 비워 두면 물러섬·고개 올리기·돌아보기가 통째로 빠져 확인이 되지 않는다.</para>
+    /// </summary>
     public void ForcePlay()
     {
         if (_fired || IsPlaying) return;
+        if (player == null)
+        {
+            var go = GameObject.FindWithTag("Player");
+            if (go != null) player = go.transform;
+        }
         _fired = true;
         StartCoroutine(PlayDemoEnding());
     }
@@ -473,7 +483,7 @@ public class ForestBarrierDirector : MonoBehaviour
 
     Transform FindCompanion()
     {
-        var c = FindFirstObjectByType<CompanionFollow>();
+        var c = FindAnyObjectByType<CompanionFollow>();
         return c != null ? c.transform : null;
     }
 
@@ -558,6 +568,7 @@ public class ForestBarrierDirector : MonoBehaviour
         yield return new WaitForSecondsRealtime(endCardDuration);
 
         IsPlaying = false;
+        Time.timeScale = 1f;               // 슬로모션이 남아 있을 자리는 아니지만 방어적으로 되돌린다
         YarnDialogue.UnlockPlayer(_lockedCtrl);
         _lockedCtrl = null;
 
@@ -566,6 +577,22 @@ public class ForestBarrierDirector : MonoBehaviour
             // 화면을 띄운 채로 둔다. 「종결이 아니라 정지」를 그대로 두고 싶을 때의 선택지다.
             yield break;
         }
+
+        // ── 데모 밖으로 나가기 전에 되돌린다 ────────────────────────────────
+        // 셋 다 씬을 넘어 살아남는 것들이라, 여기서 정리하지 않으면 타이틀 화면까지 따라간다.
+
+        // ① 가장자리 잔광 — ScreenEdgeEffectController 는 DontDestroyOnLoad 다.
+        ScreenEdgeEffectController.ClearSustained();
+
+        // ② 황금 광막 — 씬 오브젝트라 전환에 파괴되지만, 전환 전 한 프레임을 남기지 않는다.
+        if (_glowRoot != null) { Destroy(_glowRoot); _glowRoot = null; }
+
+        // ③ 필터 토글 봉인 — static 이라 씬을 넘어 유지된다.
+        //    ⚠ GameState 의 초기화는 [RuntimeInitializeOnLoadMethod] 라 에디터 플레이를
+        //      다시 시작할 때만 돈다. 게임 안에서 타이틀로 갔다 새로 시작하는 경로에서는
+        //      불리지 않으므로, 여기서 풀지 않으면 다음 회차에 F 키가 영영 듣지 않는다.
+        //      봉인의 목적은 「종료 화면까지 환상으로 고정」이고 그 뒤는 데모 밖이다.
+        DaggerFilterController.UnsealToggle();
 
         if (card != null) Destroy(card);
         UnityEngine.SceneManagement.SceneManager.LoadScene(nextScene);
