@@ -60,6 +60,12 @@ public class NightSequenceManager : MonoBehaviour
     [Tooltip("복도 발소리 이름. 비우면 무음.")]
     public string footstepSfxName = "";
 
+    [Header("S#02 — 루가 침대로 돌아간다")]
+    [Tooltip("루가 돌아갈 침대 위치. 비우면 S#01 시작 때 루가 있던 자리(잠에서 깬 자리)로 돌아간다.")]
+    public Transform luBedPoint;
+    [Tooltip("침대까지 걸리는 시간(초). 정본 D-S#02: 「반사적으로 … 망설임이 없다. 몸에 밴 동작」 — 짧게 둔다.")]
+    public float returnToBedDuration = 0.4f;
+
     // ── S#03 — 못 들은 척 ──────────────────────────
     [Header("S#03 — 못 들은 척 (Yarn 노드)")]
     public string yarnNode_S3_Owl   = "House_Unheard_Owl";
@@ -101,6 +107,8 @@ public class NightSequenceManager : MonoBehaviour
     // ── 내부 상태 ─────────────────────────────────
     private bool      _windowReached = false;
     private Coroutine _owlCallLoop;
+    private Vector3   _luWakePosition;
+    private bool      _hasWakePosition;
 
     [Header("── 테스트 전용 (빌드 전 해제) ──")]
     [SerializeField] private bool _skipForTesting = false;
@@ -162,10 +170,16 @@ public class NightSequenceManager : MonoBehaviour
 
     // ─── S#01 — 부엉이 ────────────────────────────
     // 루가 깨어나 창틀의 부엉이를 본다. 플레이어가 창문에 도달하면 S#02로.
-    // 목표 UI는 yarn 의 <<show_objective>> 가 띄운다.
+    // 2026-09-17: 목표 UI(「창문으로 이동해서 밖을 확인하세요.」)는 띄우지 않는다.
+    // 유도는 부엉이 울음 반복만 맡는다.
     IEnumerator RunScene1()
     {
         LockPlayer();
+
+        // 잠에서 깬 자리 = 침대. S#02 에서 루가 여기로 돌아간다.
+        var lu = FindLu();
+        _hasWakePosition = lu != null;
+        if (lu != null) _luWakePosition = lu.transform.position;
 
         if (owlObject) owlObject.SetActive(true);
 
@@ -197,9 +211,12 @@ public class NightSequenceManager : MonoBehaviour
 
         // 발소리 — 세라가 복도에서 다가온다
         PlaySfxIfNamed(footstepSfxName);
-        if (seraLight) seraLight.intensity = 0f;
+        SetSeraLightPresence(0f);
         if (seraAnimator) seraAnimator.SetTrigger(seraWalkInTrigger);
-        if (seraLight) StartCoroutine(FadeInLight(seraLight, seraLightTarget, 1f));
+        FadeSeraLight(1f, 1f);
+
+        // 발소리에 루가 반사적으로 침대로 돌아간다(D-S#02 ▶ 연출).
+        yield return StartCoroutine(ReturnLuToBed());
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S2_Enter, false);
 
@@ -224,7 +241,7 @@ public class NightSequenceManager : MonoBehaviour
         // 퇴장. 발소리가 멀어질 때까지 아무 일도 일어나지 않게 둔다.
         if (seraAnimator) seraAnimator.SetTrigger(seraExitTrigger);
         AudioManager.Instance?.Play("doorClose");
-        if (seraLight) StartCoroutine(FadeOutLight(seraLight, 1f));
+        FadeSeraLight(0f, 1f);
         yield return _wait3s;
 
         UnlockPlayer();
@@ -281,6 +298,62 @@ public class NightSequenceManager : MonoBehaviour
         AudioManager.Instance?.Play(soundName);
     }
 
+    static ClearSky.SimplePlayerController FindLu() =>
+        PlayerStats.Instance != null
+            ? PlayerStats.Instance.GetComponent<ClearSky.SimplePlayerController>()
+            : Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+
+    /// <summary>
+    /// 루를 침대 자리로 짧게 옮긴다. 조작이 잠겨 있어 SimplePlayerController 가 Animator 를
+    /// 덮어쓰지 않으므로 여기서 걷기·방향을 직접 건다. 눕는 자세 스프라이트는 아직 없어
+    /// 도착하면 아래(0)를 보고 멈춘다.
+    /// </summary>
+    IEnumerator ReturnLuToBed()
+    {
+        var lu = FindLu();
+        if (lu == null) yield break;
+
+        Vector3 target;
+        if (luBedPoint != null)      target = luBedPoint.position;
+        else if (_hasWakePosition)   target = _luWakePosition;
+        else yield break;
+
+        var rb   = lu.GetComponent<Rigidbody2D>();
+        var anim = lu.GetComponent<Animator>();
+        Vector3 start = lu.transform.position;
+        Vector3 delta = target - start;
+        if (delta.sqrMagnitude < 0.0001f) yield break;
+
+        if (anim != null)
+        {
+            // 0=아래 · 1=옆 · 2=위. 옆이면 SimplePlayerController 와 같은 규칙으로 부호만 뒤집는다.
+            int dir = Mathf.Abs(delta.x) > Mathf.Abs(delta.y) ? 1 : (delta.y > 0f ? 2 : 0);
+            Vector3 s = lu.transform.localScale;
+            s.x = dir == 1 ? Mathf.Abs(s.x) * (delta.x > 0f ? -1f : 1f) : Mathf.Abs(s.x);
+            lu.transform.localScale = s;
+            anim.SetInteger("dir", dir);
+            anim.SetBool("isRun", true);
+        }
+
+        float t = 0f;
+        float duration = Mathf.Max(0.01f, returnToBedDuration);
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            Vector3 p = Vector3.Lerp(start, target, Mathf.SmoothStep(0f, 1f, t / duration));
+            if (rb != null) rb.position = p; else lu.transform.position = p;
+            yield return null;
+        }
+        if (rb != null) { rb.position = target; rb.linearVelocity = Vector2.zero; }
+        else lu.transform.position = target;
+
+        if (anim != null)
+        {
+            anim.SetBool("isRun", false);
+            anim.SetInteger("dir", 0);
+        }
+    }
+
     IEnumerator OwlCallLoop()
     {
         var wait = new WaitForSeconds(owlCallInterval);
@@ -307,6 +380,39 @@ public class NightSequenceManager : MonoBehaviour
         }
         c.a = targetAlpha;
         image.color = c;
+    }
+
+    /// <summary>
+    /// 세라의 빛을 「등장 정도」로 다룹니다.
+    ///
+    /// <see cref="SeraLightDirector"/> 가 붙어 있으면 세기를 직접 쓰지 않고 presence 축만 밉니다 —
+    /// 세기는 세라의 기분이 정하고 연출은 「얼마나 와 있는가」만 정하기 때문입니다.
+    /// 둘 다 세기를 쓰면 매 프레임 서로 밀어냅니다.
+    ///
+    /// 디렉터가 없으면 예전처럼 <see cref="seraLightTarget"/> 까지 세기를 페이드합니다.
+    /// </summary>
+    SeraLightDirector SeraLightDir =>
+        seraLight != null ? seraLight.GetComponent<SeraLightDirector>() : null;
+
+    void SetSeraLightPresence(float value)
+    {
+        if (seraLight == null) return;
+
+        var dir = SeraLightDir;
+        if (dir != null) { dir.SetPresence(value); return; }
+
+        seraLight.intensity = value <= 0f ? 0f : seraLightTarget;
+    }
+
+    void FadeSeraLight(float target, float duration)
+    {
+        if (seraLight == null) return;
+
+        var dir = SeraLightDir;
+        if (dir != null) { dir.FadePresenceTo(target, duration); return; }
+
+        if (target <= 0f) StartCoroutine(FadeOutLight(seraLight, duration));
+        else              StartCoroutine(FadeInLight(seraLight, seraLightTarget, duration));
     }
 
     IEnumerator FadeInLight(Light2D light, float target, float duration)

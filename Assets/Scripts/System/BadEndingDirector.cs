@@ -91,6 +91,15 @@ public class BadEndingDirector : MonoBehaviour
     [Tooltip("한 단계를 유지하는 시간(초).")]
     public float livingLightStageSeconds = 2.2f;
 
+    [Tooltip("같은 박자로 함께 낮출 전체 조명(Global Light 2D). 비우면 빛 조각만 움직인다.\n" +
+             "⚠ 여기는 아주 조금만 내린다. 많이 내리면 「조명만 이동」이 아니라 페이드가 되어 " +
+             "정본 문단 474 가 금지한 것이 된다.")]
+    public Light2D ambientLight;
+
+    [Tooltip("전체 조명의 단계별 밝기. livingLightIntensities 와 같은 박자로 간다.\n" +
+             "비워 두면 전체 조명은 건드리지 않는다.")]
+    public float[] ambientIntensities = { 1f, 0.95f, 0.9f, 0.85f };
+
     // ── 카메라 ──────────────────────────────────────────────────────────────
     [Header("BE#01-a — 문이 커지는 컷")]
     [Tooltip("컷이 바뀔 때마다 줄어드는 orthoSize 단계(정본 문단 460). 비우면 줌을 쓰지 않는다.")]
@@ -136,6 +145,7 @@ public class BadEndingDirector : MonoBehaviour
     Vector3   _origSeraPos;
     Transform _origCameraTarget;
     float     _origLightIntensity;
+    float     _origAmbientIntensity;
     Quaternion _origLightRotation;
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -250,19 +260,36 @@ public class BadEndingDirector : MonoBehaviour
     {
         yield return CutTo(livingRoomSpawn);
 
-        if (livingLight == null || livingLightIntensities == null || livingLightIntensities.Length == 0)
+        // 단계 수는 빛 조각 쪽이 정한다. 빛 조각이 없으면 전체 조명 배열이 대신 정한다.
+        int stages = (livingLightIntensities != null) ? livingLightIntensities.Length : 0;
+        if (stages == 0 && ambientIntensities != null) stages = ambientIntensities.Length;
+
+        if ((livingLight == null && ambientLight == null) || stages == 0)
         {
             // 조명이 배선돼 있지 않아도 시간의 경과는 흘러야 한다.
             yield return new WaitForSecondsRealtime(livingLightStageSeconds * 3f);
             yield break;
         }
 
-        float baseAngle = livingLight.transform.eulerAngles.z;
-        for (int i = 0; i < livingLightIntensities.Length; i++)
+        // 기준 각도는 씬에서 맞춰 둔 값이다. 디렉터는 거기에 더하기만 한다 —
+        // 빛이 어느 쪽에서 드는지는 씬이 정하고, 코드는 「움직인다」만 맡는다.
+        float baseAngle = (livingLight != null) ? livingLight.transform.eulerAngles.z : 0f;
+
+        for (int i = 0; i < stages; i++)
         {
-            livingLight.intensity = livingLightIntensities[i];
-            livingLight.transform.rotation =
-                Quaternion.Euler(0f, 0f, baseAngle + livingLightAngleStep * i);
+            if (livingLight != null)
+            {
+                if (livingLightIntensities != null && i < livingLightIntensities.Length)
+                    livingLight.intensity = livingLightIntensities[i];
+
+                livingLight.transform.rotation =
+                    Quaternion.Euler(0f, 0f, baseAngle + livingLightAngleStep * i);
+            }
+
+            // 전체 조명은 같은 박자로 아주 조금만 내린다(정본 문단 474).
+            if (ambientLight != null && ambientIntensities != null && i < ambientIntensities.Length)
+                ambientLight.intensity = ambientIntensities[i];
+
             yield return new WaitForSecondsRealtime(livingLightStageSeconds);
         }
     }
@@ -398,6 +425,9 @@ public class BadEndingDirector : MonoBehaviour
             _origLightIntensity = livingLight.intensity;
             _origLightRotation  = livingLight.transform.rotation;
         }
+
+        if (ambientLight != null)
+            _origAmbientIntensity = ambientLight.intensity;
     }
 
     void EndPlayback()
@@ -421,6 +451,9 @@ public class BadEndingDirector : MonoBehaviour
             livingLight.intensity          = _origLightIntensity;
             livingLight.transform.rotation = _origLightRotation;
         }
+
+        if (ambientLight != null)
+            ambientLight.intensity = _origAmbientIntensity;
 
         YarnDialogue.UnlockPlayer(_lockedCtrl);
         _lockedCtrl = null;

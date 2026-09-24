@@ -650,6 +650,14 @@ public class YarnCommandBridge : MonoBehaviour
     private IEnumerator ShowSpriteInternal(string character, string emotion,
                                             string side, string mode)
     {
+        // 0. 기분 통지 — 초상화 말고 다른 것이 감정에 반응할 자리다(세라의 빛 등).
+        //
+        // ⚠ effectiveEmotion 이 아니라 원본 emotion 을 넘긴다. _real 변형은 스프라이트 교체용이며
+        //   등록된 감정 ID 가 아니다(CharacterSpriteData.asset).
+        // ⚠ 아래 전투 조기 반환보다 앞에 둔다 — 전투 중에도 기분은 바뀌고,
+        //   빛은 필드 오브젝트라 전투 UI 와 겹치지 않는다.
+        DialogueEvents.RaisePortraitEmotion(character, emotion);
+
         // 1. 배치 방향 결정
         bool useRight = ResolveSide(character, side);
 
