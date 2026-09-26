@@ -246,7 +246,10 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
 
         if (_edgeEffectCoroutine != null)
             StopCoroutine(_edgeEffectCoroutine);
-        _edgeEffectCoroutine = StartCoroutine(EdgeEffectRoutine());
+        // 2026-09-27: 게이지 UI(Canvas)가 꺼져 있으면 코루틴을 시작할 수 없어 에러가 났다(S#04E 마시멜로).
+        //   가장자리 효과는 같은 Canvas 안의 그림이라 꺼져 있으면 어차피 보이지 않는다 — 건너뛴다.
+        //   게이지 값 변경(위)은 그대로 적용된다.
+        _edgeEffectCoroutine = isActiveAndEnabled ? StartCoroutine(EdgeEffectRoutine()) : null;
     }
 
     /// <summary>단검 선택: 현실 100% 강제 후 tempForceDuration 초 뒤 이전 게이지로 복원.</summary>
