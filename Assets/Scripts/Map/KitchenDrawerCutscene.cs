@@ -3,12 +3,14 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// S#08 부엌 서랍 — 작고 녹슨 열쇠(다락방 열쇠) 획득.
+/// S#08 부엌 서랍 — 작고 낡은 열쇠(다락방 열쇠) 획득.
 /// InteractionTrigger.onInteract 에 BeginCutscene() 을 연결하세요.
 ///
-/// ⚠ 정본 규약 (2026-08-07 D 정본 S#08)
-///   - 지문 한 줄("부엌 서랍 안에 작고 녹슨 열쇠가 나온다. 다락방 열쇠.")은 화면에 나온다.
-///     정본이 금지한 것은 **설명**이지 지문이 아니다 — 루가 이것이 다락방 열쇠라는 것을
+/// ⚠ 정본 규약 (D 정본 S#08)
+///   - 「녹슨 열쇠」는 루가 8살 때 만든 쉼터 열쇠 전용 명칭이다(D 문단 328). 이것은 「다락방 열쇠」다.
+///   - 지문 한 줄("부엌 서랍 안에 작고 낡은 열쇠가 나온다. 다락방 열쇠.")은 **화면에 나오지 않는다.**
+///     v3 화이트리스트가 지문 전체를 표시 금지로 본다(House_Kitchen_Drawer 주석 · node_map S#08 = 0줄).
+///     루가 이것이 다락방 열쇠라는 것을
 ///     어떻게 아는지는 설명하지 않는다. 이 집에서 27년을 살았다. 열쇠 하나가 어디 것인지는 안다.
 ///     한 번도 열어본 적이 없을 뿐이다. (구 House_Kitchen_key 의 "어떻게 알았지?" 는 폐기됨)
 ///   - 카메라가 열쇠를 중앙에 두지 않는다. 살짝 구석에 두고 플레이어가 먼저 찾아내게 한다.
@@ -30,8 +32,19 @@ public class KitchenDrawerCutscene : MonoBehaviour
     [Header("Yarn 노드 이름")]
     public string yarnNode = "House_Kitchen_Drawer";
 
-    [Header("루 손 클로즈업 Image (Canvas)")]
+    [Header("서랍 안 클로즈업 (D S#08 문단 324 · 433)")]
+    [Tooltip("전체화면 클로즈업을 띄울 Image (Canvas). 아래 스프라이트가 있을 때만 쓴다.")]
     public Image handCloseupImage;
+    [Tooltip("「부엌 서랍 — 열린 상태 내부 클로즈업」. 잡동사니 사이 열쇠 하나를 **구석에** 그려 넣는다\n" +
+             "(카메라가 열쇠를 중앙에 두지 않는다 — 플레이어가 먼저 찾아내게). 비우면 월드 카메라 클로즈업으로 대신한다.")]
+    public Sprite drawerInteriorSprite;
+    [Tooltip("스프라이트가 없을 때 카메라가 붙을 대상. 비우면 이 오브젝트(싱크대 앞).")]
+    public Transform drawerCloseupTarget;
+
+    // 2026-09-27: 예전에는 handCloseupImage 를 스프라이트 확인 없이 알파 1 로 띄웠다.
+    //   그 Image 는 S#03 도자기 손가락과 공용이고 스프라이트가 비어 있어(흰색) 서랍을 열면
+    //   1.5초간 화면 전체가 흰 사각형으로 덮였다. 스프라이트가 있을 때만 띄우고, 없으면
+    //   D 문단 324 [CAM] 「서랍 안 클로즈업」을 월드 카메라 한 단계 클로즈업으로 대신한다.
 
     [Header("효과음")]
     public AudioClip sfxDrawerOpen;
@@ -55,8 +68,19 @@ public class KitchenDrawerCutscene : MonoBehaviour
     {
         var ctrl = YarnDialogue.LockPlayer();
 
-        if (handCloseupImage != null)
+        bool useImage   = handCloseupImage != null && drawerInteriorSprite != null;
+        bool cameraHeld = false;
+        if (useImage)
+        {
+            handCloseupImage.sprite = drawerInteriorSprite;
             yield return StartCoroutine(FadeInImage(handCloseupImage, 1f, 0.3f));
+        }
+        else if (CameraDirector.Instance != null && CameraFollow.Instance != null)
+        {
+            CameraDirector.Instance.HoldCloseUp(drawerCloseupTarget != null ? drawerCloseupTarget : transform,
+                                                CameraDirector.OrthoStepsCloser(1));
+            cameraHeld = true;
+        }
 
         AudioManager.Instance?.Play(sfxDrawerOpen);
         yield return new WaitForSeconds(0.5f);
@@ -74,8 +98,10 @@ public class KitchenDrawerCutscene : MonoBehaviour
         if (atticKeyItem != null)
             InventoryManager.Instance?.AddItem(atticKeyItem);
 
-        if (handCloseupImage != null)
+        if (useImage)
             yield return StartCoroutine(FadeOutImage(handCloseupImage, 0.3f));
+        if (cameraHeld)
+            CameraDirector.Instance?.RestoreDefault();
 
         ObjectiveManager.Instance?.ShowObjective(objectiveHeader, objectiveBody);
 
