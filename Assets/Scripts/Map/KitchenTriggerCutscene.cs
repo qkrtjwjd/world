@@ -248,7 +248,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Tap, false);
 
         // 각설탕 — 결계 밖에서 들어온 물건이라 채도·윤곽이 다르다
-        if (sugarCubeCloseupImage != null)
+        if (CloseupArt.Has(sugarCubeCloseupImage))
         {
             sugarCubeCloseupImage.gameObject.SetActive(true);
             yield return _wait1s;
@@ -572,7 +572,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
     /// <summary>도자기 손가락 클로즈업 + 딱 소리 count회.</summary>
     IEnumerator ShowCeramicHand(int count)
     {
-        if (ceramicHandCloseupImage != null)
+        if (CloseupArt.Has(ceramicHandCloseupImage))
             ceramicHandCloseupImage.gameObject.SetActive(true);
 
         for (int i = 0; i < count; i++)
@@ -642,7 +642,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
     /// <summary>클로즈업 Image 를 잠깐 띄웠다 끈다. 비어 있으면 조용히 건너뛴다.</summary>
     IEnumerator FlashCloseup(Image image, float holdSeconds)
     {
-        if (image == null) yield break;
+        if (!CloseupArt.Has(image)) yield break;   // 그림이 없으면 흰 화면만 뜬다
 
         image.gameObject.SetActive(true);
         yield return new WaitForSeconds(holdSeconds);

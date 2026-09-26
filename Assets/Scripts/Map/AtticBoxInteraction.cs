@@ -33,6 +33,14 @@ public class AtticBoxInteraction : MonoBehaviour
     public string yarnNode_S9_Box = "House_Attic_Box";
     [Tooltip("상자 뚜껑이 열리는 소리.")]
     public AudioClip sfxBoxOpen;
+    [Tooltip("상자를 여는 순간부터 깔리는 아주 낮은 지속음 (AudioManager 등록 이름, 루프). 비우면 무음.\n" +
+             "D 문단 333 에서 시작해 S#10 동안 유지(346), S#11 라디오에서 끊는다(362).")]
+    public string droneLoopName = "";
+
+    // 2026-09-27: House_Attic_Box 의 camera_closeup "상자" 1.0 2.6 을 걷어내고 여기서 건다.
+    //   다락방은 이미 3배 줌(ortho 1.875)으로 들어가는 방이라 2.6 을 빼면 한계 1 까지 내려가 6배가 됐다.
+    //   이제 「지금 보이는 배율에서 한 단계 가까이」(CameraDirector.OrthoStepsCloser)로 상자를 내려다본다.
+    //   D 문단 336 「상자를 열면 내려다보는 부감으로 전환」 — 그림(boxContentsImage)이 있으면 그쪽이 우선이다.
 
     // ── S#10 ─────────────────────────────────────────────────────────────
     [Header("S#10 — 코트 주머니")]
@@ -112,16 +120,29 @@ public class AtticBoxInteraction : MonoBehaviour
     {
         AudioManager.Instance?.Play(sfxBoxOpen);
 
-        if (boxContentsImage != null)
+        // 상자를 여는 순간부터 아주 낮은 지속음 하나(D 문단 333). S#11 라디오에서 끊는다.
+        if (!string.IsNullOrEmpty(droneLoopName))
+            AudioManager.Instance?.PlayLoop(droneLoopName);
+
+        bool cameraHeld = false;
+        if (CloseupArt.Has(boxContentsImage))
         {
             boxContentsImage.gameObject.SetActive(true);
             yield return new WaitForSeconds(0.8f);
         }
+        else if (CameraDirector.Instance != null && CameraFollow.Instance != null)
+        {
+            // 그림이 없으면 상자를 한 단계 가까이 내려다본다. 세 물건을 순서대로 비추지 않는다.
+            CameraDirector.Instance.HoldCloseUp(transform, CameraDirector.OrthoStepsCloser(1));
+            cameraHeld = true;
+            yield return new WaitForSeconds(0.8f);
+        }
 
         if (!string.IsNullOrEmpty(yarnNode_S9_Box))
-            yield return YarnDialogue.PlayAndWait(yarnNode_S9_Box, false);
+            yield return YarnDialogue.PlayIfExists(yarnNode_S9_Box, false);
 
         if (boxContentsImage != null) boxContentsImage.gameObject.SetActive(false);
+        if (cameraHeld) CameraDirector.Instance?.RestoreDefault();
     }
 
     // ─── S#10 — 코트 주머니 ──────────────────────────────────────────────
@@ -131,7 +152,7 @@ public class AtticBoxInteraction : MonoBehaviour
     {
         AudioManager.Instance?.Play(sfxClothRustle);
 
-        if (coatPocketCloseupImage != null)
+        if (CloseupArt.Has(coatPocketCloseupImage))
         {
             coatPocketCloseupImage.gameObject.SetActive(true);
             yield return new WaitForSeconds(0.8f);
@@ -160,6 +181,10 @@ public class AtticBoxInteraction : MonoBehaviour
     //   대비 노드 안에서 $라디오소지 로 조건 분기한다(F-8-4).
     IEnumerator RunS11_Radio()
     {
+        // 지속음은 여기서 끊는다 — 유의 목소리 외에 아무 소리도 없어야 한다(D 문단 362).
+        if (!string.IsNullOrEmpty(droneLoopName))
+            AudioManager.Instance?.StopLoop(droneLoopName);
+
         GiveItem(radioItem);
         yield return WaitForAcquisitionNotice();
 

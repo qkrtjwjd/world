@@ -58,7 +58,7 @@ public class AtticDoorCutscene : MonoBehaviour
         var ctrl = YarnDialogue.LockPlayer();
 
         // 손+자물쇠 클로즈업
-        if (handLockCloseupImage != null)
+        if (CloseupArt.Has(handLockCloseupImage))
             yield return StartCoroutine(FadeInImage(handLockCloseupImage, 1f, 0.3f));
 
         AudioManager.Instance?.Play(sfxLockClick);
@@ -66,7 +66,7 @@ public class AtticDoorCutscene : MonoBehaviour
 
         // 문 열리는 배경으로 전환
         if (handLockCloseupImage != null) handLockCloseupImage.gameObject.SetActive(false);
-        if (doorOpenBgImage != null)      doorOpenBgImage.gameObject.SetActive(true);
+        if (CloseupArt.Has(doorOpenBgImage)) doorOpenBgImage.gameObject.SetActive(true);
 
         AudioManager.Instance?.Play(sfxDoorCreak);
         yield return new WaitForSeconds(0.8f);

@@ -75,7 +75,7 @@ public class AtticRadioCutscene : MonoBehaviour
         // 다이얼이 저 혼자 떨린다 — 루는 버튼을 누르지 않았다.
         AudioManager.Instance?.Play(sfxRadioButton);
 
-        if (radioDialImage != null)
+        if (CloseupArt.Has(radioDialImage))
             yield return StartCoroutine(FadeInImage(radioDialImage, 1f, 0.3f));
 
         yield return new WaitForSeconds(0.5f);
