@@ -89,6 +89,14 @@ public class FrontDoorInteraction : MonoBehaviour
     public string refusedObjectiveHeader = "[목표 갱신]";
     public string refusedObjectiveBody   = "나갈 방법을 찾으세요";
 
+    // 2026-09-27 사용자 결정: D S#07 문단 306 「[UI][목표] 집 안을 뒤져보세요」는
+    //   거부 뒤 루가 현관에서 걸어 나가는 순간(S#06 → S#07 경계) 띄운다.
+    [Header("S#07 — 현관을 벗어나면 (D 문단 306)")]
+    public string searchObjectiveHeader = "[목표]";
+    public string searchObjectiveBody   = "집 안을 뒤져보세요";
+    [Tooltip("거부 뒤 루가 문에서 이 거리(월드 유닛) 넘게 멀어지면 S#07 목표로 바꾼다.")]
+    public float  searchObjectiveDistance = 2f;
+
     /// <summary>정본 지정 — 4번째 시도에서 손잡이가 뜨거워진다.</summary>
     private const int RefusalAttempt = 4;
 
@@ -187,6 +195,22 @@ public class FrontDoorInteraction : MonoBehaviour
 
         YarnDialogue.UnlockPlayer(ctrl);
         _isBusy = false;
+
+        StartCoroutine(ShowSearchObjectiveWhenLeaving());
+    }
+
+    /// <summary>거부 뒤 루가 현관에서 걸어 나가면 S#07 목표로 바꾼다. 한 번만.</summary>
+    IEnumerator ShowSearchObjectiveWhenLeaving()
+    {
+        while (true)
+        {
+            if (_departed || _sealed) yield break;
+            var lu = FindLu();
+            if (lu != null && Vector2.Distance(lu.transform.position, KnobTarget.position) > searchObjectiveDistance)
+                break;
+            yield return null;
+        }
+        ObjectiveManager.Instance?.ShowObjective(searchObjectiveHeader, searchObjectiveBody);
     }
 
     // ─── S#06 클로즈업 · 임시 동작 ─────────────────────────────────────────
@@ -223,12 +247,7 @@ public class FrontDoorInteraction : MonoBehaviour
     void HoldKnobCloseup()
     {
         if (_closeupHeld || CameraDirector.Instance == null || CameraFollow.Instance == null) return;
-
-        // 지금 화면에 실제로 보이는 배율 N 에서 한 단계 가까이. 5.625/N 만 쓸 수 있다(CLAUDE.md §11).
-        float baseOrtho = CameraFollow.Instance.defaultOrthoSize;
-        float shown = Camera.main != null ? Camera.main.orthographicSize : CameraFollow.Instance.currentOrthoSize;
-        int n = Mathf.Max(1, Mathf.RoundToInt(baseOrtho / Mathf.Max(0.01f, shown)));
-        CameraDirector.Instance.HoldCloseUp(CloseupAnchor(), baseOrtho / (n + Mathf.Max(1, knobCloseupSteps)));
+        CameraDirector.Instance.HoldCloseUp(CloseupAnchor(), CameraDirector.OrthoStepsCloser(knobCloseupSteps));
         _closeupHeld = true;
         _closeupWatch = StartCoroutine(WatchLuLeavingDoor());
     }

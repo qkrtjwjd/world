@@ -53,6 +53,15 @@ public class InteractionTrigger : MonoBehaviour
     [Tooltip("대사가 완전히 끝났을 때 호출됩니다.")]
     public UnityEvent onDialogueComplete;
 
+    // 2026-09-27: D S#07 문단 307 [CAM] 「자유 이동. 상호작용 시에만 오브젝트 클로즈업으로 붙는다. 컷을 만들지 않는다.」
+    //   문단 312·314·316 의 신발장·식탁은 「대사를 붙이지 않는다. 보여주기만 한다」 — 대사가 없어도
+    //   클로즈업으로 보여준다. 기본값은 꺼짐이다. 켠 오브젝트에만 걸린다.
+    [Header("클로즈업 (선택 — 상호작용할 때만 이 오브젝트에 붙는다)")]
+    [Tooltip("켜면 상호작용할 때 이 오브젝트에 한 단계 클로즈업한다. 대사가 있으면 대사가 끝날 때 풀린다.")]
+    public bool  closeupOnInteract  = false;
+    [Tooltip("대사가 없을 때 비춰 두는 시간(초). 그동안은 조작을 잠근다.")]
+    public float closeupHoldSeconds = 1.2f;
+
     [Header("대사 후 아이템 스폰 (선택 — pickupPrefab 비워두면 비활성)")]
     [Tooltip("ItemPickup 컴포넌트가 포함된 프리팹. 대화 후 인스턴스화합니다.")]
     public GameObject pickupPrefab;
@@ -129,11 +138,49 @@ public class InteractionTrigger : MonoBehaviour
 
         onInteract?.Invoke();
 
+        bool dialogueWillPlay = !string.IsNullOrEmpty(yarnNode) && !YarnDialogue.IsRunning
+                             && !(playOnce && _hasPlayed && string.IsNullOrEmpty(yarnNodeRepeat));
+
         if (!string.IsNullOrEmpty(yarnNode))
             HandleDialogue();
 
+        if (closeupOnInteract && !_closeupActive)
+            StartCoroutine(InteractCloseup(dialogueWillPlay));
+
         if (hideTextAfterFirstView)
             InteractionTextUI.Instance?.Hide();
+    }
+
+    // ── 클로즈업 ──────────────────────────────────────────────────────────
+
+    private bool _closeupActive;
+
+    /// <summary>
+    /// 이 오브젝트에 한 단계 클로즈업했다가 푼다. 대사가 있으면 대사가 끝날 때,
+    /// 없으면 closeupHoldSeconds 뒤에 푼다(그동안 조작 잠금 — 비추는 도중 걸어 나가지 않게).
+    /// </summary>
+    private IEnumerator InteractCloseup(bool withDialogue)
+    {
+        var director = CameraDirector.Instance;
+        if (director == null || CameraFollow.Instance == null) yield break;
+
+        _closeupActive = true;
+        director.HoldCloseUp(transform, CameraDirector.OrthoStepsCloser(1));
+
+        if (withDialogue)
+        {
+            yield return null;                                  // 대사가 시작될 한 프레임
+            while (YarnDialogue.IsRunning) yield return null;
+        }
+        else
+        {
+            var ctrl = YarnDialogue.LockPlayer();
+            yield return new WaitForSeconds(closeupHoldSeconds);
+            YarnDialogue.UnlockPlayer(ctrl);
+        }
+
+        director.RestoreDefault();
+        _closeupActive = false;
     }
 
     // ── 대사 처리 ─────────────────────────────────────────────────────────

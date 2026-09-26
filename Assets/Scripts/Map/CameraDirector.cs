@@ -88,6 +88,20 @@ public class CameraDirector : MonoBehaviour
     /// TriggerCloseUp 은 duration 뒤 자동 복귀하고, cam_zoom_in 은 이름으로 대상을 찾는다 —
     /// 코드가 Transform 을 들고 있고 플레이어 행동에 따라 풀 시점이 정해질 때 쓴다(S#06 현관 손잡이).
     /// </summary>
+    /// <summary>
+    /// 지금 화면에 실제로 보이는 픽셀퍼펙트 배율 N 에서 steps 단계 가까운 ortho. 5.625/N 만 쓸 수 있다(CLAUDE.md §11).
+    /// 빼기로 계산하지 않는 이유: 이미 확대된 방에서는 한계까지 파고든다(2026-09-27 실측 6배).
+    /// </summary>
+    public static float OrthoStepsCloser(int steps = 1)
+    {
+        var cf = CameraFollow.Instance;
+        float baseOrtho = cf != null ? cf.defaultOrthoSize : 5.625f;
+        float shown = Camera.main != null ? Camera.main.orthographicSize
+                    : (cf != null ? cf.currentOrthoSize : baseOrtho);
+        int n = Mathf.Max(1, Mathf.RoundToInt(baseOrtho / Mathf.Max(0.01f, shown)));
+        return baseOrtho / (n + Mathf.Max(1, steps));
+    }
+
     public void HoldCloseUp(Transform target, float orthoSize)
     {
         var cam = CameraFollow.Instance;
