@@ -23,10 +23,17 @@ title: House_Owl_Wake
 <<stop_bgm 1.0>>
 // [SFX] 부엉 부엉 — 창밖에서 낮고 규칙적인 울음  ← AudioManager 등록 필요
 // <<play_sfx "???">>
-<<show_objective "" "창문으로 이동해서 밖을 확인하세요.">>
+// 2026-09-17: 「창문으로 이동해서 밖을 확인하세요.」 목표를 뺐다.
+//   유도는 부엉이 울음 반복만 맡는다. 이동·창문 도달 대기는 그대로다 (NightSequenceManager.RunScene1).
+// 2026-09-26: 카메라가 두 번 튀던 것을 고쳤다. 예전 순서는 fade_from_black → camera_closeup "루 침대" 1.0 2.5
+//   → cam_zoom_out 1.0 2.0 이었다. 그러면 (1) 밝아진 뒤에야 클로즈업이 걸리고, (2) 곧바로 cam_zoom_out 이
+//   ortho 를 3.125 → 4.125 로 되돌려 픽셀퍼펙트 문턱(3.75)을 넘겨 줌이 통째로 무효가 되고(CLAUDE.md §11),
+//   (3) 대상 「루 침대」 오브젝트가 루와 떨어져 있어 카메라가 옆으로 갔다가 1초 뒤 루로 돌아왔다.
+//   D S#01 [CAM] 「침대 위 루 클로즈업에서 시작 → 줌아웃하며 방 전경」대로
+//   페이드 전에 루(Wizard)에 클로즈업을 걸고, 2초 뒤(= 밝아지고 1초 뒤) 한 번에 방 전경으로 돌아간다.
+//   줌아웃은 camera_closeup 의 자동 복귀가 맡는다. 픽셀퍼펙트라 부드럽게 빠지지 않고 한 번에 바뀐다.
+<<camera_closeup "Wizard" 2.0 2.5>>
 <<fade_from_black>>
-<<camera_closeup "루 침대" 1.0 2.5>>
-<<cam_zoom_out 1.0 2.0>>
 
 // 2026-08-08 수정: 아래 줄이 대사로 출력되고 있었다.
 //   정본에서는 "▶ 페이드인  오프닝 독백에서 이어지며 어두운 방 안이 서서히 보인다.
@@ -113,7 +120,12 @@ title: House_Sera_Lock_Tuck
 
 title: House_Unheard_Owl
 ---
-<<camera_closeup "루 침대" 1.0 2.5>>
+// 2026-09-26: camera_closeup "루 침대" 1.0 2.5 → cam_zoom_in "Wizard" 2.5 0.
+//   D 문단 56 「루 얼굴 클로즈업 고정. 눈을 뜨는 순간부터 감는 순간까지 컷 없이 한 호흡」.
+//   camera_closeup 은 1초 뒤 스스로 풀려 이 조건을 못 지켰고, 대상 「루 침대」 오브젝트가 루와 떨어져 있었다.
+//   cam_zoom_in 은 스스로 풀리지 않는다 — 도자기 손 클로즈업(NightSequenceManager)을 지나
+//   House_Unheard_Close 에서 눈을 감은 뒤 camera_restore 로 푼다. 날개 그림자는 그다음 방 전경에서 지나간다.
+<<cam_zoom_in "Wizard" 2.5 0>>
 // [SFX] 멀어지는 발소리 — 이후 정적  ← AudioManager 등록 필요
 // <<play_sfx "???">>
 
@@ -137,6 +149,9 @@ title: House_Unheard_Close
 // [지문 제거] {이름조사("는")} 언제나처럼 눈을 감고 못 들은 척, 못 본 척한다.
 
 <<showSprite "루" "eyes_closed" "right" "fixed">>
+// 눈을 감은 얼굴에 한 박자 머문다(D 문단 62 「저항하는 기색이 전혀 없다」). 그다음 클로즈업을 푼다.
+<<wait 1>>
+<<camera_restore>>
 
 // [지문 제거] 부엉이는 그걸 보고 어디론가 날아간다.
 
