@@ -315,7 +315,7 @@ public class NightSequenceManager : MonoBehaviour
         yield return _wait3s;
 
         StopCoroutine(leaving);
-        if (seraAnimator) seraAnimator.SetFloat("Speed", 0f);
+        { var w = SeraWalker; if (w != null) w.Stop(); }
         UnlockPlayer();
     }
 
@@ -423,97 +423,20 @@ public class NightSequenceManager : MonoBehaviour
     }
 
     // ─── S#02 세라 이동 ───────────────────────────
-    // SeraPatrol 과 같은 규칙: dir(0=아래 1=옆 2=위) + Speed, 좌우는 localScale.x 부호만 뒤집는다
-    // (양수가 왼쪽 · CLAUDE.md §11 — 통째 대입 금지). SeraLightDirector 가 같은 값으로 시선을 읽는다.
+    // 걷기·방향·숨기기는 SeraStageWalker 가 맡는다(S#04 KitchenTriggerCutscene 과 공용).
+    // 여기 있는 것은 그 얇은 창구뿐이다.
 
-    Vector3 _seraSavedPosition;
-    Vector3 _seraSavedScale;
-    int     _seraSavedDir;
-    bool    _seraSaved;
-    SpriteRenderer[] _seraRenderers;
-    bool[]           _seraRendererWasEnabled;
+    SeraStageWalker SeraWalker => SeraStageWalker.On(seraAnimator);
 
-    void CaptureSeraState()
-    {
-        _seraSaved = false;
-        if (seraAnimator == null) return;
-
-        var t = seraAnimator.transform;
-        _seraSavedPosition = t.position;
-        _seraSavedScale    = t.localScale;
-        _seraSavedDir      = seraAnimator.GetInteger("dir");
-        _seraRenderers     = t.GetComponentsInChildren<SpriteRenderer>(true);
-        _seraRendererWasEnabled = new bool[_seraRenderers.Length];
-        for (int i = 0; i < _seraRenderers.Length; i++)
-            _seraRendererWasEnabled[i] = _seraRenderers[i].enabled;
-        _seraSaved = true;
-    }
-
-    void RestoreSeraState()
-    {
-        if (!_seraSaved || seraAnimator == null) return;
-
-        var t = seraAnimator.transform;
-        t.position   = _seraSavedPosition;
-        t.localScale = _seraSavedScale;
-        seraAnimator.SetFloat("Speed", 0f);
-        seraAnimator.SetInteger("dir", _seraSavedDir);
-        for (int i = 0; i < _seraRenderers.Length; i++)
-            if (_seraRenderers[i] != null) _seraRenderers[i].enabled = _seraRendererWasEnabled[i];
-        _seraSaved = false;
-    }
-
-    /// <summary>세라의 모습만 켜고 끈다. 빛은 건드리지 않는다 — 문 밖에서는 빛만 새어 들어와야 한다.</summary>
-    void SetSeraVisible(bool visible)
-    {
-        if (_seraRenderers == null) return;
-        for (int i = 0; i < _seraRenderers.Length; i++)
-            if (_seraRenderers[i] != null && _seraRendererWasEnabled[i]) _seraRenderers[i].enabled = visible;
-    }
-
-    void SeraFace(Vector2 delta)
-    {
-        if (seraAnimator == null) return;
-        if (Mathf.Abs(delta.x) < 0.001f && Mathf.Abs(delta.y) < 0.001f) return;
-
-        var t = seraAnimator.transform;
-        Vector3 s = t.localScale;
-        if (Mathf.Abs(delta.x) >= Mathf.Abs(delta.y))
-        {
-            seraAnimator.SetInteger("dir", 1);
-            s.x = Mathf.Abs(s.x) * (delta.x > 0f ? -1f : 1f);
-        }
-        else
-        {
-            seraAnimator.SetInteger("dir", delta.y > 0f ? 2 : 0);
-            s.x = Mathf.Abs(s.x);
-        }
-        t.localScale = s;
-    }
+    void CaptureSeraState()          { var w = SeraWalker; if (w != null) w.Capture(); }
+    void RestoreSeraState()          { var w = SeraWalker; if (w != null) w.Restore(); }
+    void SetSeraVisible(bool visible){ var w = SeraWalker; if (w != null) w.SetVisible(visible); }
+    void SeraFace(Vector2 delta)     { var w = SeraWalker; if (w != null) w.Face(delta); }
 
     IEnumerator SeraWalkTo(Vector2 target)
     {
-        if (seraAnimator == null) yield break;
-
-        var t = seraAnimator.transform;
-        Vector3 start = t.position;
-        Vector3 end   = new Vector3(target.x, target.y, start.z);
-        float distance = Vector2.Distance(start, end);
-        if (distance < 0.001f) yield break;
-
-        SeraFace(end - start);
-        seraAnimator.SetFloat("Speed", 1f);
-
-        float duration = distance / Mathf.Max(0.01f, seraWalkSpeed);
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            t.position = Vector3.Lerp(start, end, elapsed / duration);
-            yield return null;
-        }
-        t.position = end;
-        seraAnimator.SetFloat("Speed", 0f);
+        var w = SeraWalker;
+        if (w != null) yield return w.WalkTo(target, seraWalkSpeed);
     }
 
     /// <summary>문 밖으로 나간 뒤 복도를 따라 멀어진다. 모습은 숨긴 채 빛만 움직인다 — 벽을 가로지르지 않게 문을 거친다.</summary>

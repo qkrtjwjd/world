@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
+using Yarn.Unity;
 
 /// <summary>
 /// S#04A~H (부엌 아침 · 초인종 · 마당의 각설탕) 컷씬 트리거.
@@ -60,17 +61,26 @@ public class KitchenTriggerCutscene : MonoBehaviour
     [Header("S#04H — 한번만 더 와요")]
     public string yarnNode_S4H_Plea = "House_Window_Plea";
 
-    // ── 세라 Animator ─────────────────────────────
-    [Header("세라 Animator")]
+    // ── 세라 ─────────────────────────────────────
+    // 2026-09-27: 옛 Freeze·ToDoor·Dishwash·LeaveHouse·TurnAround 트리거를 걷어냈다.
+    //   Sera.controller 에는 dir·Speed 뿐이라 트리거가 있어도 세라가 움직이지 않았다.
+    //   이제 SeraStageWalker 로 아래 자리까지 직접 걷게 한다(S#02 NightSequenceManager 와 공용).
+    //   좌표는 Home.unity 실측(2026-09-27) — 싱크대 (-3.20, 2.29) · 부엌 창문 (-1.15, 2.73) ·
+    //   현관문 (-0.02, -2.70) · 식탁 자리 = seraDiningSpawn(S_KitchenSpawn).
+    //   yarn 노드 안에서는 <<sera_walk "자리">> · <<sera_face "방향">> 으로 부른다(아래 Yarn 커맨드).
+    [Header("세라")]
     public Animator seraAnimator;
-    [Tooltip("초인종에 반응해 손을 멈추는 트리거.")]
-    public string seraFreezeTrigger      = "Freeze";
-    [Tooltip("현관으로 걸어가는 트리거.")]
-    public string seraToDoorTrigger      = "ToDoor";
-    [Tooltip("설거지를 시작하는 트리거.")]
-    public string seraDishwashTrigger    = "Dishwash";
-    [Tooltip("집을 나서는 트리거. S#04H 끝에서 발동.")]
-    public string seraLeaveHouseTrigger  = "LeaveHouse";
+    [Tooltip("현관문 앞. 초인종에 문을 열러 가는 자리(S#04B), 외출할 때 사라지는 자리(S#04H).")]
+    public Vector2 seraFrontDoorPoint = new Vector2(-0.02f, -2.1f);
+    [Tooltip("싱크대 앞. 설거지하는 자리(S#04F·G). 등을 보이고 선다.")]
+    public Vector2 seraSinkPoint      = new Vector2(-3.20f, 1.65f);
+    [Tooltip("부엌 창문 앞. 꽃을 바라보고 잠금장치를 다시 잠그는 자리(S#04G).\n" +
+             "창문(x -1.7~-0.6) 왼쪽 끝이다 — 가운데는 S#04F 에서 창밖을 본 루가 서 있어 겹친다.")]
+    public Vector2 seraWindowPoint    = new Vector2(-1.6f, 2.1f);
+    [Tooltip("루에게 다가갈 때 루 앞에서 멈추는 거리(월드 유닛). 머리를 쓰다듬는 거리.")]
+    public float   seraNearLuDistance = 0.6f;
+    [Tooltip("세라 걷는 속도(월드 유닛/초).")]
+    public float   seraWalkSpeed      = 1.2f;
 
     // ── 효과음 ───────────────────────────────────
     [Header("효과음")]
@@ -138,9 +148,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public string sfxGlassTapName = "";
 
     [Header("S#04G — 세라 대치")]
-    [Tooltip("세라가 뒤돌아보는 트리거.")]
-    public string seraTurnAroundTrigger = "TurnAround";
-    [Tooltip("창문 잠금장치 딸깍 (AudioManager 등록 이름). 비우면 무음.")]
+    [Tooltip("창문 잠금장치 딸깍 (AudioManager 등록 이름). 비우면 무음. yarn 의 <<kitchen_window_lock>> 이 울린다.")]
     public string sfxWindowLockName = "";
 
     [Header("S#04H — 창유리")]
@@ -156,6 +164,13 @@ public class KitchenTriggerCutscene : MonoBehaviour
     private static readonly WaitForSeconds _wait1s  = new WaitForSeconds(1f);
 
     // ─────────────────────────────────────────────
+
+    void Start()
+    {
+        // 세라가 이미 외출한 뒤의 세이브를 불러오면 세라는 집에 없다(S#04H 이후).
+        if (GameState.isSeraOut && seraAnimator != null)
+            seraAnimator.gameObject.SetActive(false);
+    }
 
     /// <summary>NightSequenceManager 종료 후 자동 호출.</summary>
     public void BeginCutscene()
@@ -214,16 +229,15 @@ public class KitchenTriggerCutscene : MonoBehaviour
         // 오르골이 뚝 끊기고 초인종이 울린다 — 결계 안에서 한 번도 난 적 없는 소리
         AudioManager.Instance?.StopLoop(bgmMusicBoxName);
         PlaySfxIfNamed(doorbellSfxName);
-        if (seraAnimator != null && !string.IsNullOrEmpty(seraFreezeTrigger))
-            seraAnimator.SetTrigger(seraFreezeTrigger);
+        // 세라의 손이 멈춘다 — 그 자리에 선 채로 둔다(동작 그림 없음).
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Ring, false);
 
         // 루의 도자기 손가락이 저절로 딱 — 부엌 구간은 소리가 난다
         yield return StartCoroutine(ShowCeramicHand(1));
 
-        if (seraAnimator != null && !string.IsNullOrEmpty(seraToDoorTrigger))
-            seraAnimator.SetTrigger(seraToDoorTrigger);
+        // 세라가 현관으로 가 문을 살짝 연다(D 문단 105). 다음 노드 첫 줄이 현관문 클로즈업이다.
+        yield return SeraGo("door");
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Tap, false);
 
@@ -247,6 +261,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
     {
         if (eavesdrop == null)
             eavesdrop = Object.FindAnyObjectByType<EavesdropAttenuator>();
+
+        // 손님을 들이고 식탁으로 돌아간다. 루가 방으로 가는 동안 같이 일어난다 — 이후 부엌은 소리로만 나온다.
+        StartCoroutine(SeraGo("table"));
 
         // 이 구간만 조작을 풀어 준다 — 플레이어가 문틈에 붙는 행위 자체가 연출이다
         PlayerInputLock.Instance?.Unlock();
@@ -302,6 +319,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
     // 환상 필터 튜토리얼이 이 지점에서 성립한다(C-3-2, C-5-1).
     IEnumerator RunS4E_Marshmallow()
     {
+        SeraFaceMark("lu");
         yield return YarnDialogue.PlayAndWait(yarnNode_S4E_Marshmallow, false);
 
         // 씹을 때마다 화면 가장자리가 뽀얗게 번지고, 네 번째에 화면 전체가 흐려진다.
@@ -323,8 +341,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
             yield return StartCoroutine(FadeOutImage(fullScreenBlurImage, 0.3f));
 
         AudioManager.Instance?.StopLoop(bgmMusicBoxName);
-        if (seraAnimator != null && !string.IsNullOrEmpty(seraDishwashTrigger))
-            seraAnimator.SetTrigger(seraDishwashTrigger);
+
+        // 다 먹고 세라는 설거지를 시작한다(D 문단 224). 싱크대 앞에서 등을 보인다.
+        yield return SeraGo("sink");
 
         // 설거지 물소리 — 이 소리 때문에 세라는 '툭'도 딱 소리도 듣지 못한다
         if (!string.IsNullOrEmpty(sfxDishwashingLoopName))
@@ -354,15 +373,14 @@ public class KitchenTriggerCutscene : MonoBehaviour
         if (!string.IsNullOrEmpty(sfxDishwashingLoopName))
             AudioManager.Instance?.StopLoop(sfxDishwashingLoopName);
 
-        if (seraAnimator != null && !string.IsNullOrEmpty(seraTurnAroundTrigger))
-            seraAnimator.SetTrigger(seraTurnAroundTrigger);
+        // 물소리가 멈추고 한 박자 뒤, 세라가 천천히 뒤돌아본다(D 문단 241).
+        yield return _wait05s;
+        SeraFaceMark("lu");
         yield return _wait05s;
 
+        // 창가 → 딸깍 → 루 앞 → 싱크대 는 대사 사이에 끼므로 노드 안의 <<sera_walk>> 가 맡는다.
+        // 딸깍도 D 순서(문단 247→248→249)대로 노드 안의 <<kitchen_window_lock>> 이 울린다.
         yield return YarnDialogue.PlayAndWait(yarnNode_S4G_Refuse, false);
-
-        // 잠금장치를 다시 잠근다. 딸깍.
-        PlaySfxIfNamed(sfxWindowLockName);
-        yield return _wait03s;
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4G_Refuse2, false);
     }
@@ -386,9 +404,10 @@ public class KitchenTriggerCutscene : MonoBehaviour
         // '…아무도 오지 않는다' — 아무것도 주지 않고 그냥 둔다.
         yield return new WaitForSeconds(noAnswerSilence);
 
-        // 세라 외출. 루는 보지 못하고 소리로만 안다.
-        if (seraAnimator != null && !string.IsNullOrEmpty(seraLeaveHouseTrigger))
-            seraAnimator.SetTrigger(seraLeaveHouseTrigger);
+        // 세라 외출. 루는 방에 있어 보지 못하고 소리로만 안다.
+        // 현관까지 걸어가서 사라진다 — 누가 부엌에 나와 있으면 나가는 모습을 본다.
+        yield return SeraGo("door");
+        if (seraAnimator != null) seraAnimator.gameObject.SetActive(false);
         AudioManager.Instance?.Play(sfxDoorClose);
 
         // 속도 복원 — 다리 떨림이 풀린다(정본 S#07: "이동 속도를 S#04H보다 빠르게 되돌린다").
@@ -412,6 +431,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
                 companion.TeleportTo(seraDiningSpawn.position);
             else
                 seraAnimator.transform.position = seraDiningSpawn.position;
+
+            // 루가 부엌으로 나오자 세라가 환하게 웃는다(D 문단 88) — 루 쪽을 보고 선다.
+            SeraFaceMark("lu");
         }
 
         if (diningRoom != null)
@@ -419,6 +441,106 @@ public class KitchenTriggerCutscene : MonoBehaviour
             diningRoom.EnterRoom();
             CameraFollow.Instance?.SetBound(diningRoom.roomBound, snap: true);
         }
+    }
+
+    // ── 세라 무대 ─────────────────────────────────
+
+    SeraStageWalker SeraWalker => SeraStageWalker.On(seraAnimator);
+
+    static Vector2 LuPosition()
+    {
+        var lu = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+        return lu != null ? (Vector2)lu.transform.position : Vector2.zero;
+    }
+
+    /// <summary>
+    /// 이름 붙은 자리로 세라를 걷게 한다. 도착하면 그 자리에 맞는 쪽을 본다.
+    /// door=현관(문을 본다) · sink=싱크대(등) · window=창문(등) · table=식탁 자리(루를 본다) · lu=루 앞(루를 본다).
+    /// 모르는 이름은 경고를 남기고 건너뛴다(CLAUDE.md §0-7 — 조용히 버리지 않는다).
+    /// </summary>
+    IEnumerator SeraGo(string mark)
+    {
+        var w = SeraWalker;
+        if (w == null || !w.isActiveAndEnabled) yield break;
+
+        switch (mark)
+        {
+            case "door":
+                yield return w.WalkTo(seraFrontDoorPoint, seraWalkSpeed);
+                w.Face(Vector2.down);
+                break;
+            case "sink":
+                yield return w.WalkTo(seraSinkPoint, seraWalkSpeed);
+                w.Face(Vector2.up);
+                break;
+            case "window":
+                yield return w.WalkTo(seraWindowPoint, seraWalkSpeed);
+                w.Face(Vector2.up);
+                break;
+            case "table":
+                if (seraDiningSpawn != null) yield return w.WalkTo(seraDiningSpawn.position, seraWalkSpeed);
+                w.FaceToward(LuPosition());
+                break;
+            case "lu":
+                yield return w.WalkNear(LuPosition(), seraNearLuDistance, seraWalkSpeed);
+                break;
+            default:
+                Debug.LogWarning($"[KitchenTriggerCutscene] sera_walk: 모르는 자리 '{mark}' — door·sink·window·table·lu 중 하나");
+                break;
+        }
+    }
+
+    /// <summary>세라를 제자리에서 돌려 세운다. lu=루 쪽 · up · down · left · right.</summary>
+    void SeraFaceMark(string mark)
+    {
+        var w = SeraWalker;
+        if (w == null) return;
+        switch (mark)
+        {
+            case "lu":    w.FaceToward(LuPosition()); break;
+            case "up":    w.Face(Vector2.up);    break;
+            case "down":  w.Face(Vector2.down);  break;
+            case "left":  w.Face(Vector2.left);  break;
+            case "right": w.Face(Vector2.right); break;
+            default:
+                Debug.LogWarning($"[KitchenTriggerCutscene] sera_face: 모르는 방향 '{mark}' — lu·up·down·left·right 중 하나");
+                break;
+        }
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        Gizmos.color = new Color(1f, 0.85f, 0.4f);
+        Gizmos.DrawWireSphere(seraFrontDoorPoint, 0.15f);
+        Gizmos.DrawWireSphere(seraSinkPoint,      0.15f);
+        Gizmos.DrawWireSphere(seraWindowPoint,    0.15f);
+        if (seraDiningSpawn != null) Gizmos.DrawWireSphere(seraDiningSpawn.position, 0.15f);
+    }
+
+    // ── Yarn 커맨드 ─────────────────────────────
+    // Yarn Spinner 3.x: 인스턴스 [YarnCommand] 는 첫 인자를 GameObject 이름으로 해석하므로
+    // static + Instance 패턴을 쓴다 (CameraDirector · YarnCommandBridge 와 같은 규약).
+
+    // <<sera_walk "door|sink|window|table|lu">> — 도착할 때까지 대사를 멈춘다
+    [YarnCommand("sera_walk")]
+    public static IEnumerator YarnSeraWalk(string mark)
+    {
+        if (Instance == null) yield break;
+        yield return Instance.StartCoroutine(Instance.SeraGo(mark));
+    }
+
+    // <<sera_face "lu|up|down|left|right">>
+    [YarnCommand("sera_face")]
+    public static void YarnSeraFace(string mark)
+    {
+        if (Instance != null) Instance.SeraFaceMark(mark);
+    }
+
+    // <<kitchen_window_lock>> — S#04G 세라가 부엌 창문 잠금장치를 다시 잠근다. 딸깍.
+    [YarnCommand("kitchen_window_lock")]
+    public static void YarnKitchenWindowLock()
+    {
+        if (Instance != null) Instance.PlaySfxIfNamed(Instance.sfxWindowLockName);
     }
 
     // ── 헬퍼 ────────────────────────────────────
