@@ -158,6 +158,10 @@ public class KitchenTriggerCutscene : MonoBehaviour
     [Tooltip("'…아무도 오지 않는다' 뒤에 아무 일도 일어나지 않게 두는 시간(초). 정본 지정 3초.")]
     public float noAnswerSilence = 3f;
 
+    [Header("S#06 — 조작권이 넘어올 때의 첫 목표 (D 문단 291)")]
+    public string s6ObjectiveHeader = "[목표]";
+    public string s6ObjectiveBody   = "마당으로 나가세요";
+
     // ── 캐싱된 WaitForSeconds ─────────────────────
     private static readonly WaitForSeconds _wait03s = new WaitForSeconds(0.3f);
     private static readonly WaitForSeconds _wait05s = new WaitForSeconds(0.5f);
@@ -209,9 +213,11 @@ public class KitchenTriggerCutscene : MonoBehaviour
         GameState.isSeraOut = true;
         ObjectiveManager.Instance?.ResetCutscene();
 
-        // ⚠ 목표를 띄우지 않는다. 정본은 여기서 아무 지시도 주지 않는다.
-        //   첫 목표는 S#06(현관 손잡이 4회 실패) 뒤에 "나갈 방법을 찾으세요"로 처음 뜬다.
-        //   FrontDoorInteraction 소관.
+        // 조작권이 넘어오는 순간 첫 목표를 띄운다 — D S#06 문단 291 「[UI][목표] 마당으로 나가세요」.
+        //   마당의 각설탕을 본 직후라 현관이 가장 강한 유인이지만 강제하지 않는다(문단 293).
+        //   2026-09-27 사용자 결정. 예전 주석은 「정본은 여기서 아무 지시도 주지 않는다」였으나 D 와 어긋났다.
+        //   손잡이 4회 뒤의 「나갈 방법을 찾으세요」 갱신은 FrontDoorInteraction 소관.
+        ObjectiveManager.Instance?.ShowObjective(s6ObjectiveHeader, s6ObjectiveBody);
     }
 
     // ─── S#04A — 세 개의 접시 ──────────────────────

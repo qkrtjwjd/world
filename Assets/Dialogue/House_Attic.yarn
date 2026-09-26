@@ -38,7 +38,10 @@ title: House_Doorknob_Refused
 // [SFX] 손잡이 돌아가는 소리 — 매번 정확히 같은 음. 4번째에는 소리 대신 아주 낮은 저역음  ← AudioManager 등록 필요
 // <<play_sfx "???">>
 
-<<camera_closeup "현관문" 1.0 3.0>>
+// 2026-09-27: camera_closeup "현관문" 1.0 3.0 · camera_restore · show_objective 를 뺐다.
+//   D 문단 292 는 1~3번째 동안 클로즈업을 고정하고 4번째에만 물러나라고 한다 — 이 노드는 4번째에만
+//   불리므로 여기서 걸면 순서가 거꾸로였다. 클로즈업·물러남은 FrontDoorInteraction 이 맡는다.
+//   「나갈 방법을 찾으세요」도 FrontDoorInteraction 이 이 노드 뒤에 띄운다(두 번 부르던 중복).
 
 // [지문 제거] "루는 현관문 손잡이를 돌린다… 4번째엔 손잡이가 아예 뜨거워진다."
 //   → 손잡이 4회 판정과 뜨거워지는 연출은 FrontDoorInteraction 이 수행한다. 자막으로 겹쳐 쓰지 않는다.
@@ -49,8 +52,6 @@ title: House_Doorknob_Refused
 // [SFX] 손을 떼는 마찰음 — 짧게  ← AudioManager 등록 필요
 // <<play_sfx "???">>
 
-<<camera_restore>>
-<<show_objective "[목표 갱신]" "나갈 방법을 찾으세요">>
 ===
 
 title: House_Search_Drawer

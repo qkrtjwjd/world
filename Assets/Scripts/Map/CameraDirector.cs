@@ -83,6 +83,21 @@ public class CameraDirector : MonoBehaviour
         RestoreState(cam);
     }
 
+    /// <summary>
+    /// 스스로 풀리지 않는 클로즈업. <see cref="RestoreDefault"/> 로 푼다.
+    /// TriggerCloseUp 은 duration 뒤 자동 복귀하고, cam_zoom_in 은 이름으로 대상을 찾는다 —
+    /// 코드가 Transform 을 들고 있고 플레이어 행동에 따라 풀 시점이 정해질 때 쓴다(S#06 현관 손잡이).
+    /// </summary>
+    public void HoldCloseUp(Transform target, float orthoSize)
+    {
+        var cam = CameraFollow.Instance;
+        if (cam == null) return;
+        if (_activeRoutine != null) { StopCoroutine(_activeRoutine); _activeRoutine = null; }
+        SaveState();
+        if (target != null) cam.SetTarget(target);
+        cam.ZoomTo(orthoSize, 0f);
+    }
+
     // ─── 2. CutTo ───────────────────────────────────────────────────
 
     public void TriggerCutTo(Transform target)

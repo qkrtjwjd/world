@@ -37,11 +37,33 @@ public class FrontDoorInteraction : MonoBehaviour
     public string yarnNode_departure = "House_FrontDoor_Depart";
 
     [Header("손잡이 애니메이션")]
-    [Tooltip("1~3회 시도에 재사용할 Animator. 같은 트리거를 매번 그대로 쓴다.")]
+    [Tooltip("1~3회 시도에 재사용할 Animator. 같은 트리거를 매번 그대로 쓴다.\n" +
+             "비어 있으면 아래 「임시 동작」으로 루를 움직인다(그림이 오면 여기에 꽂는다).")]
     public Animator doorknobAnimator;
     public string   doorknobTurnTrigger    = "Turn";
     [Tooltip("4번째에만 붙는 '손을 떼는' 트리거.")]
     public string   doorknobRecoilTrigger  = "Recoil";
+
+    // 2026-09-27: D S#06 문단 292 [CAM] 「손잡이 클로즈업 고정. 1~3번째 동안 화면은 전혀 움직이지 않는다.
+    //   4번째에만 카메라가 아주 미세하게 뒤로 물러난다.」
+    //   픽셀퍼펙트라 줌은 2배 단위뿐이다(CLAUDE.md §11) — 「아주 미세하게」는 만들 수 없어서
+    //   4번째에 방 전경으로 돌아가는 것을 「물러남」으로 쓴다. 문에서 멀어지면 도중에도 푼다.
+    [Header("S#06 — 손잡이 클로즈업 (D 문단 292)")]
+    [Tooltip("클로즈업 대상. 비우면 이 오브젝트(현관문).")]
+    public Transform knobCloseupTarget;
+    [Tooltip("지금 화면보다 몇 단계 가까이 갈지. 픽셀퍼펙트 배율 N 이 N+이 값 이 된다(CLAUDE.md §11 · 5.625/N).\n" +
+             "빼기로 계산하지 않는 이유: 방마다 이미 확대돼 있는 경우가 있어 한계까지 파고든다(2026-09-27 실측 6배).")]
+    public int knobCloseupSteps = 1;
+    [Tooltip("루가 문에서 이 거리(월드 유닛) 넘게 멀어지면 클로즈업을 푼다.")]
+    public float knobCloseupReleaseDistance = 1.5f;
+
+    // 손잡이 그림·애니메이션이 없어서 루 본인을 움직여 대신한다. 1~3회는 매번 완전히 같은 흔들림이다
+    // (D 문단 295 「반복이 그대로 보여야 한다」). 4번째만 반 발짝 물러나 손을 뗀다. 아파하는 기색은 없다.
+    [Header("S#06 — 임시 동작 (doorknobAnimator 가 비었을 때)")]
+    [Tooltip("손잡이를 돌릴 때 루가 흔들리는 폭(월드 유닛). 1/32 = 화면 1픽셀.")]
+    public float knobTurnJiggle = 1f / 32f;
+    [Tooltip("4번째에 손을 떼며 물러나는 거리(월드 유닛).")]
+    public float knobRecoilDistance = 0.25f;
 
     [Header("효과음 (AudioManager 등록 이름. 비우면 무음)")]
     [Tooltip("1~3회 — 매번 정확히 같은 음.")]
@@ -118,23 +140,24 @@ public class FrontDoorInteraction : MonoBehaviour
     {
         _attemptCount++;
 
-        // 1~3회: 완전히 동일한 애니메이션. 반복이 그대로 보여야 한다.
-        if (doorknobAnimator != null && !string.IsNullOrEmpty(doorknobTurnTrigger))
-            doorknobAnimator.SetTrigger(doorknobTurnTrigger);
+        // 손잡이를 잡는 동안은 조작을 잠근다 — 돌리는 도중에 걸어 나가면 반복이 안 보인다.
+        var ctrl = YarnDialogue.LockPlayer();
+        var lu = FindLu();
+        FaceLuTowardDoor(lu);
+        HoldKnobCloseup();
 
-        if (_attemptCount < RefusalAttempt)
-        {
-            PlaySfxIfNamed(sfxKnobTurnName);
-            yield return new WaitForSeconds(0.6f);
-            _isBusy = false;
-            yield break;
-        }
+        bool refusalNow = _attemptCount >= RefusalAttempt && !GameState.isDoorknobRefused;
 
-        // 4회 이후: 이미 한 번 거부당했다면 다시 무반응으로 되돌린다.
-        if (GameState.isDoorknobRefused)
+        if (!refusalNow)
         {
+            // 1~3회(그리고 거부 이후): 완전히 동일한 동작과 소리. 화면은 움직이지 않는다.
+            if (doorknobAnimator != null && !string.IsNullOrEmpty(doorknobTurnTrigger))
+                doorknobAnimator.SetTrigger(doorknobTurnTrigger);
             PlaySfxIfNamed(sfxKnobTurnName);
-            yield return new WaitForSeconds(0.6f);
+            yield return StartCoroutine(KnobTurnMotion(lu));
+            yield return new WaitForSeconds(0.3f);
+
+            YarnDialogue.UnlockPlayer(ctrl);
             _isBusy = false;
             yield break;
         }
@@ -142,30 +165,166 @@ public class FrontDoorInteraction : MonoBehaviour
         // 4회째 — 손잡이가 뜨거워진다.
         GameState.isDoorknobRefused = true;
 
-        var ctrl = YarnDialogue.LockPlayer();
-
         // 손잡이 도는 소리가 나지 않고, 대신 아주 낮은 저역음이 깔린다.
         PlaySfxIfNamed(sfxRefusalLowName);
+        yield return StartCoroutine(KnobTurnMotion(lu));
         yield return new WaitForSeconds(0.5f);
 
+        // 손을 뗀다. 화상 이펙트·붉은 표시 없음. 아파하지 않는다.
         if (doorknobAnimator != null && !string.IsNullOrEmpty(doorknobRecoilTrigger))
             doorknobAnimator.SetTrigger(doorknobRecoilTrigger);
         PlaySfxIfNamed(sfxHandReleaseName);
+        yield return StartCoroutine(KnobRecoilMotion(lu));
+
+        // 4번째에만 카메라가 뒤로 물러난다.
+        ReleaseKnobCloseup();
 
         if (!string.IsNullOrEmpty(yarnNode_refused))
             yield return YarnDialogue.PlayAndWait(yarnNode_refused, false);
 
-        // 목표는 여기서 처음 뜬다. 아침 컷씬은 아무 지시도 주지 않았다.
+        // 목표 갱신. 첫 목표 「마당으로 나가세요」는 세라가 나간 직후(KitchenTriggerCutscene) 이미 떴다.
         ObjectiveManager.Instance?.ShowObjective(refusedObjectiveHeader, refusedObjectiveBody);
 
         YarnDialogue.UnlockPlayer(ctrl);
         _isBusy = false;
     }
 
+    // ─── S#06 클로즈업 · 임시 동작 ─────────────────────────────────────────
+
+    bool      _closeupHeld;
+    Coroutine _closeupWatch;
+
+    static ClearSky.SimplePlayerController FindLu() =>
+        PlayerStats.Instance != null
+            ? PlayerStats.Instance.GetComponent<ClearSky.SimplePlayerController>()
+            : Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+
+    Transform KnobTarget => knobCloseupTarget != null ? knobCloseupTarget : transform;
+
+    Transform _closeupAnchor;
+
+    /// <summary>
+    /// 카메라가 볼 자리 — 루와 손잡이의 중간. 문은 집 아래 벽이라 문을 중심에 두면
+    /// 화면 아래 절반이 집 밖 빈 공간이 된다(2026-09-27 실측). 손을 얹은 루가 가운데 오게 한다.
+    /// </summary>
+    Transform CloseupAnchor()
+    {
+        if (_closeupAnchor == null)
+        {
+            _closeupAnchor = new GameObject("_KnobCloseupAnchor").transform;
+            _closeupAnchor.SetParent(transform, true);
+        }
+        var lu = FindLu();
+        Vector3 knob = KnobTarget.position;
+        _closeupAnchor.position = lu != null ? Vector3.Lerp(knob, lu.transform.position, 0.5f) : knob;
+        return _closeupAnchor;
+    }
+
+    void HoldKnobCloseup()
+    {
+        if (_closeupHeld || CameraDirector.Instance == null || CameraFollow.Instance == null) return;
+
+        // 지금 화면에 실제로 보이는 배율 N 에서 한 단계 가까이. 5.625/N 만 쓸 수 있다(CLAUDE.md §11).
+        float baseOrtho = CameraFollow.Instance.defaultOrthoSize;
+        float shown = Camera.main != null ? Camera.main.orthographicSize : CameraFollow.Instance.currentOrthoSize;
+        int n = Mathf.Max(1, Mathf.RoundToInt(baseOrtho / Mathf.Max(0.01f, shown)));
+        CameraDirector.Instance.HoldCloseUp(CloseupAnchor(), baseOrtho / (n + Mathf.Max(1, knobCloseupSteps)));
+        _closeupHeld = true;
+        _closeupWatch = StartCoroutine(WatchLuLeavingDoor());
+    }
+
+    void ReleaseKnobCloseup()
+    {
+        if (!_closeupHeld) return;
+        _closeupHeld = false;
+        if (_closeupWatch != null) { StopCoroutine(_closeupWatch); _closeupWatch = null; }
+        CameraDirector.Instance?.RestoreDefault();
+    }
+
+    /// <summary>1~3회 사이에 루가 문을 떠나면 클로즈업을 푼다. 다시 오면 다시 건다.</summary>
+    IEnumerator WatchLuLeavingDoor()
+    {
+        while (_closeupHeld)
+        {
+            var lu = FindLu();
+            if (lu != null && !_isBusy &&
+                Vector2.Distance(lu.transform.position, KnobTarget.position) > knobCloseupReleaseDistance)
+            {
+                _closeupWatch = null;
+                ReleaseKnobCloseup();
+                yield break;
+            }
+            yield return null;
+        }
+    }
+
+    /// <summary>루가 문 쪽을 보게 한다. 0=아래 1=옆 2=위, 옆은 localScale.x 부호만 뒤집는다(양수가 왼쪽).</summary>
+    void FaceLuTowardDoor(ClearSky.SimplePlayerController lu)
+    {
+        if (lu == null) return;
+        var anim = lu.GetComponent<Animator>();
+        if (anim == null) return;
+
+        Vector2 d = (Vector2)(KnobTarget.position - lu.transform.position);
+        int dir = Mathf.Abs(d.x) > Mathf.Abs(d.y) ? 1 : (d.y > 0f ? 2 : 0);
+        Vector3 s = lu.transform.localScale;
+        s.x = dir == 1 ? Mathf.Abs(s.x) * (d.x > 0f ? -1f : 1f) : Mathf.Abs(s.x);
+        lu.transform.localScale = s;
+        anim.SetInteger("dir", dir);
+        anim.SetBool("isRun", false);
+    }
+
+    /// <summary>손잡이를 돌리는 흔들림. 매번 완전히 같은 궤적이고, 끝나면 정확히 제자리로 돌아온다.</summary>
+    IEnumerator KnobTurnMotion(ClearSky.SimplePlayerController lu)
+    {
+        if (doorknobAnimator != null || lu == null) { yield return new WaitForSeconds(0.3f); yield break; }
+
+        var rb = lu.GetComponent<Rigidbody2D>();
+        Vector2 home = rb != null ? rb.position : (Vector2)lu.transform.position;
+        float[] steps = { 1f, 0f, -1f, 0f };
+        foreach (float k in steps)
+        {
+            SetLuPosition(lu, rb, home + Vector2.right * (k * knobTurnJiggle));
+            yield return new WaitForSeconds(0.075f);
+        }
+        SetLuPosition(lu, rb, home);
+    }
+
+    /// <summary>4번째 — 손을 떼며 문에서 반 발짝 물러난다. 빠르게, 한 번.</summary>
+    IEnumerator KnobRecoilMotion(ClearSky.SimplePlayerController lu)
+    {
+        if (doorknobAnimator != null || lu == null) { yield return new WaitForSeconds(0.2f); yield break; }
+
+        var rb = lu.GetComponent<Rigidbody2D>();
+        Vector2 from = rb != null ? rb.position : (Vector2)lu.transform.position;
+        Vector2 away = from - (Vector2)KnobTarget.position;
+        if (away.sqrMagnitude < 0.0001f) away = Vector2.up;
+        Vector2 to = from + away.normalized * knobRecoilDistance;
+
+        const float duration = 0.12f;
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            SetLuPosition(lu, rb, Vector2.Lerp(from, to, t / duration));
+            yield return null;
+        }
+        SetLuPosition(lu, rb, to);
+    }
+
+    static void SetLuPosition(ClearSky.SimplePlayerController lu, Rigidbody2D rb, Vector2 p)
+    {
+        if (rb != null) { rb.position = p; rb.linearVelocity = Vector2.zero; }
+        else lu.transform.position = new Vector3(p.x, p.y, lu.transform.position.z);
+    }
+
     // ─── S#13 ────────────────────────────────────────────────────────────
     IEnumerator DepartRoutine()
     {
         var ctrl = YarnDialogue.LockPlayer();
+
+        // S#06 에서 손잡이 클로즈업이 걸린 채면 먼저 푼다 — 문이 열리는 빛은 방 전경에서 보여야 한다.
+        ReleaseKnobCloseup();
 
         PlaySfxIfNamed(sfxKeyUnlockName);
 
