@@ -12,10 +12,13 @@ public class RoomTransfer : MonoBehaviour
     [Tooltip("방 트리거 경계 안쪽으로 이 거리만큼 들어왔을 때 방 입장으로 판정 (문 근처 오작동 방지)")]
     public float entryThreshold = 0.2f;
 
-    [Header("카메라 줌")]
-    [Tooltip("이 방에서 사용할 orthographicSize (0이면 기본값 유지)")]
+    // ⛔ 2026-09-27: 방별 줌을 폐기했다(E-64 · F-3-9 · CLAUDE.md §11 — 정사영 크기 불변).
+    //   필드는 씬 직렬화 값이 남아 있어 지우지 않고 두지만 **읽지 않는다.** 다시 쓰지 말 것.
+    //   화면보다 작은 방은 카메라 바운드만으로 방 전경에 고정된다.
+    [Header("카메라 줌 — 폐기됨 (읽지 않는다)")]
+    [Tooltip("⛔ 폐기. 정사영 크기는 바꾸지 않는다(F-3-9). 값이 있어도 무시된다.")]
     public float targetOrthoSize = 0f;
-    [Tooltip("줌 전환 시간(초)")]
+    [Tooltip("⛔ 폐기.")]
     public float zoomDuration = 0.4f;
 
     public static RoomTransfer CurrentRoom { get; private set; }
@@ -35,12 +38,19 @@ public class RoomTransfer : MonoBehaviour
         // 씬 시작 시 플레이어가 이미 방 안에 있으면 OnTriggerEnter2D가 발생하지 않으므로
         // Physics2D.OverlapCollider로 직접 확인 후 입장 처리
         var col = GetComponent<Collider2D>();
-        if (col == null) return;
+        // ⚠ 2026-09-27: RoomTransfer 는 콜라이더 없는 RoomSpawnPoint 에 붙어 있어 여기서 늘 빠져나갔다 —
+        //   방 안에서 시작하는 판정이 한 번도 돌지 않았다(실측). 방 경계가 있으면 그것으로 판정한다.
+        if (col == null && roomBound == null) return;
 
         var player = GameObject.FindWithTag("Player");
         if (player == null) return;
 
-        if (col.bounds.Contains(player.transform.position))
+        // 2026-09-27: 판정을 방의 카메라 경계(roomBound)로 한다. 이 컴포넌트의 콜라이더는 문 앞의 작은 트리거라,
+        //   침대 위에서 시작하는 S#01 의 루를 「방 밖」으로 보고 경계를 걸지 않았다 — 그러면 카메라가 루를 따라가
+        //   방 아래쪽이 잘렸다. 개정 D S#01 「페이드인 후 고정. 루의 방 전경을 한 화면에」(보호 구역 §3).
+        Bounds area = roomBound != null ? roomBound.bounds : col.bounds;
+        Vector3 pp = player.transform.position;
+        if (area.Contains(new Vector3(pp.x, pp.y, area.center.z)))
         {
             EnterRoom();
             CameraFollow.Instance?.SetBound(roomBound, snap: true);
@@ -96,8 +106,6 @@ public class RoomTransfer : MonoBehaviour
         OnRoomEntered?.Invoke(triggerCol != null ? triggerCol : roomBound);
         SetCover(false); // 덮개 열기
 
-        if (targetOrthoSize > 0f)
-            CameraFollow.Instance?.ZoomTo(targetOrthoSize, zoomDuration);
     }
 
     public void ExitRoom()

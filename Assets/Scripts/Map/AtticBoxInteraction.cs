@@ -37,10 +37,8 @@ public class AtticBoxInteraction : MonoBehaviour
              "D 문단 333 에서 시작해 S#10 동안 유지(346), S#11 라디오에서 끊는다(362).")]
     public string droneLoopName = "";
 
-    // 2026-09-27: House_Attic_Box 의 camera_closeup "상자" 1.0 2.6 을 걷어내고 여기서 건다.
-    //   다락방은 이미 3배 줌(ortho 1.875)으로 들어가는 방이라 2.6 을 빼면 한계 1 까지 내려가 6배가 됐다.
-    //   이제 「지금 보이는 배율에서 한 단계 가까이」(CameraDirector.OrthoStepsCloser)로 상자를 내려다본다.
-    //   D 문단 336 「상자를 열면 내려다보는 부감으로 전환」 — 그림(boxContentsImage)이 있으면 그쪽이 우선이다.
+    // 2026-09-27: House_Attic_Box 의 camera_closeup "상자" 를 걷어냈다(6배로 파고들었다). 같은 날 대신 넣은
+    //   카메라 부감도 줌 폐기(E-64 · F-3-9)로 걷어냈다. 개정 D 문단 348: 방 전경 고정 + 열린 상자 오버레이 컷.
 
     // ── S#10 ─────────────────────────────────────────────────────────────
     [Header("S#10 — 코트 주머니")]
@@ -124,17 +122,10 @@ public class AtticBoxInteraction : MonoBehaviour
         if (!string.IsNullOrEmpty(droneLoopName))
             AudioManager.Instance?.PlayLoop(droneLoopName);
 
-        bool cameraHeld = false;
+        // 열린 상자 오버레이 컷(개정 D 문단 348). 그림이 없으면 카메라로 대신하지 않는다(E-64 줌 폐기).
         if (CloseupArt.Has(boxContentsImage))
         {
             boxContentsImage.gameObject.SetActive(true);
-            yield return new WaitForSeconds(0.8f);
-        }
-        else if (CameraDirector.Instance != null && CameraFollow.Instance != null)
-        {
-            // 그림이 없으면 상자를 한 단계 가까이 내려다본다. 세 물건을 순서대로 비추지 않는다.
-            CameraDirector.Instance.HoldCloseUp(transform, CameraDirector.OrthoStepsCloser(1));
-            cameraHeld = true;
             yield return new WaitForSeconds(0.8f);
         }
 
@@ -142,7 +133,6 @@ public class AtticBoxInteraction : MonoBehaviour
             yield return YarnDialogue.PlayIfExists(yarnNode_S9_Box, false);
 
         if (boxContentsImage != null) boxContentsImage.gameObject.SetActive(false);
-        if (cameraHeld) CameraDirector.Instance?.RestoreDefault();
     }
 
     // ─── S#10 — 코트 주머니 ──────────────────────────────────────────────

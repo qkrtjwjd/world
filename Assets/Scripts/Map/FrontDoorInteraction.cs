@@ -44,17 +44,17 @@ public class FrontDoorInteraction : MonoBehaviour
     [Tooltip("4번째에만 붙는 '손을 떼는' 트리거.")]
     public string   doorknobRecoilTrigger  = "Recoil";
 
-    // 2026-09-27: D S#06 문단 292 [CAM] 「손잡이 클로즈업 고정. 1~3번째 동안 화면은 전혀 움직이지 않는다.
-    //   4번째에만 카메라가 아주 미세하게 뒤로 물러난다.」
-    //   픽셀퍼펙트라 줌은 2배 단위뿐이다(CLAUDE.md §11) — 「아주 미세하게」는 만들 수 없어서
-    //   4번째에 방 전경으로 돌아가는 것을 「물러남」으로 쓴다. 문에서 멀어지면 도중에도 푼다.
-    [Header("S#06 — 손잡이 클로즈업 (D 문단 292)")]
-    [Tooltip("클로즈업 대상. 비우면 이 오브젝트(현관문).")]
+    // 2026-09-27 개정 D 문단 304 [CAM]: 「고정. 현관 전경에서 루가 문 앞에 선 상태. 손잡이를 따로 당겨 보여주지 않는다.
+    //   1~3번째 시도 동안 화면은 전혀 움직이지 않는다. 4번째에만 카메라가 문 반대쪽으로 아주 느리게 반 타일 스크롤한다.」
+    //   같은 날 먼저 만든 손잡이 줌 클로즈업은 줌 폐기(E-64 · F-3-9)로 걷어냈다.
+    [Header("S#06 — 카메라 (개정 D 문단 304)")]
+    [Tooltip("문 위치 기준. 비우면 이 오브젝트(현관문).")]
     public Transform knobCloseupTarget;
-    [Tooltip("지금 화면보다 몇 단계 가까이 갈지. 픽셀퍼펙트 배율 N 이 N+이 값 이 된다(CLAUDE.md §11 · 5.625/N).\n" +
-             "빼기로 계산하지 않는 이유: 방마다 이미 확대돼 있는 경우가 있어 한계까지 파고든다(2026-09-27 실측 6배).")]
-    public int knobCloseupSteps = 1;
-    [Tooltip("루가 문에서 이 거리(월드 유닛) 넘게 멀어지면 클로즈업을 푼다.")]
+    [Tooltip("4번째에 문 반대쪽으로 스크롤하는 거리(월드 유닛). 1 = 타일 하나 → 반 타일 0.5.")]
+    public float refusalScrollDistance = 0.5f;
+    [Tooltip("그 스크롤 속도(월드 유닛/초). 「아주 느리게」.")]
+    public float refusalScrollSpeed = 0.25f;
+    [Tooltip("루가 문에서 이 거리(월드 유닛) 넘게 멀어지면 고정을 풀고 추적으로 돌아간다.")]
     public float knobCloseupReleaseDistance = 1.5f;
 
     // 손잡이 그림·애니메이션이 없어서 루 본인을 움직여 대신한다. 1~3회는 매번 완전히 같은 흔들림이다
@@ -152,7 +152,7 @@ public class FrontDoorInteraction : MonoBehaviour
         var ctrl = YarnDialogue.LockPlayer();
         var lu = FindLu();
         FaceLuTowardDoor(lu);
-        HoldKnobCloseup();
+        HoldAtDoor();
 
         bool refusalNow = _attemptCount >= RefusalAttempt && !GameState.isDoorknobRefused;
 
@@ -184,8 +184,8 @@ public class FrontDoorInteraction : MonoBehaviour
         PlaySfxIfNamed(sfxHandReleaseName);
         yield return StartCoroutine(KnobRecoilMotion(lu));
 
-        // 4번째에만 카메라가 뒤로 물러난다.
-        ReleaseKnobCloseup();
+        // 4번째에만 카메라가 문 반대쪽으로 아주 느리게 반 타일 스크롤한다(개정 D 문단 304). 기다리지 않는다.
+        ScrollAwayFromDoor(lu);
 
         if (!string.IsNullOrEmpty(yarnNode_refused))
             yield return YarnDialogue.PlayAndWait(yarnNode_refused, false);
@@ -213,10 +213,10 @@ public class FrontDoorInteraction : MonoBehaviour
         ObjectiveManager.Instance?.ShowObjective(searchObjectiveHeader, searchObjectiveBody);
     }
 
-    // ─── S#06 클로즈업 · 임시 동작 ─────────────────────────────────────────
+    // ─── S#06 카메라 · 임시 동작 ───────────────────────────────────────────
 
-    bool      _closeupHeld;
-    Coroutine _closeupWatch;
+    bool      _heldAtDoor;
+    Coroutine _doorWatch;
 
     static ClearSky.SimplePlayerController FindLu() =>
         PlayerStats.Instance != null
@@ -225,52 +225,45 @@ public class FrontDoorInteraction : MonoBehaviour
 
     Transform KnobTarget => knobCloseupTarget != null ? knobCloseupTarget : transform;
 
-    Transform _closeupAnchor;
-
-    /// <summary>
-    /// 카메라가 볼 자리 — 루와 손잡이의 중간. 문은 집 아래 벽이라 문을 중심에 두면
-    /// 화면 아래 절반이 집 밖 빈 공간이 된다(2026-09-27 실측). 손을 얹은 루가 가운데 오게 한다.
-    /// </summary>
-    Transform CloseupAnchor()
+    /// <summary>손잡이를 잡는 동안 카메라를 그 자리에 고정한다. 루가 문을 떠나면 추적으로 돌아간다.</summary>
+    void HoldAtDoor()
     {
-        if (_closeupAnchor == null)
-        {
-            _closeupAnchor = new GameObject("_KnobCloseupAnchor").transform;
-            _closeupAnchor.SetParent(transform, true);
-        }
-        var lu = FindLu();
-        Vector3 knob = KnobTarget.position;
-        _closeupAnchor.position = lu != null ? Vector3.Lerp(knob, lu.transform.position, 0.5f) : knob;
-        return _closeupAnchor;
+        if (_heldAtDoor || CameraDirector.Instance == null) return;
+        CameraDirector.Instance.Hold();
+        _heldAtDoor = true;
+        _doorWatch = StartCoroutine(WatchLuLeavingDoor());
     }
 
-    void HoldKnobCloseup()
+    void ReleaseDoorHold()
     {
-        if (_closeupHeld || CameraDirector.Instance == null || CameraFollow.Instance == null) return;
-        CameraDirector.Instance.HoldCloseUp(CloseupAnchor(), CameraDirector.OrthoStepsCloser(knobCloseupSteps));
-        _closeupHeld = true;
-        _closeupWatch = StartCoroutine(WatchLuLeavingDoor());
+        if (!_heldAtDoor) return;
+        _heldAtDoor = false;
+        if (_doorWatch != null) { StopCoroutine(_doorWatch); _doorWatch = null; }
+        CameraDirector.Instance?.Track();
     }
 
-    void ReleaseKnobCloseup()
+    void ScrollAwayFromDoor(ClearSky.SimplePlayerController lu)
     {
-        if (!_closeupHeld) return;
-        _closeupHeld = false;
-        if (_closeupWatch != null) { StopCoroutine(_closeupWatch); _closeupWatch = null; }
-        CameraDirector.Instance?.RestoreDefault();
+        var cd = CameraDirector.Instance;
+        var cam = Camera.main;
+        if (cd == null || cam == null) return;
+        Vector2 away = lu != null ? (Vector2)(lu.transform.position - KnobTarget.position) : Vector2.up;
+        if (away.sqrMagnitude < 0.0001f) away = Vector2.up;
+        Vector2 from = cam.transform.position;
+        cd.ScrollTo(from + away.normalized * refusalScrollDistance, refusalScrollSpeed);
     }
 
-    /// <summary>1~3회 사이에 루가 문을 떠나면 클로즈업을 푼다. 다시 오면 다시 건다.</summary>
+    /// <summary>루가 문을 떠나면 고정을 풀고 추적으로 돌아간다. 다시 잡으면 다시 고정한다.</summary>
     IEnumerator WatchLuLeavingDoor()
     {
-        while (_closeupHeld)
+        while (_heldAtDoor)
         {
             var lu = FindLu();
             if (lu != null && !_isBusy &&
                 Vector2.Distance(lu.transform.position, KnobTarget.position) > knobCloseupReleaseDistance)
             {
-                _closeupWatch = null;
-                ReleaseKnobCloseup();
+                _doorWatch = null;
+                ReleaseDoorHold();
                 yield break;
             }
             yield return null;
@@ -342,8 +335,8 @@ public class FrontDoorInteraction : MonoBehaviour
     {
         var ctrl = YarnDialogue.LockPlayer();
 
-        // S#06 에서 손잡이 클로즈업이 걸린 채면 먼저 푼다 — 문이 열리는 빛은 방 전경에서 보여야 한다.
-        ReleaseKnobCloseup();
+        // S#06 의 고정이 걸린 채면 먼저 푼다.
+        ReleaseDoorHold();
 
         PlaySfxIfNamed(sfxKeyUnlockName);
 

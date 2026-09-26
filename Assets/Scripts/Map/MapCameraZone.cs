@@ -110,7 +110,14 @@ public class MapCameraZone : MonoBehaviour
                 break;
 
             case CamZoneType.TriggerZoom:
-                cd?.TriggerCamZoomIn("", zoomAmount, zoomDuration);
+            case CamZoneType.TriggerTilt:
+            case CamZoneType.TransitionCut:
+            case CamZoneType.TransitionPanDown:
+            case CamZoneType.TransitionPov:
+                // 2026-09-27: 줌 · 기울기 · 컷 · 팬 · 시점은 카메라 문법 4종(추적·고정·스크롤·흔들림)에 없다(F-3-9 · E-64).
+                //   목록에 없는 값은 경고를 남기고 고정으로 처리한다 — 조용히 버리지 않는다.
+                Debug.LogWarning($"[MapCameraZone] '{name}' 의 {type} 은 폐기된 카메라 동작이다 — 고정으로 처리한다(F-3-9).");
+                cd?.Hold();
                 break;
 
             case CamZoneType.TriggerStop:
@@ -118,25 +125,8 @@ public class MapCameraZone : MonoBehaviour
                 _activeRoutine = StartCoroutine(DoStop());
                 break;
 
-            case CamZoneType.TriggerTilt:
-                cd?.TriggerCamTilt(tiltAngle, tiltReturn);
-                break;
-
             case CamZoneType.TransitionFade:
-                cd?.TriggerCamFadeDown(fadeDuration);
-                break;
-
-            case CamZoneType.TransitionCut:
-                if (!string.IsNullOrEmpty(targetName))
-                    cd?.TriggerCamCut(targetName);
-                break;
-
-            case CamZoneType.TransitionPanDown:
-                cd?.TriggerCamPanUp(-panHeight, panSpeed);
-                break;
-
-            case CamZoneType.TransitionPov:
-                cd?.TriggerCamPov(targetName, povAngle);
+                if (cd != null) cd.StartCoroutine(cd.FadeDown(fadeDuration));
                 break;
         }
     }
@@ -163,6 +153,10 @@ public class MapCameraZone : MonoBehaviour
                 break;
 
             case CamZoneType.TriggerZoom:
+            case CamZoneType.TriggerTilt:
+            case CamZoneType.TransitionCut:
+            case CamZoneType.TransitionPanDown:
+            case CamZoneType.TransitionPov:
                 if (restoreOnExit) CameraDirector.Instance?.RestoreDefault();
                 if (!fireOnce) _fired = false;
                 break;
@@ -210,7 +204,7 @@ public class MapCameraZone : MonoBehaviour
     {
         var cd = CameraDirector.Instance;
         if (cd == null) yield break;
-        cd.TriggerCamStatic();
+        cd.Hold();
         yield return new WaitForSeconds(stopDuration);
         cd.RestoreDefault();
     }

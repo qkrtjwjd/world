@@ -60,7 +60,8 @@ public class BadEndingDirector : MonoBehaviour
     public Transform seraDiningSpawn;
 
     // ── 컷 ──────────────────────────────────────────────────────────────────
-    [Header("BE#01-a 컷 — 비워 두면 건너뛴다")]
+    // ⛔ 2026-09-27: BE#01-a 의 두 컷은 개정 D 문단 474(「컷을 잇지 않는다」)로 쓰지 않는다. 직렬화 값 때문에 필드만 남긴다.
+    [Header("BE#01-a 컷 — 폐기됨 (쓰지 않는다)")]
     [Tooltip("열쇠 구멍 클로즈업.")]
     public Image keyholeCloseup;
     [Tooltip("손잡이를 쥔 손 클로즈업.")]
@@ -101,11 +102,8 @@ public class BadEndingDirector : MonoBehaviour
     public float[] ambientIntensities = { 1f, 0.95f, 0.9f, 0.85f };
 
     // ── 카메라 ──────────────────────────────────────────────────────────────
-    [Header("BE#01-a — 문이 커지는 컷")]
-    [Tooltip("컷이 바뀔 때마다 줄어드는 orthoSize 단계(정본 문단 460). 비우면 줌을 쓰지 않는다.")]
-    public float[] doorZoomStages = { 4.2f, 3.4f, 2.6f };
-    [Tooltip("한 줌 단계에 걸리는 시간(초).")]
-    public float doorZoomDuration = 0.9f;
+    // ⛔ 2026-09-27: BE#01-a 「문이 커지는 컷」(doorZoomStages · doorZoomDuration)을 폐기했다.
+    //   개정 D 문단 474 가 카메라를 고정하고 압박은 화면 효과에 맡겼다(E-64 줌 폐기).
 
     // ── SFX ─────────────────────────────────────────────────────────────────
     // ⚠ AudioManager 에 등록된 이름만 넣는다. 없는 이름을 지어내면 조용히 무음이 되는 것이 아니라
@@ -140,7 +138,6 @@ public class BadEndingDirector : MonoBehaviour
 
     // ── 내부 상태 ───────────────────────────────────────────────────────────
     ClearSky.SimplePlayerController _lockedCtrl;
-    float     _origOrthoSize;
     bool      _origSeraActive;
     Vector3   _origSeraPos;
     Transform _origCameraTarget;
@@ -242,10 +239,10 @@ public class BadEndingDirector : MonoBehaviour
 
         PlaySfxIfNamed(sfxKeySlipName);
 
-        // [CAM] 열쇠 구멍 → 손잡이를 쥔 손 → 문 전체 와이드. 컷마다 문이 조금씩 커진다.
-        yield return FlashCloseup(keyholeCloseup);
-        yield return FlashCloseup(handOnKnobCloseup);
-        yield return ZoomThroughStages();
+        // [CAM] 2026-09-27 개정 D 문단 474: 「현관 전경에서 고정. 컷을 잇지 않는다. 문이 루를 누르는 느낌은
+        //   카메라가 아니라 ▶ 화면 효과의 압박 연출이 맡는다.」 — 예전의 열쇠 구멍 → 손 → 문 줌 3단계를 걷어냈다
+        //   (E-64 줌 폐기). 압박은 C-14-2 연출의 마지막 단계가 그대로 이어진다(문단 477).
+        yield return WaitBeat();
 
         yield return YarnDialogue.PlayIfExists(yarnNode_BE01a, false);
         yield return WaitBeat();
@@ -362,6 +359,8 @@ public class BadEndingDirector : MonoBehaviour
         PlaySfxIfNamed(sfxDistantCookingName);
         yield return new WaitForSecondsRealtime(beatSeconds * 2f);
 
+        // TODO(개정 D 문단 674): 클로즈업이 아니라 문간에 선 역광 실루엣 스프라이트다. 스프라이트가 오면 맵에 세운다.
+        //   그때까지는 그림이 없어 아무것도 뜨지 않는다(CloseupArt).
         yield return FlashCloseup(backlitSeraCloseup);
         yield return WaitBeat();
     }
@@ -408,7 +407,6 @@ public class BadEndingDirector : MonoBehaviour
         var cam = CameraFollow.Instance;
         if (cam != null)
         {
-            _origOrthoSize    = cam.currentOrthoSize;
             _origCameraTarget = cam.target;
         }
 
@@ -488,15 +486,8 @@ public class BadEndingDirector : MonoBehaviour
     {
         yield return FadeOut();
         TeleportPlayer(spawn);
-        RestoreZoom();
         yield return FadeIn();
         yield return WaitBeat();
-    }
-
-    void RestoreZoom()
-    {
-        if (_origOrthoSize <= 0f) return;
-        CameraFollow.Instance?.ZoomTo(_origOrthoSize, 0.05f);
     }
 
     WaitForSecondsRealtime WaitBeat() => new WaitForSecondsRealtime(beatSeconds);
@@ -517,30 +508,10 @@ public class BadEndingDirector : MonoBehaviour
     /// <summary>클로즈업 Image 를 잠깐 띄웠다 끈다. 비어 있으면 조용히 건너뛴다.</summary>
     IEnumerator FlashCloseup(Image image)
     {
-        if (image == null) yield break;
+        if (!CloseupArt.Has(image)) yield break;   // 그림이 없으면 흰 화면만 뜬다
         image.gameObject.SetActive(true);
         yield return new WaitForSecondsRealtime(closeupHoldSeconds);
         image.gameObject.SetActive(false);
-    }
-
-    /// <remarks>
-    /// ⚠ 카메라 줌은 RoomTransfer(방 이동)·CameraDirector 와 서로 덮어쓴 전례가 있다.
-    /// 그래서 <b>입력이 잠긴 컷씬 구간에서만</b> 쓰고 <see cref="RestoreCamera"/> 로 반드시 되돌린다.
-    /// </remarks>
-    IEnumerator ZoomThroughStages()
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null || doorZoomStages == null || doorZoomStages.Length == 0)
-        {
-            yield return WaitBeat();
-            yield break;
-        }
-
-        foreach (float size in doorZoomStages)
-        {
-            cam.ZoomTo(size, doorZoomDuration);
-            yield return new WaitForSecondsRealtime(doorZoomDuration);
-        }
     }
 
     void MoveCameraTo(Transform target)
@@ -561,7 +532,6 @@ public class BadEndingDirector : MonoBehaviour
             cam.SetTarget(_origCameraTarget);
             cam.SnapToTarget();
         }
-        if (_origOrthoSize > 0f) cam.ZoomTo(_origOrthoSize, 0.3f);
     }
 
     void ShowSera(Transform spawn)

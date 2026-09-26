@@ -4,24 +4,47 @@ using UnityEngine;
 using Unity.Cinemachine;
 using Yarn.Unity;
 
+/// <summary>
+/// 카메라 연출 — 쯔꾸르 문법 4종 (F-3-9 · D-0 · E-64).
+///
+///   추적(Track)  : 루를 따라가고 맵 경계에서 멈춘다. 조작 구간의 기본값. 진행 방향 치우침은 오프셋으로.
+///   고정(Hold)   : 현재 위치에 멈춘다. 컷신의 기본값.
+///   스크롤(Scroll): 목표 위치와 속도만 받는 평행 이동. 맵 경계를 넘는 목표는 경계에서 멈춘다.
+///   흔들림(Shake): 약한 1종. 강도 단계를 두지 않는다.
+///
+/// ⛔ 정사영 크기를 바꾸지 않는다(줌 없음). 클로즈업은 카메라가 아니라 오버레이 컷이다.
+///    2026-09-27 이전의 closeup · zoom · pan · pov · tilt · cut 명령은 이 개정으로 걷어냈다.
+/// 추적·스크롤 중 위치의 1픽셀 스냅은 <see cref="CameraFollow"/> 가 LateUpdate 에서 한다.
+/// </summary>
 public class CameraDirector : MonoBehaviour
 {
     public static CameraDirector Instance { get; private set; }
 
-    private const int DEFAULT_PRIORITY = 10;
-    private const int SHOT_PRIORITY    = 20;
+    public enum Mode { Track, Hold, Scroll }
+
+    /// <summary>[CAM] 값의 한국어 표기 — D-0 과 같은 말을 쓴다.</summary>
+    public const string KindTrack  = "추적";
+    public const string KindHold   = "고정";
+    public const string KindScroll = "스크롤";
+    public const string KindShake  = "흔들림";
+
+    [Header("흔들림 — 약한 1종 (F-3-9)")]
+    [Tooltip("흔들림 진폭(월드 유닛). 1/32 = 화면 1픽셀. 세기 단계를 만들지 않는다.")]
+    public float shakeAmplitude = 2f / 32f;
+    [Tooltip("흔들림 길이(초).")]
+    public float shakeDuration = 0.25f;
+
+    [Header("스크롤")]
+    [Tooltip("스크롤 속도를 주지 않았을 때 쓰는 값(월드 유닛/초).")]
+    public float defaultScrollSpeed = 6f;
+
+    public Mode CurrentMode { get; private set; } = Mode.Track;
 
     private readonly Dictionary<string, CinemachineCamera> _shots = new();
-    private Coroutine _activeRoutine;
-
-    private Transform _origTarget;
-    private float     _origOrthoSize;
-    private Vector3   _origDamping;
-    private Vector3   _origOffset;
-    private bool      _stateSaved;
-    private float     _origTiltAngle;
-    private float     _origTimeScale = 1f;
-    private GameObject _staticTargetGo;
+    private GameObject _anchor;          // 고정·스크롤이 따라가는 빈 오브젝트
+    private Coroutine  _scrollRoutine;
+    private Coroutine  _shakeRoutine;
+    private float      _trackSmoothTime = -1f;
 
     void Awake()
     {
@@ -29,7 +52,8 @@ public class CameraDirector : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // ─── VCam 등록/해제 ──────────────────────────────────────────────
+    // ─── 샷 VCam 등록 (SceneCameraSetup 호환) ─────────────────────────
+    // 등록만 받는다. 샷 전환은 4종에 없어 걷어냈다(E-64).
 
     public void RegisterVCam(string shotName, CinemachineCamera vcam)
     {
@@ -39,526 +63,255 @@ public class CameraDirector : MonoBehaviour
 
     public void UnregisterVCam(string shotName)
     {
-        if (_shots.TryGetValue(shotName, out var vcam))
-            vcam.Priority = 0;
+        if (_shots.TryGetValue(shotName, out var vcam)) vcam.Priority = 0;
         _shots.Remove(shotName);
     }
 
     public void ClearVCams()
     {
-        foreach (var vcam in _shots.Values)
-            vcam.Priority = 0;
+        foreach (var vcam in _shots.Values) vcam.Priority = 0;
         _shots.Clear();
     }
 
-    // ─── 등록된 VCam으로 전환 ────────────────────────────────────────
+    // ─── 1. 추적 ─────────────────────────────────────────────────────
 
-    public void TriggerShot(string shotName)
+    /// <summary>루를 따라간다. offset 은 진행 방향 치우침 등(D-S#16A). 기본 (0,0).</summary>
+    public void Track(Vector2 offset = default)
     {
-        if (!_shots.TryGetValue(shotName, out var vcam)) return;
         var cam = CameraFollow.Instance;
         if (cam == null) return;
-        SaveState();
-        cam.SetFollowPriority(0);
-        vcam.Priority = SHOT_PRIORITY;
+        StopScroll();
+
+        var player = PlayerTransform();
+        if (player != null) cam.SetTarget(player);
+        cam.charLookAheadOffset = offset.x;
+        cam.charHeightOffset    = offset.y;
+        if (_trackSmoothTime >= 0f) { cam.smoothTime = _trackSmoothTime; _trackSmoothTime = -1f; }
+
+        if (_anchor != null) { Destroy(_anchor); _anchor = null; }
+        CurrentMode = Mode.Track;
     }
 
-    // ─── 1. CloseUp ─────────────────────────────────────────────────
+    // ─── 2. 고정 ─────────────────────────────────────────────────────
 
-    public void TriggerCloseUp(Transform target, float duration, float zoomAmount = 2f)
-        => RunExclusive(DoCloseUp(target, duration, zoomAmount));
-
-    IEnumerator DoCloseUp(Transform target, float duration, float zoomAmount)
+    /// <summary>지금 카메라가 있는 자리에 멈춘다.</summary>
+    public void Hold()
     {
         var cam = CameraFollow.Instance;
-        if (cam == null) yield break;
-
-        SaveState();
-        float zoomTarget = Mathf.Max(cam.currentOrthoSize - zoomAmount, 1f);
-        if (target != null) cam.SetTarget(target);
-        cam.ZoomTo(zoomTarget, 0.35f);
-
-        yield return new WaitForSeconds(duration);
-
-        RestoreState(cam);
+        if (cam == null) return;
+        StopScroll();
+        EnsureAnchorAt(cam.transform.position);
+        cam.SetTarget(_anchor.transform);
+        CurrentMode = Mode.Hold;
     }
+
+    // ─── 3. 스크롤 ───────────────────────────────────────────────────
 
     /// <summary>
-    /// 스스로 풀리지 않는 클로즈업. <see cref="RestoreDefault"/> 로 푼다.
-    /// TriggerCloseUp 은 duration 뒤 자동 복귀하고, cam_zoom_in 은 이름으로 대상을 찾는다 —
-    /// 코드가 Transform 을 들고 있고 플레이어 행동에 따라 풀 시점이 정해질 때 쓴다(S#06 현관 손잡이).
+    /// 목표 위치까지 등속으로 평행 이동한 뒤 그 자리에 고정된다. 맵 경계 밖 목표는 경계에서 멈춘다.
+    /// 도착할 때까지 기다리려면 반환값을 yield 한다.
     /// </summary>
-    /// <summary>
-    /// 지금 화면에 실제로 보이는 픽셀퍼펙트 배율 N 에서 steps 단계 가까운 ortho. 5.625/N 만 쓸 수 있다(CLAUDE.md §11).
-    /// 빼기로 계산하지 않는 이유: 이미 확대된 방에서는 한계까지 파고든다(2026-09-27 실측 6배).
-    /// </summary>
-    public static float OrthoStepsCloser(int steps = 1)
-    {
-        var cf = CameraFollow.Instance;
-        float baseOrtho = cf != null ? cf.defaultOrthoSize : 5.625f;
-        float shown = Camera.main != null ? Camera.main.orthographicSize
-                    : (cf != null ? cf.currentOrthoSize : baseOrtho);
-        int n = Mathf.Max(1, Mathf.RoundToInt(baseOrtho / Mathf.Max(0.01f, shown)));
-        return baseOrtho / (n + Mathf.Max(1, steps));
-    }
-
-    public void HoldCloseUp(Transform target, float orthoSize)
+    public Coroutine ScrollTo(Vector2 worldTarget, float speed = 0f)
     {
         var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        if (_activeRoutine != null) { StopCoroutine(_activeRoutine); _activeRoutine = null; }
-        SaveState();
-        if (target != null) cam.SetTarget(target);
-        cam.ZoomTo(orthoSize, 0f);
+        if (cam == null) return null;
+        StopScroll();
+        EnsureAnchorAt(cam.transform.position);
+        cam.SetTarget(_anchor.transform);
+        if (_trackSmoothTime < 0f) _trackSmoothTime = cam.smoothTime;
+        cam.smoothTime = 0f;   // 앵커를 그대로 따라가야 등속이 된다
+        CurrentMode = Mode.Scroll;
+        Vector2 anchorTarget = ClampToBounds(worldTarget) - FollowOffset();
+        _scrollRoutine = StartCoroutine(DoScroll(anchorTarget, speed > 0f ? speed : defaultScrollSpeed));
+        return _scrollRoutine;
     }
 
-    // ─── 2. CutTo ───────────────────────────────────────────────────
-
-    public void TriggerCutTo(Transform target)
+    IEnumerator DoScroll(Vector2 target, float speed)
     {
-        var cam = CameraFollow.Instance;
-        if (cam == null || target == null) return;
-        SaveState();
-        cam.SetTarget(target);
-        cam.SnapToTarget();
-    }
-
-    // ─── 3. PanTo ───────────────────────────────────────────────────
-
-    public void TriggerPanTo(Transform target, float speed = 1.6875f)
-        => RunExclusive(DoPanTo(target, speed));
-
-    IEnumerator DoPanTo(Transform target, float speed)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null || target == null) yield break;
-
-        SaveState();
-        cam.smoothTime = 1f / Mathf.Max(speed, 0.1f);
-        cam.SetTarget(target);
-
-        float timeout = 5f;
-        while (timeout > 0f &&
-               Vector2.Distance(cam.transform.position, target.position) > 0.084375f)
+        Vector2 p = _anchor.transform.position;
+        while ((p - target).sqrMagnitude > 0.0001f)
         {
-            timeout -= Time.deltaTime;
+            p = Vector2.MoveTowards(p, target, speed * Time.deltaTime);
+            _anchor.transform.position = new Vector3(p.x, p.y, _anchor.transform.position.z);
             yield return null;
         }
+        _anchor.transform.position = new Vector3(target.x, target.y, _anchor.transform.position.z);
+        _scrollRoutine = null;
+        CurrentMode = Mode.Hold;   // 스크롤이 끝나면 그 자리에 고정된다
     }
 
-    // ─── 4. PanUp ───────────────────────────────────────────────────
+    void StopScroll()
+    {
+        if (_scrollRoutine != null) { StopCoroutine(_scrollRoutine); _scrollRoutine = null; }
+    }
 
-    public void TriggerPanUp(float height, float speed = 1.125f)
-        => RunExclusive(DoPanUp(height, speed));
+    // ─── 4. 흔들림 ───────────────────────────────────────────────────
 
-    IEnumerator DoPanUp(float height, float speed)
+    /// <summary>약한 흔들림 1회. 설정에서 흔들림을 끄면 아무 일도 없다.</summary>
+    public void Shake()
+    {
+        if (_shakeRoutine != null) StopCoroutine(_shakeRoutine);
+        _shakeRoutine = StartCoroutine(DoShake());
+    }
+
+    IEnumerator DoShake()
     {
         var cam = CameraFollow.Instance;
         if (cam == null) yield break;
-
-        SaveState();
-        float startOffset = cam.charHeightOffset;
-        float endOffset   = startOffset + height;
-        float duration    = Mathf.Abs(height) / Mathf.Max(speed, 0.01f);
-        float elapsed     = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            cam.charHeightOffset = Mathf.Lerp(startOffset, endOffset, elapsed / duration);
-            yield return null;
-        }
-        cam.charHeightOffset = endOffset;
-    }
-
-    // ─── 5. SlowFollow ──────────────────────────────────────────────
-
-    public void TriggerSlowFollow(float lag)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        SaveState();
-        cam.smoothTime = lag;
-    }
-
-    // ─── 6. Shake ───────────────────────────────────────────────────
-
-    public void TriggerShake(float intensity, float duration)
-        => RunExclusive(DoShake(intensity, duration));
-
-    IEnumerator DoShake(float intensity, float duration)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) yield break;
-
-        // 접근성 설정을 여기서 한 번에 존중한다.
-        // 예전에는 shakeOffset 대체 경로(CameraFollow.LateUpdate)에만 걸려 있어서,
-        // 노이즈 경로를 타면 "화면 흔들림 끄기" 가 무시됐다.
         if (!(SettingsManager.Instance?.cameraShakeEnabled ?? true)) yield break;
 
-        var noise = cam.GetNoise();
-
-        // ⚠ 컴포넌트가 있어도 NoiseProfile 이 비어 있으면 진폭을 올려도 출력이 0 이다.
-        //   Cinemachine 자신도 IsValid 를 `enabled && NoiseProfile != null` 로 본다.
-        //   존재 여부만 보고 이 분기를 타면 흔들림이 조용히 죽는다 — 2026-08-27 까지 그 상태였다.
-        //   (프로젝트에 NoiseSettings 에셋이 0개라 yarn 의 cam_shake 3건이 전부 무효였다.)
-        //   프로필이 없으면 shakeOffset 대체 경로로 넘긴다.
-        if (noise != null && noise.NoiseProfile != null)
+        float elapsed = 0f;
+        while (elapsed < shakeDuration)
         {
-            // Cinemachine noise 기반 쉐이크
-            float elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                noise.AmplitudeGain = intensity * (1f - elapsed / duration);
-                yield return null;
-            }
-            noise.AmplitudeGain = 0f;
+            elapsed += Time.deltaTime;
+            float fade = 1f - elapsed / shakeDuration;
+            cam.shakeOffset = new Vector3(Random.Range(-1f, 1f), Random.Range(-1f, 1f), 0f) * (shakeAmplitude * fade);
+            yield return null;
         }
-        else
-        {
-            // fallback: shakeOffset 직접 조작 (CameraFollow.LateUpdate에서 적용)
-            float elapsed = 0f;
-            while (elapsed < duration)
-            {
-                elapsed += Time.deltaTime;
-                float fade = 1f - elapsed / duration;
-                cam.shakeOffset = new Vector3(
-                    Random.Range(-1f, 1f) * intensity * fade,
-                    Random.Range(-1f, 1f) * intensity * fade, 0f);
-                yield return null;
-            }
-            cam.shakeOffset = Vector3.zero;
-        }
-    }
-
-    // ─── 상태 저장/복귀 ─────────────────────────────────────────────
-
-    public void RestoreDefault()
-    {
-        var cam = CameraFollow.Instance;
-        if (cam != null) RestoreState(cam);
-    }
-
-    void SaveState()
-    {
-        if (_stateSaved) return;
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-
-        _origTarget    = cam.target;
-        _origOrthoSize = cam.currentOrthoSize;
-        _origDamping   = new Vector3(cam.smoothTime, cam.smoothTime, 0f);
-        _origOffset    = new Vector3(0f, cam.charHeightOffset, 0f);
-        _origTiltAngle = cam.tiltAngle;
-        _origTimeScale = Time.timeScale;
-        _stateSaved    = true;
-    }
-
-    void RestoreState(CameraFollow cam)
-    {
-        if (_origTarget != null) cam.SetTarget(_origTarget);
-        cam.ZoomTo(_origOrthoSize, 0.4f);
-        cam.smoothTime       = _origDamping.x;
-        cam.charHeightOffset = _origOffset.y;
-
-        // Shot VCam 비활성화, follow VCam 복귀
-        foreach (var vcam in _shots.Values)
-            vcam.Priority = 0;
-        cam.SetFollowPriority(DEFAULT_PRIORITY);
-
-        var noise = cam.GetNoise();
-        if (noise != null) noise.AmplitudeGain = 0f;
         cam.shakeOffset = Vector3.zero;
-        cam.tiltAngle   = 0f;
-        Time.timeScale  = _origTimeScale;
+        _shakeRoutine = null;
+    }
 
-        if (_staticTargetGo != null)
+    // ─── [CAM] 값 하나로 부르기 ───────────────────────────────────────
+
+    /// <summary>
+    /// [CAM] 연출 데이터의 값으로 카메라를 움직인다. 값은 추적·고정·스크롤·흔들림 넷 중 하나다(F-3-9).
+    /// 목록에 없는 값은 경고를 남기고 고정으로 처리한다 — 조용히 버리지 않는다.
+    /// </summary>
+    public Coroutine Apply(string kind, Vector2 offsetOrTarget = default, float speed = 0f, bool hasTarget = false)
+    {
+        switch (kind)
         {
-            Destroy(_staticTargetGo);
-            _staticTargetGo = null;
+            case KindTrack:  Track(offsetOrTarget); return null;
+            case KindHold:   Hold(); return null;
+            case KindScroll:
+                if (!hasTarget)
+                {
+                    Debug.LogWarning("[CameraDirector] 스크롤에 목표가 없다 — 고정으로 처리한다.");
+                    Hold(); return null;
+                }
+                return ScrollTo(offsetOrTarget, speed);
+            case KindShake:  Shake(); return null;
+            default:
+                Debug.LogWarning($"[CameraDirector] 모르는 [CAM] 값 '{kind}' — 추적·고정·스크롤·흔들림 중 하나여야 한다. 고정으로 처리한다(F-3-9).");
+                Hold(); return null;
         }
-
-        _stateSaved = false;
     }
 
-    void RunExclusive(IEnumerator routine)
+    /// <summary>예전 호출부 호환 — 연출이 끝나면 추적으로 돌아간다.</summary>
+    public void RestoreDefault() => Track();
+
+    // ─── 내부 ────────────────────────────────────────────────────────
+
+    /// <summary>카메라 중심이 cameraCenter 에 오도록 앵커를 놓는다. 추적 오프셋만큼 빼 둔다.</summary>
+    void EnsureAnchorAt(Vector3 cameraCenter)
     {
-        if (_activeRoutine != null) StopCoroutine(_activeRoutine);
-        _activeRoutine = StartCoroutine(routine);
-    }
-
-    // ─── 7. ZoomIn ──────────────────────────────────────────────────
-
-    public void TriggerCamZoomIn(string targetName, float zoomAmount, float duration)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        SaveState();
-        Transform t = GameObject.Find(targetName)?.transform ?? cam.target;
-        if (t != null) cam.SetTarget(t);
-        cam.ZoomTo(Mathf.Max(cam.currentOrthoSize - zoomAmount, 1f), duration);
-    }
-
-    // ─── 8. ZoomOut ─────────────────────────────────────────────────
-
-    public void TriggerCamZoomOut(float zoomAmount, float duration)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        SaveState();
-        cam.ZoomTo(cam.currentOrthoSize + zoomAmount, duration);
-    }
-
-    // ─── 9. CamCut ──────────────────────────────────────────────────
-
-    public void TriggerCamCut(string targetName)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        Transform t = GameObject.Find(targetName)?.transform;
-        if (t == null) return;
-        SaveState();
-        cam.SetTarget(t);
-        cam.SnapToTarget();
-    }
-
-    // ─── 10. CamPan (시작→끝) ────────────────────────────────────────
-
-    public void TriggerCamPan(string fromName, string toName, float speed)
-        => StartCoroutine(DoCamPan(fromName, toName, speed));
-
-    IEnumerator DoCamPan(string fromName, string toName, float speed)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) yield break;
-        Transform from = GameObject.Find(fromName)?.transform;
-        Transform to   = GameObject.Find(toName)?.transform;
-        if (from == null || to == null) yield break;
-
-        SaveState();
-        cam.SetTarget(from);
-        cam.SnapToTarget();
-        yield return null;
-
-        cam.smoothTime = 1f / Mathf.Max(speed, 0.1f);
-        cam.SetTarget(to);
-    }
-
-    // ─── 11. CamPanUp ───────────────────────────────────────────────
-
-    public void TriggerCamPanUp(float height, float speed)
-        => StartCoroutine(DoCamPanUp(height, speed));
-
-    IEnumerator DoCamPanUp(float height, float speed)
-    {
-        var cam = CameraFollow.Instance;
-        if (cam == null) yield break;
-
-        SaveState();
-        float startOffset = cam.charHeightOffset;
-        float endOffset   = startOffset + height;
-        float duration    = Mathf.Abs(height) / Mathf.Max(speed, 0.01f);
-        float elapsed     = 0f;
-
-        while (elapsed < duration)
+        if (_anchor == null)
         {
-            elapsed += Time.deltaTime;
-            cam.charHeightOffset = Mathf.Lerp(startOffset, endOffset, elapsed / duration);
-            yield return null;
+            _anchor = new GameObject("_CamAnchor");
+            DontDestroyOnLoad(_anchor);
         }
-        cam.charHeightOffset = endOffset;
+        Vector2 a = (Vector2)cameraCenter - FollowOffset();
+        _anchor.transform.position = new Vector3(a.x, a.y, 0f);
     }
 
-    // ─── 12. CamPOV ─────────────────────────────────────────────────
-
-    public void TriggerCamPov(string targetName, float rotationAngle)
+    static Vector2 FollowOffset()
     {
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        SaveState();
-        Transform t = GameObject.Find(targetName)?.transform;
-        if (t != null) cam.SetTarget(t);
-        cam.tiltAngle = rotationAngle;
+        var cf = CameraFollow.Instance;
+        return cf != null ? new Vector2(cf.charLookAheadOffset, cf.charHeightOffset) : Vector2.zero;
     }
 
-    // ─── 13. CamStatic ──────────────────────────────────────────────
-
-    public void TriggerCamStatic()
+    static Transform PlayerTransform()
     {
-        var cam = CameraFollow.Instance;
-        if (cam == null) return;
-        SaveState();
-
-        if (_staticTargetGo != null) Destroy(_staticTargetGo);
-        _staticTargetGo = new GameObject("_CamStaticAnchor");
-        _staticTargetGo.transform.position = cam.transform.position;
-        DontDestroyOnLoad(_staticTargetGo);
-
-        cam.SetTarget(_staticTargetGo.transform);
-        cam.SnapToTarget();
+        if (PlayerStats.Instance != null) return PlayerStats.Instance.transform;
+        var p = GameObject.FindWithTag("Player");
+        return p != null ? p.transform : null;
     }
 
-    // ─── 14. CamTilt ────────────────────────────────────────────────
-
-    public void TriggerCamTilt(float angle, float returnTime)
-        => StartCoroutine(DoCamTilt(angle, returnTime));
-
-    IEnumerator DoCamTilt(float angle, float returnTime)
+    /// <summary>카메라 중심이 맵 경계 밖을 보지 않도록 목표를 자른다. 경계가 화면보다 작으면 경계 중앙.</summary>
+    static Vector2 ClampToBounds(Vector2 target)
     {
-        var cam = CameraFollow.Instance;
-        if (cam == null) yield break;
+        var cf = CameraFollow.Instance;
+        var cam = Camera.main;
+        if (cf == null || cam == null || !cf.TryGetBoundRect(out Rect r)) return target;
 
-        cam.tiltAngle = angle;
-        yield return new WaitForSeconds(returnTime);
+        // CameraFollow.ClampToBound 와 같은 규칙 — 경계가 화면보다 작은 축은 중앙.
+        float halfH = cam.orthographicSize;
+        float halfW = halfH * cam.aspect;
+        float x = r.width  <= halfW * 2f ? r.center.x : Mathf.Clamp(target.x, r.xMin + halfW, r.xMax - halfW);
+        float y = r.height <= halfH * 2f ? r.center.y : Mathf.Clamp(target.y, r.yMin + halfH, r.yMax - halfH);
+        return new Vector2(x, y);
+    }
 
-        float elapsed    = 0f;
-        float retDuration = 0.3f;
-        float startAngle = cam.tiltAngle;
-        while (elapsed < retDuration)
+    // ─── Yarn Commands ───────────────────────────────────────────────
+    // Yarn Spinner 3.x: 인스턴스 [YarnCommand] 는 첫 인자를 GameObject 이름으로 해석하므로
+    // static + Instance 패턴을 쓴다 (YarnCommandBridge 와 같은 규약).
+
+    /// <summary>
+    /// <<cam "추적">>                    — 루를 따라간다
+    /// <<cam "추적" "오프셋x" "오프셋y">>  — 진행 방향 치우침
+    /// <<cam "고정">>                    — 그 자리에 멈춘다
+    /// <<cam "스크롤" "오브젝트명" "속도">> — 그 오브젝트 위치까지 평행 이동(도착까지 대사 대기). 속도 생략 가능
+    /// <<cam "흔들림">>                  — 약한 흔들림 1회
+    /// 목록에 없는 값은 경고 후 고정.
+    /// </summary>
+    [YarnCommand("cam")]
+    public static IEnumerator YarnCam(string kind, string arg1 = "", string arg2 = "")
+    {
+        var cd = Instance;
+        if (cd == null) yield break;
+
+        switch (kind)
         {
-            elapsed += Time.deltaTime;
-            cam.tiltAngle = Mathf.Lerp(startAngle, 0f, elapsed / retDuration);
-            yield return null;
+            case KindTrack:
+            {
+                float.TryParse(arg1, out float ox);
+                float.TryParse(arg2, out float oy);
+                cd.Track(new Vector2(ox, oy));
+                yield break;
+            }
+            case KindScroll:
+            {
+                var go = string.IsNullOrEmpty(arg1) ? null : GameObject.Find(arg1);
+                if (go == null)
+                {
+                    Debug.LogWarning($"[CameraDirector] cam 스크롤: 오브젝트 '{arg1}' 을 찾지 못했다 — 고정으로 처리한다.");
+                    cd.Hold();
+                    yield break;
+                }
+                float.TryParse(arg2, out float speed);
+                yield return cd.ScrollTo(go.transform.position, speed);
+                yield break;
+            }
+            default:
+                cd.Apply(kind);
+                yield break;
         }
-        cam.tiltAngle = 0f;
     }
 
-    // ─── 15. CamSlowmo ──────────────────────────────────────────────
+    // ── 예전 C# 호출부 호환 (숲 ForestBarrierDirector) ──────────────────
+    // 강도 인자를 받지만 쓰지 않는다 — 흔들림은 약한 1종뿐이다(F-3-9).
+    public static void YarnCamShake(float intensityIgnored, float durationIgnored) => Instance?.Shake();
 
-    public void TriggerCamSlowmo(float timeScale, float duration)
-        => StartCoroutine(DoCamSlowmo(timeScale, duration));
-
-    IEnumerator DoCamSlowmo(float timeScale, float duration)
+    // 슬로모션은 카메라 동작이 아니라 시간 연출이다. 숲 결계가 쓴다. 4종 제한과 무관하게 남긴다.
+    public static void YarnCamSlowmo(float timeScale, float duration)
     {
-        SaveState();
+        if (Instance != null) Instance.StartCoroutine(Instance.DoSlowmo(timeScale, duration));
+    }
+
+    IEnumerator DoSlowmo(float timeScale, float duration)
+    {
+        float orig = Time.timeScale;
         Time.timeScale = Mathf.Clamp(timeScale, 0.01f, 1f);
         yield return new WaitForSecondsRealtime(duration);
-        Time.timeScale = _origTimeScale;
+        Time.timeScale = orig;
     }
 
-    // ─── 16. CamShake (cam_ 접두어) ─────────────────────────────────
-
-    public void TriggerCamShake(float intensity, float duration)
-        => StartCoroutine(DoShake(intensity, duration));
-
-    // ─── 17. CamFadeDown ────────────────────────────────────────────
-
-    public void TriggerCamFadeDown(float duration)
-        => StartCoroutine(DoCamFadeDown(duration));
-
-    IEnumerator DoCamFadeDown(float duration)
+    // <<cam_fade_down 지속시간>> — 카메라가 아니라 화면 페이드다. 구역 카메라의 TransitionFade 가 쓴다.
+    public IEnumerator FadeDown(float duration)
     {
         var tm = TransitionManager.Instance;
         if (tm == null) yield break;
         yield return StartCoroutine(tm.FadeToBlack(duration));
     }
-
-    // ─── Yarn Commands ───────────────────────────────────────────────
-    // Yarn Spinner 3.x: 인스턴스 [YarnCommand]는 첫 인자를 GameObject 이름으로
-    // 해석하므로 static + Instance 패턴을 사용한다 (YarnCommandBridge와 동일 규약).
-
-    // <<camera_closeup "오브젝트명" 시간>>
-    // <<camera_closeup "오브젝트명" 시간 줌량>>
-    [YarnCommand("camera_closeup")]
-    public static void YarnCloseUp(string objectName, float duration, float zoomAmount = 2f)
-    {
-        if (Instance == null) return;
-        Transform t = GameObject.Find(objectName)?.transform
-                   ?? CameraFollow.Instance?.target;
-        Instance.TriggerCloseUp(t, duration, zoomAmount);
-    }
-
-    // <<camera_cut "오브젝트명">>
-    [YarnCommand("camera_cut")]
-    public static void YarnCutTo(string objectName)
-    {
-        if (Instance == null) return;
-        Transform t = GameObject.Find(objectName)?.transform;
-        if (t != null) Instance.TriggerCutTo(t);
-    }
-
-    // <<camera_pan "오브젝트명" 속도>>
-    [YarnCommand("camera_pan")]
-    public static void YarnPanTo(string objectName, float speed = 1.6875f)
-    {
-        if (Instance == null) return;
-        Transform t = GameObject.Find(objectName)?.transform;
-        if (t != null) Instance.TriggerPanTo(t, speed);
-    }
-
-    // <<camera_pan_up 높이 속도>>
-    [YarnCommand("camera_pan_up")]
-    public static void YarnPanUp(float height, float speed = 2f) =>
-        Instance?.TriggerPanUp(height, speed);
-
-    // <<camera_shake 강도 시간>>
-    [YarnCommand("camera_shake")]
-    public static void YarnShake(float intensity, float duration) =>
-        Instance?.TriggerShake(intensity, duration);
-
-    // <<camera_restore>>
-    [YarnCommand("camera_restore")]
-    public static void YarnRestore() => Instance?.RestoreDefault();
-
-    // <<camera_shot "샷이름">>
-    [YarnCommand("camera_shot")]
-    public static void YarnShot(string shotName) => Instance?.TriggerShot(shotName);
-
-    // ─── cam_* 커맨드 ────────────────────────────────────────────────
-
-    // <<cam_zoom_in "타겟" 줌량 지속시간>>
-    [YarnCommand("cam_zoom_in")]
-    public static void YarnCamZoomIn(string targetName, float zoomAmount, float duration)
-        => Instance?.TriggerCamZoomIn(targetName, zoomAmount, duration);
-
-    // <<cam_zoom_out 줌량 지속시간>>
-    [YarnCommand("cam_zoom_out")]
-    public static void YarnCamZoomOut(float zoomAmount, float duration)
-        => Instance?.TriggerCamZoomOut(zoomAmount, duration);
-
-    // <<cam_cut "타겟">>
-    [YarnCommand("cam_cut")]
-    public static void YarnCamCut(string targetName)
-        => Instance?.TriggerCamCut(targetName);
-
-    // <<cam_pan "시작타겟" "끝타겟" 속도>>
-    [YarnCommand("cam_pan")]
-    public static void YarnCamPan(string fromName, string toName, float speed)
-        => Instance?.TriggerCamPan(fromName, toName, speed);
-
-    // <<cam_pan_up 높이 속도>>
-    [YarnCommand("cam_pan_up")]
-    public static void YarnCamPanUp(float height, float speed = 2f)
-        => Instance?.TriggerCamPanUp(height, speed);
-
-    // <<cam_pov "타겟" 회전각도>>
-    [YarnCommand("cam_pov")]
-    public static void YarnCamPov(string targetName, float rotationAngle)
-        => Instance?.TriggerCamPov(targetName, rotationAngle);
-
-    // <<cam_static>>
-    [YarnCommand("cam_static")]
-    public static void YarnCamStatic()
-        => Instance?.TriggerCamStatic();
-
-    // <<cam_tilt 각도 복귀시간>>
-    [YarnCommand("cam_tilt")]
-    public static void YarnCamTilt(float angle, float returnTime)
-        => Instance?.TriggerCamTilt(angle, returnTime);
-
-    // <<cam_slowmo 배속 지속시간>>
-    [YarnCommand("cam_slowmo")]
-    public static void YarnCamSlowmo(float timeScale, float duration)
-        => Instance?.TriggerCamSlowmo(timeScale, duration);
-
-    // <<cam_shake 강도 지속시간>>
-    [YarnCommand("cam_shake")]
-    public static void YarnCamShake(float intensity, float duration)
-        => Instance?.TriggerCamShake(intensity, duration);
-
-    // <<cam_fade_down 지속시간>>
-    [YarnCommand("cam_fade_down")]
-    public static void YarnCamFadeDown(float duration)
-        => Instance?.TriggerCamFadeDown(duration);
 }

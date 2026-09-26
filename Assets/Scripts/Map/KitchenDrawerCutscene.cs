@@ -38,13 +38,14 @@ public class KitchenDrawerCutscene : MonoBehaviour
     [Tooltip("「부엌 서랍 — 열린 상태 내부 클로즈업」. 잡동사니 사이 열쇠 하나를 **구석에** 그려 넣는다\n" +
              "(카메라가 열쇠를 중앙에 두지 않는다 — 플레이어가 먼저 찾아내게). 비우면 월드 카메라 클로즈업으로 대신한다.")]
     public Sprite drawerInteriorSprite;
-    [Tooltip("스프라이트가 없을 때 카메라가 붙을 대상. 비우면 이 오브젝트(싱크대 앞).")]
+    [Tooltip("⛔ 쓰지 않는다 — 2026-09-27 카메라 대체 클로즈업 폐기(E-64).")]
     public Transform drawerCloseupTarget;
 
     // 2026-09-27: 예전에는 handCloseupImage 를 스프라이트 확인 없이 알파 1 로 띄웠다.
     //   그 Image 는 S#03 도자기 손가락과 공용이고 스프라이트가 비어 있어(흰색) 서랍을 열면
-    //   1.5초간 화면 전체가 흰 사각형으로 덮였다. 스프라이트가 있을 때만 띄우고, 없으면
-    //   D 문단 324 [CAM] 「서랍 안 클로즈업」을 월드 카메라 한 단계 클로즈업으로 대신한다.
+    //   1.5초간 화면 전체가 흰 사각형으로 덮였다. 스프라이트가 있을 때만 띄운다.
+    //   같은 날 넣었던 「그림이 없으면 월드 카메라 클로즈업」은 줌 폐기(E-64)로 걷어냈다.
+    //   서랍 안은 오버레이 컷(house_overlay_*, F-3-9)으로 옮길 자리다 — 매핑표 확정 대기.
 
     [Header("효과음")]
     public AudioClip sfxDrawerOpen;
@@ -69,18 +70,12 @@ public class KitchenDrawerCutscene : MonoBehaviour
         var ctrl = YarnDialogue.LockPlayer();
 
         bool useImage   = handCloseupImage != null && drawerInteriorSprite != null;
-        bool cameraHeld = false;
         if (useImage)
         {
             handCloseupImage.sprite = drawerInteriorSprite;
             yield return StartCoroutine(FadeInImage(handCloseupImage, 1f, 0.3f));
         }
-        else if (CameraDirector.Instance != null && CameraFollow.Instance != null)
-        {
-            CameraDirector.Instance.HoldCloseUp(drawerCloseupTarget != null ? drawerCloseupTarget : transform,
-                                                CameraDirector.OrthoStepsCloser(1));
-            cameraHeld = true;
-        }
+        // 그림이 없으면 카메라로 대신하지 않는다 — 클로즈업은 카메라가 아니라 오버레이 컷이다(개정 D 문단 336 · E-64).
 
         AudioManager.Instance?.Play(sfxDrawerOpen);
         yield return new WaitForSeconds(0.5f);
@@ -100,8 +95,6 @@ public class KitchenDrawerCutscene : MonoBehaviour
 
         if (useImage)
             yield return StartCoroutine(FadeOutImage(handCloseupImage, 0.3f));
-        if (cameraHeld)
-            CameraDirector.Instance?.RestoreDefault();
 
         ObjectiveManager.Instance?.ShowObjective(objectiveHeader, objectiveBody);
 

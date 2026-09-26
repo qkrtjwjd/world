@@ -447,6 +447,13 @@ public class KitchenTriggerCutscene : MonoBehaviour
             diningRoom.EnterRoom();
             CameraFollow.Instance?.SetBound(diningRoom.roomBound, snap: true);
         }
+        else
+        {
+            // 2026-09-27: 밤은 루의 방 안에서 시작해 방 경계가 걸려 있다(RoomTransfer.Start). 부엌으로 순간이동하면서
+            //   방을 나간 것으로 처리한다 — 안 하면 카메라가 루의 방 중앙에 묶인 채 아침 장면이 진행된다.
+            RoomTransfer.CurrentRoom?.ExitRoom();
+            CameraFollow.Instance?.SetBound(null, snap: true);
+        }
     }
 
     // ── 세라 무대 ─────────────────────────────────

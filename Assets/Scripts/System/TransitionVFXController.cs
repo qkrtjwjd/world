@@ -122,7 +122,6 @@ public class TransitionVFXController : MonoBehaviour
     private Coroutine _flashCoroutine;
     private Coroutine _shakeCoroutine;
     private Coroutine _colorGradingCoroutine;
-    private Coroutine _zoomCoroutine;
     private Coroutine _screenCrackCoroutine;
     private Coroutine _shatterCoroutine;
     private Coroutine _impactFlashCoroutine;
@@ -238,15 +237,7 @@ public class TransitionVFXController : MonoBehaviour
         _colorGradingCoroutine = StartCoroutine(ColorGradingRoutine(saturation, contrast, colorFilter, duration));
     }
 
-    /// <summary>
-    /// 카메라 orthographicSize를 targetOrthoSize까지 duration 초 동안 변경합니다.
-    /// ※ 이 프로젝트는 2D Orthographic 카메라를 사용하므로 FOV 대신 orthographicSize로 줌을 제어합니다.
-    /// </summary>
-    public void CameraZoom(float targetOrthoSize, float duration)
-    {
-        if (_zoomCoroutine != null) StopCoroutine(_zoomCoroutine);
-        _zoomCoroutine = StartCoroutine(ZoomRoutine(targetOrthoSize, duration));
-    }
+    // ⛔ 2026-09-27: CameraZoom 을 걷어냈다. 정사영 크기는 바꾸지 않는다(E-64 · F-3-9). 호출처도 없었다.
 
     /// <summary>
     /// GlassCrack 셰이더 기반 화면 균열 연출. duration 초 동안 _CrackAmount를 0→1로 애니메이션.
@@ -420,28 +411,6 @@ public class TransitionVFXController : MonoBehaviour
         _colorGradingCoroutine = null;
     }
 
-    /// <summary>카메라 orthographicSize Lerp — ZoomIn / ZoomOut 공용.</summary>
-    IEnumerator ZoomRoutine(float targetOrthoSize, float duration)
-    {
-        if (_cam == null)
-        {
-            Debug.LogWarning("[TransitionVFXController] CameraZoom: 카메라 참조가 없습니다.");
-            yield break;
-        }
-
-        float startSize = _cam.orthographicSize;
-        float elapsed   = 0f;
-
-        while (elapsed < duration)
-        {
-            elapsed += Time.unscaledDeltaTime;
-            _cam.orthographicSize = Mathf.Lerp(startSize, targetOrthoSize, elapsed / duration);
-            yield return null;
-        }
-
-        _cam.orthographicSize = targetOrthoSize;
-        _zoomCoroutine = null;
-    }
 
     /// <summary>GlassCrack _CrackAmount 0→1 + 임팩트 포인트 설정. timeScale 0.3 대응(unscaled).</summary>
     IEnumerator ScreenCrackRoutine(float duration, Vector2 impactUV)

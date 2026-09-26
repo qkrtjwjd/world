@@ -39,7 +39,6 @@ public class CameraFollow : MonoBehaviour
     private Camera _cam;
     private Camera _bgCam;
     private CinemachineFollow _follow;
-    private Coroutine _zoomCoroutine;
 
     // 씬을 넘어 살아남은 뒤 followVCam 을 다시 찾을 때 쓰는 이름. 아래 OnSceneLoaded 참조.
     private string _followVCamName;
@@ -87,6 +86,7 @@ public class CameraFollow : MonoBehaviour
         //   이전 씬의 가상 카메라가 파괴되면 confiner 도 같이 가짜 null 이 된다.
         //   이걸 빼면 씬을 넘어간 뒤 SetBound 가 조용히 아무 일도 하지 않는다.
         confiner = vcam.GetComponent<CinemachineConfiner2D>();
+        DisableCinemachineConfiner();
     }
 
     /// <summary>씬의 기본 바운드를 이름으로 다시 찾습니다.</summary>
@@ -164,6 +164,8 @@ public class CameraFollow : MonoBehaviour
         // 첫 씬에서는 sceneLoaded 가 이 컴포넌트의 OnEnable 보다 먼저 지나갈 수 있으므로
         // 여기서도 한 번 잡는다.
         if (defaultBound == null) BindDefaultBound();
+        if (_bound == null) _bound = defaultBound;
+        DisableCinemachineConfiner();
 
         if (followVCam == null) return;
 
@@ -209,9 +211,22 @@ public class CameraFollow : MonoBehaviour
     // Script Execution Order에서 CameraFollow를 CinemachineBrain보다 늦게 실행해야 합니다.
     void LateUpdate()
     {
+        // 정사영 크기는 5.625 에서 움직이지 않는다(F-3-9 · CLAUDE.md §11). 씬 설정이 달라도 여기서 되돌린다.
+        LockOrthoSize();
+
+        // 방 경계 안으로 제한한다 — 경계가 화면보다 작으면 그 축은 경계 중앙에 고정된다(아래 「경계 제한」).
+        ClampToBound();
+
         bool shakeOn = SettingsManager.Instance?.cameraShakeEnabled ?? true;
         if (shakeOn && shakeOffset != Vector3.zero)
             transform.position += shakeOffset;
+
+        // 카메라 위치를 내부 해상도 1픽셀(1/PPU 유닛) 단위로 스냅한다(F-3-9).
+        // 소수 좌표에 멈추면 정수배 스케일에서 타일 경계가 떨린다.
+        Vector3 pos = transform.position;
+        pos.x = Mathf.Round(pos.x * PixelsPerUnit) / PixelsPerUnit;
+        pos.y = Mathf.Round(pos.y * PixelsPerUnit) / PixelsPerUnit;
+        transform.position = pos;
 
         if (tiltAngle != 0f)
         {
@@ -233,7 +248,8 @@ public class CameraFollow : MonoBehaviour
 
     public float currentOrthoSize => followVCam != null ? followVCam.Lens.OrthographicSize : defaultOrthoSize;
 
-    public BoxCollider2D currentBound => confiner?.BoundingShape2D as BoxCollider2D;
+    /// <summary>지금 걸린 방 경계. 카메라 위치는 <see cref="ClampToBound"/> 가 이 사각형 안으로 제한한다.</summary>
+    public BoxCollider2D currentBound => _bound;
 
     public float smoothTime
     {
@@ -281,34 +297,9 @@ public class CameraFollow : MonoBehaviour
     /// </remarks>
     public void SetBound(BoxCollider2D newBound, bool snap = false)
     {
-        if (confiner != null)
-        {
-            confiner.BoundingShape2D = newBound != null ? newBound : defaultBound;
-            confiner.InvalidateBoundingShapeCache();
-        }
-        if (newBound == null) ZoomTo(defaultOrthoSize, 0.3f);
+        _bound = newBound != null ? newBound : defaultBound;
+        DisableCinemachineConfiner();
         if (snap) SnapToTarget();
-    }
-
-    /// <summary>
-    /// 목표 ortho 로 줌한다.
-    ///
-    /// <para>⚠ <b>픽셀퍼펙트가 켜져 있으면 duration 을 무시하고 즉시 적용한다.</b>
-    /// <c>CinemachinePixelPerfect</c> 가 ortho 를 <c>base / N</c>(N = 정수)로 스냅하기 때문에
-    /// 쓸 수 있는 값이 5.625 · 2.8125 · 1.875 · 1.40625 … 뿐이고 중간값이 아예 없다.
-    /// 이때 Lerp 를 돌리면 전반부에는 아무 일도 일어나지 않다가 중간에 한 번 튄다 —
-    /// 부드러워지는 게 아니라 지연만 생긴다. 그래서 끊어서 적용하는 편이 낫다.</para>
-    ///
-    /// <para>연출의 호흡은 호출부가 잡는다. 예를 들어 배드엔딩 문 줌은 단계마다
-    /// <c>ZoomTo</c> 뒤에 <c>WaitForSecondsRealtime</c> 로 기다리므로,
-    /// 스냅해도 세 박자로 끊어 들어가는 연출이 그대로 유지된다.</para>
-    /// </summary>
-    public void ZoomTo(float targetSize, float duration)
-    {
-        if (_zoomCoroutine != null) StopCoroutine(_zoomCoroutine);
-        if (followVCam == null) return;
-        if (duration <= 0f || PixelPerfectActive) { SetOrthoSize(targetSize); return; }
-        _zoomCoroutine = StartCoroutine(ZoomCoroutine(targetSize, duration));
     }
 
     public void SetTarget(Transform newTarget)
@@ -333,39 +324,20 @@ public class CameraFollow : MonoBehaviour
 
     // ─── Private ─────────────────────────────────────────────────────
 
-    // 같은 GameObject 의 PixelPerfectCamera. 없을 수도 있으므로 조회 여부를 따로 기억한다.
-    PixelPerfectCamera _ppc;
-    bool _ppcLookedUp;
+    /// <summary>화면 1픽셀 = 1/PPU 유닛. 기준 삼각형(CLAUDE.md §11)의 PPU 32.</summary>
+    const float PixelsPerUnit = 32f;
 
-    bool PixelPerfectActive
-    {
-        get
-        {
-            if (!_ppcLookedUp) { _ppc = GetComponent<PixelPerfectCamera>(); _ppcLookedUp = true; }
-            return _ppc != null && _ppc.isActiveAndEnabled;
-        }
-    }
-
-    void SetOrthoSize(float size)
+    /// <summary>
+    /// 정사영 크기를 기본값에 묶어 둔다. 2026-09-27 줌 폐기(E-64 · F-3-9)로 ZoomTo 를 걷어냈다.
+    /// 옛 씬 값이나 다른 코드가 렌즈를 바꿔도 다음 프레임에 돌아온다.
+    /// </summary>
+    void LockOrthoSize()
     {
         if (followVCam == null) return;
         var lens = followVCam.Lens;
-        lens.OrthographicSize = size;
+        if (Mathf.Approximately(lens.OrthographicSize, defaultOrthoSize)) return;
+        lens.OrthographicSize = defaultOrthoSize;
         followVCam.Lens = lens;
-    }
-
-    IEnumerator ZoomCoroutine(float targetSize, float duration)
-    {
-        float startSize = followVCam.Lens.OrthographicSize;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            SetOrthoSize(Mathf.Lerp(startSize, targetSize, elapsed / duration));
-            yield return null;
-        }
-        SetOrthoSize(targetSize);
-        _zoomCoroutine = null;
     }
 
     IEnumerator DoSnap()
@@ -407,12 +379,63 @@ public class CameraFollow : MonoBehaviour
 
     void OnDrawGizmos()
     {
-        if (confiner?.BoundingShape2D != null)
+        if (_bound != null && TryGetBoundRect(out Rect r))
         {
             Gizmos.color = Color.green;
-            Gizmos.DrawWireCube(
-                confiner.BoundingShape2D.bounds.center,
-                confiner.BoundingShape2D.bounds.size);
+            Gizmos.DrawWireCube(r.center, r.size);
         }
+    }
+
+    // ─── 경계 제한 ───────────────────────────────────────────────────
+    //
+    // ⚠ 2026-09-27 (보호 구역 §2 사용자 승인): 방 경계 제한을 Cinemachine Confiner2D 에서 여기로 옮겼다.
+    //   다락방 경계(`다락방 계단 ▸ CameraBounds`)를 Confiner2D 에 넣으면 빈 해가 나와 보정이 카메라를
+    //   정확히 (0,0,0) 으로 끌어가 화면이 통째로 비었다(z 까지 0). 줌을 쓰던 시절에도 같았고, OversizeWindow ·
+    //   대리 경계로도 고쳐지지 않았다. Confiner2D 는 BoxCollider2D 의 offset 도 다르게 다룬다.
+    //   이제 콜라이더의 네 꼭짓점을 월드로 변환해 사각형을 잡고, 카메라 중심을 그 안으로 자른다.
+    //     · 경계가 화면보다 작은 축 → 그 축은 경계 중앙에 고정(개정 D 의 「방 전경 고정」)
+    //     · 큰 축 → 화면 가장자리가 경계에 닿으면 멈춘다(추적 · 스크롤이 맵 경계에서 멈춘다 — F-3-9)
+
+    BoxCollider2D _bound;
+
+    void DisableCinemachineConfiner()
+    {
+        if (confiner == null) return;
+        confiner.BoundingShape2D = null;
+        confiner.enabled = false;
+    }
+
+    void ClampToBound()
+    {
+        if (_cam == null || !TryGetBoundRect(out Rect r)) return;
+        float halfH = _cam.orthographicSize;
+        float halfW = halfH * _cam.aspect;
+        Vector3 p = transform.position;
+        p.x = r.width  <= halfW * 2f ? r.center.x : Mathf.Clamp(p.x, r.xMin + halfW, r.xMax - halfW);
+        p.y = r.height <= halfH * 2f ? r.center.y : Mathf.Clamp(p.y, r.yMin + halfH, r.yMax - halfH);
+        transform.position = p;
+    }
+
+    /// <summary>
+    /// 현재 경계의 월드 사각형. 네 꼭짓점을 변환해 잰다 — 회전 · 비균일 스케일 · offset 을 그대로 반영하고,
+    /// 콜라이더가 꺼져 있어도 값이 나온다(CLAUDE.md §11 — m_Size 로 재지 않는다).
+    /// </summary>
+    public bool TryGetBoundRect(out Rect rect)
+    {
+        rect = default;
+        var c = _bound;
+        if (c == null) return false;
+        Vector2 h = c.size * 0.5f, o = c.offset;
+        var t = c.transform;
+        Vector2 a = t.TransformPoint(o + new Vector2(-h.x, -h.y));
+        Vector2 b = t.TransformPoint(o + new Vector2( h.x, -h.y));
+        Vector2 d = t.TransformPoint(o + new Vector2(-h.x,  h.y));
+        Vector2 e = t.TransformPoint(o + new Vector2( h.x,  h.y));
+        float xMin = Mathf.Min(Mathf.Min(a.x, b.x), Mathf.Min(d.x, e.x));
+        float xMax = Mathf.Max(Mathf.Max(a.x, b.x), Mathf.Max(d.x, e.x));
+        float yMin = Mathf.Min(Mathf.Min(a.y, b.y), Mathf.Min(d.y, e.y));
+        float yMax = Mathf.Max(Mathf.Max(a.y, b.y), Mathf.Max(d.y, e.y));
+        rect = Rect.MinMaxRect(xMin, yMin, xMax, yMax);
+        return true;
     }
 }

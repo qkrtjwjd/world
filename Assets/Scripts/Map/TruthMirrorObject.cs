@@ -22,10 +22,10 @@ public class TruthMirrorObject : MonoBehaviour
     [SerializeField] private string crackedMonologue   = "...관절이 삐걱거리는 것 같아.";
     [SerializeField] private string porcelainMonologue = "...저게 나인가. 웃고 있는데 눈이 비어있어.";
 
-    [Header("카메라 클로즈업 설정")]
-    [SerializeField] private Transform closeUpTarget;    // null이면 this.transform
+    [Header("표시 시간")]
+    [SerializeField] private Transform closeUpTarget;    // ⛔ 2026-09-27 줌 폐기로 쓰지 않는다(직렬화 값 보존)
     [SerializeField] private float     closeUpDuration = 2.5f;
-    [SerializeField] private float     closeUpZoom     = 2.5f;
+    [SerializeField] private float     closeUpZoom     = 2.5f; // ⛔ 쓰지 않는다
 
     private bool      _isPlayerNear;
     private bool      _isOpen;
@@ -110,11 +110,11 @@ public class TruthMirrorObject : MonoBehaviour
                 sprite = crackedSprite; monologue = porcelainMonologue; break;
         }
 
-        // 카메라 클로즈업
-        Transform target = closeUpTarget != null ? closeUpTarget : transform;
-        CameraDirector.Instance?.TriggerCloseUp(target, closeUpDuration, closeUpZoom);
+        // 2026-09-27: 카메라 줌 클로즈업을 걷어냈다(E-64 · F-3-9 — 정사영 크기 불변). 거울 그림(mirrorImage)이
+        //   화면에 뜨는 것이 곧 좁혀 보여주는 것이다. 카메라는 그 자리에 고정만 한다. CloseSequence 가 추적으로 되돌린다.
+        CameraDirector.Instance?.Hold();
 
-        yield return new WaitForSeconds(0.35f); // 줌 도입부 대기
+        yield return new WaitForSeconds(0.35f);
 
         // 거울 스프라이트 페이드인
         if (mirrorImage != null && sprite != null)
@@ -127,7 +127,7 @@ public class TruthMirrorObject : MonoBehaviour
 
         InteractionTextUI.Instance?.Show(monologue);
 
-        // CameraDirector의 closeUpDuration 종료까지 대기
+        // closeUpDuration 동안 보여 준다
         float remaining = closeUpDuration - 0.35f;
         if (remaining > 0f) yield return new WaitForSeconds(remaining);
 
