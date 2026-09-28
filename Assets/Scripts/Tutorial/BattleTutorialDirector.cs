@@ -179,7 +179,9 @@ public class BattleTutorialDirector : MonoBehaviour
         // 보상은 턴제·액션 공통이다 (F-2-6). 차이는 성립 난이도뿐이며 보상에 차등을 두지 않는다.
         GiveItem(spared ? redCrystalPath : blackOrbPath);
         CorruptionManager.Instance?.AddCorruption(spared ? corruptionOnSpare : corruptionOnKill);
-        if (spared) GaugeManager.Instance?.ChangeGauge(gaugeOnSpare);
+        // 심리 게이지 +5 는 환상 불살(턴제)에만 붙인다. 액션 불살에는 붙이지 않는다(F-2-6 · C-3-3 #6).
+        //   2026-09-28: 전에는 액션 불살(S#19E)에도 붙었다.
+        if (spared && _encounter == Encounter.Wolf1TurnBased) GaugeManager.Instance?.ChangeGauge(gaugeOnSpare);
 
         // 전투 UI 가 정리될 때까지 기다렸다가 마무리 대사를 재생한다.
         while (BattleSystem.Instance != null)

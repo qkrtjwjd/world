@@ -402,7 +402,7 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void ShowResult(bool playerWon, int gainedXp = 0)
     {
-        string msg = playerWon ? "⚔ 전투 승리!" : "💀 전투 패배...";
+        string msg = playerWon ? "전투 승리!" : "전투 패배...";   // ⚔·💀 는 Pretendard 에 없어 □ 로 나왔다(2026-09-28)
         if (playerWon && gainedXp > 0) msg += $" 경험치 +{gainedXp}";
         ShowMessage(msg);
         if (!playerWon)

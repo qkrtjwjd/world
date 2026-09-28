@@ -21,6 +21,10 @@ public class TutorialEnemyTrigger : MonoBehaviour
     [Range(0f, 0.3f)]
     public float sightViewportMargin = 0.1f;
 
+    [Tooltip("2차 전투(S#19A)는 루가 이 거리 안에 들어오면 시작한다 — 늑대가 나무 사이에서 천천히 걸어나온다(D 942). " +
+             "지도가 짧아 화면 판정만 쓰면 S#17 이 끝나자마자 시작되므로 거리로 한 박자를 둔다. 0 이면 닿을 때만.")]
+    public float approachRadius = 4f;
+
     private bool _triggered = false;
 
     void Start()
@@ -33,12 +37,22 @@ public class TutorialEnemyTrigger : MonoBehaviour
 
     void Update()
     {
-        // S#17A — 「루를 따라가다 개가 화면에 들어오는 순간 고정」(D 807). 1차 전투만 시야로 시작한다.
-        if (tutorialStep != 0 || _triggered) return;
+        if (_triggered) return;
         if (GameState.tutorialBattleStep != tutorialStep || !GameState.isKuruJoined) return;
-        if (YarnDialogue.IsRunning || BattleSystem.IsActive) return;
+        if (YarnDialogue.IsRunning || BattleSystem.IsActive || HackSlashCombatManager.IsActive) return;
         var cam = Camera.main;
         if (cam == null || PlayerStats.Instance == null) return;
+
+        // S#19A — 걷다가 두 번째 늑대와 마주친다(D 1045). 가까워지면 늑대가 걸어나온다(TutorialBattleManager).
+        if (tutorialStep == 1)
+        {
+            if (approachRadius > 0f &&
+                Vector2.Distance(PlayerStats.Instance.transform.position, transform.position) <= approachRadius)
+                TryTrigger(PlayerStats.Instance.gameObject);
+            return;
+        }
+
+        // S#17A — 「루를 따라가다 개가 화면에 들어오는 순간 고정」(D 807). 1차 전투는 시야로 시작한다.
         Vector3 v = cam.WorldToViewportPoint(transform.position);
         float m = sightViewportMargin;
         if (v.x < m || v.x > 1f - m || v.y < m || v.y > 1f - m) return;

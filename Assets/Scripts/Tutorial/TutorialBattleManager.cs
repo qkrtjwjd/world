@@ -178,14 +178,53 @@ public class TutorialBattleManager : MonoBehaviour
     //  2번 전투 흐름 (핵앤슬래시)
     // ────────────────────────────────────────────────────
 
+    [Header("2번 전투 — S#19A 등장")]
+    [Tooltip("두 번째 늑대가 나무 사이에서 걸어나오는 속도(D 942 「천천히」).")]
+    public float wolf2ApproachSpeed = 1f;
+    [Tooltip("늑대가 루에게서 이 거리까지 걸어나와 멈춘다.")]
+    public float wolf2StopDistance = 2.5f;
+
     IEnumerator Battle2Flow(GameObject enemyObject)
     {
+        // S#19A [CAM] 「고정. 늑대와 루 · 쿠루가 한 화면에 들어온 구도를 유지하고 컷을 잇지 않는다」(D 941).
+        //   늑대는 나무 사이에서 천천히 걸어나온다(D 942). 그동안 루는 멈춰 선다.
+        var ctrl = YarnDialogue.LockPlayer();
+        var cd   = CameraDirector.Instance;
+        var lu   = PlayerStats.Instance != null ? PlayerStats.Instance.transform : null;
+        if (enemyObject != null && lu != null)
+        {
+            if (cd != null)
+            {
+                cd.Hold();
+                yield return cd.ScrollTo(((Vector2)lu.position + (Vector2)enemyObject.transform.position) * 0.5f);
+            }
+            var rb = enemyObject.GetComponent<Rigidbody2D>();
+            float t = 0f;
+            while (t < 3f && Vector2.Distance(enemyObject.transform.position, lu.position) > wolf2StopDistance)
+            {
+                Vector2 step = ((Vector2)lu.position - (Vector2)enemyObject.transform.position).normalized
+                               * wolf2ApproachSpeed * Time.fixedDeltaTime;
+                if (rb != null) rb.MovePosition(rb.position + step);
+                else enemyObject.transform.position += (Vector3)step;
+                t += Time.fixedDeltaTime;
+                yield return new WaitForFixedUpdate();
+            }
+            if (rb != null) rb.linearVelocity = Vector2.zero;
+        }
+        YarnDialogue.UnlockPlayer(ctrl);
+
         // 전투 전 대사 재생 — S#19A(조우) → S#19B(실체 확인)
         if (!string.IsNullOrEmpty(yarnNode_preBattle2))
             yield return YarnDialogue.PlayAndWait(yarnNode_preBattle2, lockPlayer: true);
 
-        // 두 노드 사이에서 필터가 현실로 넘어간다. S#19B 첫 줄의 set_filter 가 그 자리이며,
-        // 「한 꺼풀 벗겨지듯」이 지문이므로 페이드를 끼우지 않는다 (정본 ▶ 연출).
+        // 두 노드 사이에서 필터가 현실로 넘어간다 — 단검 파지 → 필터 현실(R) 전환(D 964).
+        // 「한 꺼풀 벗겨지듯」이 지문이므로 페이드를 끼우지 않고 한 프레임에 끊는다 (D 965).
+        //   2026-09-28: 전에는 S#19B 첫 줄의 set_filter 만 있었는데, 그건 FilterManager 쪽이라 화면(게이지)이 바뀌지 않았다.
+        //   S#19B 대사 내내 환상으로 보이다가 전투가 시작돼서야 현실이 됐다.
+        //   여기서 게이지를 올려 두면 액션 전투가 끝날 때 이 값(현실)으로 되돌아간다 — S#20 은 직전 전투의 필터를 유지한다(D 1052).
+        GaugeBoundaryMonitor.Instance?.SilentSetZone(100f);
+        GaugeManager.Instance?.ForceRealityMax();
+
         if (!string.IsNullOrEmpty(yarnNode_preBattle2b))
             yield return YarnDialogue.PlayAndWait(yarnNode_preBattle2b, lockPlayer: true);
 
@@ -200,6 +239,10 @@ public class TutorialBattleManager : MonoBehaviour
             Debug.LogError("[TutorialBattleManager] HackSlashCombatManager가 씬에 없습니다.");
             yield break;
         }
+
+        // 액션 전투는 루를 따라간다 — 고정을 풀고 숲길 추적으로 돌아간다.
+        var entrance2 = FindAnyObjectByType<ForestEntranceDirector>();
+        cd?.Track(entrance2 != null ? entrance2.forwardOffset : Vector2.zero);
 
         // 마무리 구간(5% · E키 · 2초 이탈)은 숲 전투에서만 연다 (F-2-6).
         HackSlashCombatManager.Instance.useFinisherWindow = true;
