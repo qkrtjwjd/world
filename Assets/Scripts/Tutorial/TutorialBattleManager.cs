@@ -54,6 +54,7 @@ public class TutorialBattleManager : MonoBehaviour
         {
             Instance = null;
             BattleEvents.OnBattleEnded -= HandleTurnBasedEnded;
+            BattleEvents.OnBattleFinished -= RecordBattle1Outcome;
         }
     }
 
@@ -68,7 +69,7 @@ public class TutorialBattleManager : MonoBehaviour
     public void StartTutorialEncounter(int step, GameObject enemyObject = null)
     {
         if (step == 0)
-            StartCoroutine(Battle1Flow());
+            StartCoroutine(Battle1Flow(enemyObject));
         else if (step == 1)
             StartCoroutine(Battle2Flow(enemyObject));
         else
@@ -79,8 +80,17 @@ public class TutorialBattleManager : MonoBehaviour
     //  1번 전투 흐름 (턴제)
     // ────────────────────────────────────────────────────
 
-    IEnumerator Battle1Flow()
+    GameObject     _battle1FieldEnemy;
+    BattleOutcome? _battle1Outcome;
+
+    IEnumerator Battle1Flow(GameObject enemyObject)
     {
+        _battle1FieldEnemy = enemyObject;
+        _battle1Outcome    = null;
+
+        // S#17A [CAM] 「개가 화면에 들어오는 순간 고정. 컷을 잇지 않는다. 개에게 카메라를 다가가지 않는다」(D 807).
+        CameraDirector.Instance?.Hold();
+
         // 전투 전 대사 재생 (플레이어 이동 잠금 포함)
         if (!string.IsNullOrEmpty(yarnNode_preBattle1))
             yield return YarnDialogue.PlayAndWait(yarnNode_preBattle1, lockPlayer: true);
@@ -100,12 +110,16 @@ public class TutorialBattleManager : MonoBehaviour
         StartCoroutine(BeginDirectorNextFrame(BattleTutorialDirector.Encounter.Wolf1TurnBased));
 
         // 전투 종료를 이벤트로 감지
+        BattleEvents.OnBattleFinished += RecordBattle1Outcome;
         BattleEvents.OnBattleEnded += HandleTurnBasedEnded;
     }
+
+    void RecordBattle1Outcome(BattleOutcome outcome) => _battle1Outcome = outcome;
 
     void HandleTurnBasedEnded()
     {
         BattleEvents.OnBattleEnded -= HandleTurnBasedEnded;
+        BattleEvents.OnBattleFinished -= RecordBattle1Outcome;
         StartCoroutine(AfterBattle1Flow());
     }
 
@@ -114,6 +128,13 @@ public class TutorialBattleManager : MonoBehaviour
         // BattleUI가 완전히 파괴될 때까지 대기 (BattleSystem이 내부에서 3초 후 파괴)
         while (BattleSystem.Instance != null)
             yield return null;
+
+        // 필드의 개를 치운다 — 몰살은 흩어져 사라지고(D 882), 정화는 「늑대는 이미 도망가고 없다」(D 906).
+        //   2026-09-28: 전에는 전투용 적을 따로 스폰해 싸우고, 필드의 개는 이긴 뒤에도 그 자리에 남아 있었다.
+        //   패배는 게임 오버 → 전투 직전 불러오기로 되돌아가므로 건드리지 않는다.
+        bool won = _battle1Outcome == BattleOutcome.Killed || _battle1Outcome == BattleOutcome.Spared;
+        if (won && _battle1FieldEnemy != null)
+            _battle1FieldEnemy.SetActive(false);
 
         // 짧은 딜레이로 화면 전환 안정화
         yield return _wait03;
@@ -127,6 +148,12 @@ public class TutorialBattleManager : MonoBehaviour
         if (!string.IsNullOrEmpty(yarnNode_postBattle1))
             yield return YarnDialogue.PlayAndWait(yarnNode_postBattle1, lockPlayer: true);
 
+        // 고정을 풀고 숲길 추적으로 돌아간다(S#16A 의 진행 방향 치우침 그대로).
+        var entrance = FindAnyObjectByType<ForestEntranceDirector>();
+        CameraDirector.Instance?.Track(entrance != null ? entrance.forwardOffset : Vector2.zero);
+
+        // 지면 튜토리얼을 끝낸 것으로 치지 않는다 — 게임 오버에서 전투 직전으로 되돌아가 다시 싸운다.
+        if (_battle1Outcome == BattleOutcome.Lost) yield break;
         GameState.tutorialBattleStep = 1;
     }
 
