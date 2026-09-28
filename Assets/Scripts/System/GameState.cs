@@ -116,6 +116,8 @@ public static class GameState
     public static bool hasMerchantMetAtSquare = false;
     /// <summary>S#16D 끝 — 쿠루가 동행을 시작했는가(D 789). 튜토리얼 늑대(S#17A)는 이 뒤에만 발동한다.</summary>
     public static bool isKuruJoined = false;
+    /// <summary>S#20-A 숲에서 솔과 다시 만났는가(D 1053). 한 번만 자동 발동하고, 그 뒤로는 E키로 거래창이 바로 열린다.</summary>
+    public static bool isForestSolMet = false;
 
     // ──────────────────────────────────────────
     //  위치 / 멘탈 붕괴 / 기타
@@ -179,6 +181,7 @@ public static class GameState
         isBreadDoughAcquired     = false;
         hasMerchantMetAtSquare   = false;
         isKuruJoined             = false;
+        isForestSolMet           = false;
         isZombieDefeated         = false;
         defeatedEnemyIDs         = new HashSet<string>();
         chosenDialogueKeys       = new HashSet<string>();

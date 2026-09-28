@@ -107,7 +107,10 @@ public class SolNPC : MonoBehaviour
         if (hidden)
         {
             // 창을 즉시 닫는다. 확인창을 띄우지 않는다(F-7-3).
-            SolTradeUI.Instance?.ForceClose();
+            //   단 마을 창일 때만 — 거래창은 숲 솔과 같이 쓴다. 2026-09-28: 전에는 마을 광장에 세라가 들어올 때마다
+            //   숲에서 열어 둔 거래창(S#20)까지 닫혔다.
+            if (SolTradeUI.Instance != null && SolTradeUI.Instance.CurrentMode == TradeMode.VillageBrowse)
+                SolTradeUI.Instance.ForceClose();
             if (_greeting && YarnDialogue.IsRunning)
             {
                 _greeting = false;

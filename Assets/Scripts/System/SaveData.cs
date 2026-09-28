@@ -46,6 +46,7 @@ public class SaveData
     public bool isBreadDoughAcquired;
     public bool hasMerchantMetAtSquare;
     public bool isKuruJoined;
+    public bool isForestSolMet;
 
     // v4 추가 필드
     public bool isAtticKeyFound;

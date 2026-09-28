@@ -122,6 +122,8 @@ public class SolTradeUI : MonoBehaviour
     private readonly Dictionary<ItemData, int>  _itemCountCache = new Dictionary<ItemData, int>();
 
     public State CurrentState => _state;
+    /// <summary>지금 열린 창의 모드. 마을 솔과 숲 솔이 이 창 하나를 같이 쓴다.</summary>
+    public TradeMode CurrentMode => _mode;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     static void ResetStatics() => Instance = null;
