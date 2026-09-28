@@ -42,8 +42,10 @@ public class HouseEscapePressureController : MonoBehaviour
     [Header("제한 시간")]
     [Tooltip("F-6 초안값 90초. 다락방에서 현관까지 직선 이동 약 25초 기준 여유 3배.")]
     public float timeLimit = 90f;
-    [Tooltip("시간이 다한 뒤 배드 엔딩으로 넘어가기 전까지 조임을 유지하는 시간(초).")]
-    public float failLingerDuration = 2f;
+    // 2026-09-27: failLingerDuration(시간이 다한 자리에서 조임을 2초 유지)을 뺐다. 개정 D 465 「시간이 끝나는 순간
+    //   루가 어디에 있든 즉시 암전한 뒤 BE#01-a 를 현관 앞에서 연다」. 조임은 현관 장면으로 이어져 거기서 끝까지 간다(477).
+    [Tooltip("BE#01-a 끝에 가장자리가 4차에서 화면 전체로 조여 들어가는 시간(초). 끝나면 그대로 암전이다(D 477).")]
+    public float failCloseInDuration = 1.2f;
 
     [Header("조임 단계 (C-14-2-1 · F-6)")]
     [Tooltip("F-6 「집 조임 단계 — 4단계 · 20 / 45 / 65 / 80초」. 이 시점에만 값이 바뀌고 " +
@@ -451,15 +453,12 @@ public class HouseEscapePressureController : MonoBehaviour
         Dbg.Log("[탈출압박] 90초 경과 — 현관문 영구 폐쇄");
         _active = false;
 
-        // 문이 닫히는 것을 느낄 시간을 준다. 곧바로 씬을 넘기면 아무 일도 없이 화면만 바뀐다.
-        var ctrl = YarnDialogue.LockPlayer();
-
         // 현관문이 완전히 닫힌다. 열쇠가 통하지 않는다 (C-14-2).
         var door = FindAnyObjectByType<FrontDoorInteraction>();
         if (door != null) door.SealPermanently();
 
-        // 조임이 끝까지 간 상태(4차)를 한 박자 유지한다. 전환 중에 시간이 다했더라도
-        // 여기서 4차 목표값으로 맞춰 둔다 — 실패는 항상 끝까지 조인 그림이어야 한다.
+        // 조임이 끝까지 간 상태(4차)로 맞춘다. 전환 중에 시간이 다했더라도 실패는 항상 4차 그림이다.
+        // 이 값은 BE#01-a 현관 장면까지 그대로 이어진다 — 저음도 끊지 않는다(D 472 「이후 저음이 사방에서 조여든다」).
         _stage      = 4;
         _transition = 1f;
         _edgeAlpha  = TargetEdgeAlpha(4);
@@ -470,28 +469,51 @@ public class HouseEscapePressureController : MonoBehaviour
         OnLevelChanged?.Invoke(_shrink);
         ApplyStageValues();
 
-        yield return new WaitForSeconds(failLingerDuration);
-
-        StopDrone();
-        AudioManager.BgmDuck = 1f;          // 실패 경로에서도 되돌린다. 배드 엔딩이 BGM 을 쓴다.
-        YarnDialogue.UnlockPlayer(ctrl);
-
-        // ⚠ 조임을 여기서 걷지 않는다. D-BE#01-a 문단 463 이 「가장자리 어두워짐 · 복도 축소 ·
-        //   문틀 좁아짐이 끝까지 갔다가 암전으로 닫힌다」로 못박았다. 조임이 풀린 뒤에 암전이 오면
-        //   그 연결이 끊긴다. 화면(ClearSustained)과 공간(OnLevelChanged) 둘 다 해당한다.
-        //
-        //   ⛔ 2026-09-05 이전에는 여기서 OnLevelChanged(0f) 와 ResetStageState() 를 불러
-        //      복도 축소·문틀 좁아짐만 암전 직전에 원래 크기로 되돌아갔다. 바로 아래 주석이
-        //      금지한 것을 같은 함수 안에서 하고 있었다. 되돌리지 말 것.
-
         // 인형화 페널티 없음 (CLAUDE.md §2).
-        // 정본 BE#01-a~d 컷씬을 재생한 뒤 디렉터가 TriggerBadEnding 까지 처리한다.
+        // 즉시 암전 → BE#01-a~d → TriggerBadEnding 까지 디렉터가 한다. 조임은 BE#01-a 끝에서
+        // CloseIn → FinishFailPressure 로 암전 속에 걷힌다.
         yield return BadEndingDirector.PlayHouseSealed();
 
-        // 암전이 끝난 뒤에야 공간을 되돌린다. 되감기로 S#11 직후에 다시 들어오므로
-        // 여기서 반드시 풀어야 다음 발동이 기준값부터 시작한다.
+        // 디렉터가 없거나 도중에 끊겨도 다음 발동이 기준값부터 시작하게 한 번 더 걷는다(중복 호출 안전).
+        FinishFailPressure();
+    }
+
+    /// <summary>
+    /// BE#01-a 끝 — 4차 가장자리가 화면 전체로 조여 들어간다. 새 연출이 아니라 C-14-2 압박의 마지막 단계를 끝까지 민다(D 477).
+    /// 끝나면 화면은 (접근성 설정으로 가장자리가 꺼져 있지 않은 한) 거의 검다. 호출부가 이어서 암전을 건다.
+    /// </summary>
+    public static System.Collections.IEnumerator CloseIn()
+    {
+        var c = _instance;
+        if (c == null) yield break;
+        float fromAlpha = c._edgeAlpha, fromRatio = c._edgeRatio;
+        float dur = Mathf.Max(0.01f, c.failCloseInDuration);
+        for (float t = 0f; t < dur; t += Time.unscaledDeltaTime)
+        {
+            float k = t / dur;
+            c._edgeAlpha = Mathf.Lerp(fromAlpha, 1f, k);
+            c._edgeRatio = Mathf.Lerp(fromRatio, 1f, k);
+            c.ApplyStageValues();
+            yield return null;
+        }
+        c._edgeAlpha = 1f;
+        c._edgeRatio = 1f;
+        c.ApplyStageValues();
+    }
+
+    /// <summary>
+    /// 실패 뒤 남은 조임(화면 · 공간 · 저음 · BGM 물림)을 전부 걷는다. <b>암전 속에서</b> 부른다 — 풀리는 것이 보이면 안 된다.
+    /// BE#01-a 가 끝나는 암전에서 디렉터가 부르고, FailRoutine 이 마지막에 한 번 더 부른다(중복 호출 안전).
+    /// </summary>
+    public static void FinishFailPressure()
+    {
+        var c = _instance;
+        if (c == null || c._active) return;
+        c.StopDrone();
+        AudioManager.BgmDuck = 1f;
+        ScreenEdgeEffectController.ClearSustained();
         OnLevelChanged?.Invoke(0f);
-        ResetStageState();
+        c.ResetStageState();
     }
 
     // ── 저음 드론 ────────────────────────────────────────────────────────────

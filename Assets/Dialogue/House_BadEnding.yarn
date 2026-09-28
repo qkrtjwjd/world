@@ -10,6 +10,7 @@
 // ⚠ 연출 커맨드(set_filter · play_sfx · fade_* · camera)를 여기에 넣지 않았다.
 //   배드 엔딩은 BadEndingDirector 가 코드로 컷을 몰고 가며, 필터 강제 · 암전 · 줌 · SFX 를
 //   전부 그쪽에서 처리한다. yarn 에도 같은 것을 넣으면 두 번 걸린다.
+//   예외 하나: <<be_cut "dining">> (BE#01-d) — 두 대사 사이에서 디렉터에게 컷을 넘기는 자리다. 2026-09-27 사용자 결정.
 //   연출 근거는 Scenario/output_v3/House_BadEnding_staging.json 에 분리돼 있다.
 //
 // ⚠ BE#01-b · BE#02-b · BE#02-c 는 여기에 노드가 없다. 빠뜨린 것이 아니다.
@@ -53,8 +54,10 @@ title: House_BadEnd_ThreePlates
 ---
 // BE#01-d — S#04A 의 세 개의 접시로 돌아온다. 루는 하루 동안 아무 데도 가지 못했다(문단 508).
 // '잘 먹겠습니다' 는 이 게임에서 루가 가장 순종적인 문장이다. 존댓말도 그대로 둔다(문단 509).
+// 2026-09-27: 부름은 루의 방에서 듣고, 「잘 먹겠습니다」는 식탁에서 한다(D 515~521). 사이의 컷은 BadEndingDirector 가 한다(사용자 결정).
 <<showSprite "세라" "warm_smile" "left" "fixed">>
 세라: 저녁 먹게 나오렴.
-{$이름}: 잘 먹겠습니다.
 <<hideSprite "left">>
+<<be_cut "dining">>
+{$이름}: 잘 먹겠습니다.
 ===

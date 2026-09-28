@@ -114,6 +114,8 @@ public static class GameState
     public static bool isBreadDoughAcquired = false;
     /// <summary>솔 상인 광장에서 첫 만남 여부.</summary>
     public static bool hasMerchantMetAtSquare = false;
+    /// <summary>S#16D 끝 — 쿠루가 동행을 시작했는가(D 789). 튜토리얼 늑대(S#17A)는 이 뒤에만 발동한다.</summary>
+    public static bool isKuruJoined = false;
 
     // ──────────────────────────────────────────
     //  위치 / 멘탈 붕괴 / 기타
@@ -176,6 +178,7 @@ public static class GameState
         isWorkbenchLocked        = true;
         isBreadDoughAcquired     = false;
         hasMerchantMetAtSquare   = false;
+        isKuruJoined             = false;
         isZombieDefeated         = false;
         defeatedEnemyIDs         = new HashSet<string>();
         chosenDialogueKeys       = new HashSet<string>();

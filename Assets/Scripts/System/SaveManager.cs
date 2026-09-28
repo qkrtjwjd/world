@@ -104,6 +104,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         data.tutorialBattleStep      = GameState.tutorialBattleStep;
         data.isBreadDoughAcquired    = GameState.isBreadDoughAcquired;
         data.hasMerchantMetAtSquare  = GameState.hasMerchantMetAtSquare;
+        data.isKuruJoined            = GameState.isKuruJoined;
         data.isAtticKeyFound         = GameState.isAtticKeyFound;
         data.isDaggerAcquired        = GameState.isDaggerAcquired;
         data.isAtticBoxOpened        = GameState.isAtticBoxOpened;
@@ -461,6 +462,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         GameState.tutorialBattleStep      = data.tutorialBattleStep;
         GameState.isBreadDoughAcquired    = data.isBreadDoughAcquired;
         GameState.hasMerchantMetAtSquare  = data.hasMerchantMetAtSquare;
+        GameState.isKuruJoined            = data.isKuruJoined;
         GameState.isAtticKeyFound         = data.isAtticKeyFound;
         GameState.isDaggerAcquired        = data.isDaggerAcquired;
         GameState.isAtticBoxOpened        = data.isAtticBoxOpened;

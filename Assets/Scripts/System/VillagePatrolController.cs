@@ -36,7 +36,11 @@ public class VillagePatrolController : MonoBehaviour
     [Tooltip("손을 잡는 아주 작은 소리(AudioManager 등록 이름. 비우면 무음).")]
     public string sfxHandTakenName = "";
     [Tooltip("세라가 뒤에서 다가오는 데 걸리는 시간(초). 루는 굳어서 움직이지 못한다.")]
-    public float approachSeconds = 1.6f;
+    public float approachSeconds = 1.6f;   // ⚠ 2026-09-27 부터 쓰지 않는다 — 세라가 실제로 걸어온다(approachWalkSpeed)
+    [Tooltip("BE#02-a — 세라가 루에게 걸어오는 속도(월드 유닛/초). 「천천히」(D 659). 뛰지 않는다(D 587).")]
+    public float approachWalkSpeed = 1.0f;
+    [Tooltip("BE#02-a — 세라가 멈춰 서서 손을 잡는 거리(월드 유닛).")]
+    public float handReachDistance = 0.55f;
     [Tooltip("대사가 끝나고 집으로 넘기기 전 여백(초). 0 으로 두지 말 것 — 아래 주석 참조.")]
     public float postCaptureSeconds = 0.6f;
 
@@ -76,9 +80,18 @@ public class VillagePatrolController : MonoBehaviour
         // 마을에는 세이브 포인트를 두지 않으므로(C-14-3-5) 이 지점이 유일한 복귀 지점이다.
         if (SceneManager.GetActiveScene().name != SceneNames.Map) return;
 
+        bool rewind = _rewindPending;
+        _rewindPending = false;
+
         SaveManager.Instance?.SaveRewindPoint();
         ResetVillageState();
+
+        // 첫 진입이면 세라는 남쪽으로 걸어가는 중이다(D 586 · 2026-09-27 사용자 결정). 되감기는 광장 점검 그대로(C-14-3-6).
+        if (!rewind) SeraPatrol.Instance?.StartOpening();
     }
+
+    /// <summary>BE#02 발각 → 감금 엔딩을 거쳐 다시 들어오는 중. 씬을 넘어 살아야 하므로 static.</summary>
+    static bool _rewindPending;
 
     /// <summary>
     /// 마을 진입 시점의 상태로 되돌립니다 (C-14-3-6 · 수치 F-6).
@@ -133,6 +146,10 @@ public class VillagePatrolController : MonoBehaviour
 
         yield return YarnDialogue.PlayIfExists(yarnNode_firstSighting);
 
+        // 이내 고개를 돌려버린다 — 착각이라고 치부한다(D 584). 2026-09-27: 전에는 계속 루를 보고 있었다.
+        var lu = FindAnyObjectByType<ClearSky.SimplePlayerController>();
+        if (lu != null) SeraPatrol.Instance?.LookAwayFrom(lu.transform.position);
+
         // 그 자리를 벗어날 때까지 같은 대사를 반복하지 않는다.
         var vision = SeraPatrol.Instance != null
             ? SeraPatrol.Instance.GetComponentInChildren<SeraVision>() : null;
@@ -163,9 +180,22 @@ public class VillagePatrolController : MonoBehaviour
         var ctrl = YarnDialogue.LockPlayer();
         ObjectiveManager.Instance?.HideHUD();
 
-        // 루의 뒤쪽에서 세라가 천천히 걸어온다. 루는 굳어서 움직이지 못한다(D-BE#02-a 문단 639).
+        // [CAM] 고정(D 658).
+        CameraDirector.Instance?.Hold();
+
+        // 루의 뒤쪽에서 세라가 천천히 걸어온다. 루는 굳어서 움직이지 못한다(D 659) — 루는 돌아보지 않는다.
+        // 2026-09-27: 전에는 세라가 순찰 자리에 선 채 1.6초 기다리기만 했고, 순찰도 계속 돌았다(배치 실측).
         PlaySfxIfNamed(sfxApproachStepsName);
-        yield return new WaitForSeconds(approachSeconds);
+        var patrol = SeraPatrol.Instance;
+        var lu = ctrl != null ? ctrl : FindAnyObjectByType<ClearSky.SimplePlayerController>();
+        if (patrol != null && lu != null)
+        {
+            patrol.Halt();
+            var walker = SeraStageWalker.On(patrol.animator);
+            if (walker != null)
+                yield return walker.WalkNear(lu.transform.position, handReachDistance, approachWalkSpeed);
+        }
+        yield return new WaitForSeconds(0.4f);
 
         // [CAM] 손을 잡는 순간 손 클로즈업 — 세라의 손과 루의 도자기 손가락이 한 화면에(D-BE#02-a 문단 638).
         PlaySfxIfNamed(sfxHandTakenName);
@@ -185,6 +215,7 @@ public class VillagePatrolController : MonoBehaviour
         // D-BE#02-a 문단 646 — 마을에서 집까지의 이동은 컷 하나로 넘긴다. 걸어가는 과정을 보여주지 않는다.
         // 집에 도착한 뒤의 BE#02-b · c 는 Home 씬의 BadEndingDirector 가 이어 재생한다.
         BadEndingDirector.QueueCapturedHousePart();
+        _rewindPending = true;   // 다음 마을 진입은 되감기다 — 세라는 광장 점검에서 시작한다(C-14-3-6)
         YarnDialogue.UnlockPlayer(ctrl);
 
         if (TransitionManager.Instance != null)

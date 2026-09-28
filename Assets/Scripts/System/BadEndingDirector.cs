@@ -51,6 +51,22 @@ public class BadEndingDirector : MonoBehaviour
     [Tooltip("BE#02-b. 밖에서 잠긴 루의 방.")]
     public Transform luRoomSpawn;
 
+    // 2026-09-27 개정 D BE#02 대조 — 좌표는 배치 실측. 루의 방 문은 방 아래 변(-2.42, 5.1~5.4)이다.
+    [Header("BE#02-b — 루의 방 (월드 좌표)")]
+    [Tooltip("루가 방 안에서 서서 문을 바라보는 자리(D 665). luRoomSpawn 은 문 바로 앞이라 세라와 겹친다.")]
+    public Vector2 luLockedRoomPoint = new Vector2(-2.40f, 7.40f);
+    [Tooltip("세라가 문을 열고 서는 문간(D 674).")]
+    public Vector2 seraDoorwayPoint  = new Vector2(-2.42f, 5.45f);
+    [Tooltip("세라가 밀어넣은 저녁밥 쟁반(D 677 · 705). 비우면 없음 — 그림 대기.")]
+    public GameObject dinnerTray;
+    [Tooltip("BE#02-b. 방문이 밖에서 잠기는 소리.")]
+    public string sfxRoomDoorLockName = "";
+    [Tooltip("BE#02-b. 방문이 열리는 / 닫히는 소리.")]
+    public string sfxRoomDoorOpenName = "";
+    public string sfxRoomDoorCloseName = "";
+    [Tooltip("BE#02-c. 의자 끄는 소리(D 687).")]
+    public string sfxChairDragName = "";
+
     [Header("세라")]
     [Tooltip("컷씬에 등장시킬 세라. 비우면 세라 없이 대사만 진행한다.")]
     public GameObject seraObject;
@@ -58,6 +74,20 @@ public class BadEndingDirector : MonoBehaviour
     public Transform seraLivingSpawn;
     [Tooltip("BE#02-c 에서 세라가 식탁에 앉는 자리.")]
     public Transform seraDiningSpawn;
+
+    // 2026-09-27 개정 D BE#01 대조 — 세라가 뿅 나타나고 사라지던 것을 걸어 들고 나게 했다. 좌표는 배치 실측(거실·부엌 가구 경계)으로 잡았다.
+    //   ⚠ seraLivingSpawn(2.25,-2.25)은 소파 안쪽이라 세라가 가구에 가려졌다 — BE#01-c 는 아래 지점을 쓴다.
+    [Header("BE#01-c · d — 동선 (월드 좌표)")]
+    [Tooltip("세라가 현관문을 열고 들어서는 자리(D 499). 현관문 바로 안쪽.")]
+    public Vector2 seraEnterPoint   = new Vector2(-0.02f, -2.1f);
+    [Tooltip("세라가 루에게 말을 거는 자리. 소파(x 2.09~) 왼쪽 옆.")]
+    public Vector2 seraGreetPoint   = new Vector2(1.45f, -2.15f);
+    [Tooltip("세라가 들어가는 부엌 — 싱크대 앞(S#04 seraSinkPoint 와 같은 자리).")]
+    public Vector2 seraKitchenPoint = new Vector2(-3.20f, 1.65f);
+    [Tooltip("BE#01-d 첫머리 — 루가 소파에서 일어나 방 쪽으로 걷는 목표(D 515). 여기서 암전한다.")]
+    public Vector2 luLeaveSofaPoint = new Vector2(1.6f, -1.1f);
+    [Tooltip("식탁의 유의 자리. 루(왼쪽 의자) · 세라(오른쪽 의자) 사이 식탁 위쪽 변 — 의자 오브젝트는 없다(F-3-2 빈 의자는 그림 대기).")]
+    public Vector2 yuSeatPoint      = new Vector2(-4.0f, 0.1f);   // 루 자리에서 위쪽이 우세 → 고개를 드는 것으로 보인다(옆이면 식탁을 보는 것과 구분이 안 됐다 — 실측)
 
     // ── 컷 ──────────────────────────────────────────────────────────────────
     // ⛔ 2026-09-27: BE#01-a 의 두 컷은 개정 D 문단 474(「컷을 잇지 않는다」)로 쓰지 않는다. 직렬화 값 때문에 필드만 남긴다.
@@ -67,7 +97,8 @@ public class BadEndingDirector : MonoBehaviour
     [Tooltip("손잡이를 쥔 손 클로즈업.")]
     public Image handOnKnobCloseup;
 
-    [Header("BE#02-b 컷 — 비워 두면 건너뛴다")]
+    // ⛔ 2026-09-27: 개정 D 674 로 BE#02-b 는 클로즈업이 아니라 「문간에 선 역광 실루엣 스프라이트」다. 쓰지 않는다 — 직렬화 값 때문에 필드만 남긴다.
+    [Header("BE#02-b 컷 — 폐기됨 (쓰지 않는다)")]
     [Tooltip("문이 열리며 들어오는 빛과 세라의 역광 실루엣.")]
     public Image backlitSeraCloseup;
 
@@ -117,7 +148,7 @@ public class BadEndingDirector : MonoBehaviour
     public string sfxBasketDownName = "";
     [Tooltip("BE#01-d · BE#02-c. 식기 소리.")]
     public string sfxTablewareName = "";
-    [Tooltip("BE#02-b. 문 너머 저녁을 만드는 소리(멀게).")]
+    [Tooltip("BE#02-b · BE#01-d. 문 너머 저녁을 만드는 소리(멀게).")]
     public string sfxDistantCookingName = "";
 
     // ── Yarn 노드 ───────────────────────────────────────────────────────────
@@ -135,6 +166,10 @@ public class BadEndingDirector : MonoBehaviour
     public float cutFadeDuration = 0.5f;
     [Tooltip("컷이 열린 뒤 한 박자 두는 시간(초).")]
     public float beatSeconds = 0.9f;
+    [Tooltip("BE#01-a — 시간이 끝나는 순간의 암전(초). D 465 「즉시 암전」.")]
+    public float instantBlackout = 0.15f;
+    [Tooltip("세라 · 루가 걷는 속도(월드 유닛/초).")]
+    public float walkSpeed = 1.6f;
 
     // ── 내부 상태 ───────────────────────────────────────────────────────────
     ClearSky.SimplePlayerController _lockedCtrl;
@@ -144,6 +179,10 @@ public class BadEndingDirector : MonoBehaviour
     float     _origLightIntensity;
     float     _origAmbientIntensity;
     Quaternion _origLightRotation;
+    Collider2D[]    _luColliders;
+    bool[]          _luColliderWasEnabled;
+    SeraStageWalker _seraWalker;
+    bool            _diningCutDone;
 
     // ─────────────────────────────────────────────────────────────────────────
     void Awake()
@@ -216,46 +255,70 @@ public class BadEndingDirector : MonoBehaviour
         yield return RunBE01d_ThreePlates();
         Dbg.Log("[배드엔딩] BE#01 종료 — 엔딩 화면으로");
 
+        // 마지막 컷(식탁)에서 곧바로 암전한다. 먼저 정리하면 카메라가 루에게 되돌아간 화면이 엔딩 직전에 비친다(2026-09-27 실측).
+        yield return FadeOut();
         EndPlayback();
         EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
     }
 
     /// <remarks>
-    /// 정본 문단 451: 「시간이 끝나는 순간 루가 어디에 있든 즉시 암전한 뒤 BE#01-a 를 현관 앞에서 연다.
-    /// 루가 현관까지 내려가는 과정은 보여주지 않는다.」 그래서 이동은 암전 안에서 끝낸다.
-    /// 문단 463: 압박 연출의 마지막 단계가 그대로 암전으로 닫힌다 — 새 연출을 만들지 않는다.
+    /// 개정 D 465: 「시간이 끝나는 순간 루가 어디에 있든 즉시 암전한 뒤 BE#01-a 를 현관 앞에서 연다.」
+    /// 472 · 476: 열쇠가 헛돌고, 저음이 사방에서 조여들고, 손잡이만 뜨거웠던 것이 문 전체로 퍼진다.
+    /// 477: 진행되던 가장자리 어두워짐 · 복도 축소 · 문틀 좁아짐이 <b>끝까지 갔다가 암전으로 닫힌다</b> — 새 연출을 만들지 않는다.
+    /// 479: 루는 문을 두드리거나 소리치지 않는다. 한 번 더 돌려보고 손을 뗀다.
+    /// 2026-09-27: 전에는 암전 속에서 조임을 다 걷어 현관 장면이 밋밋했고, 루가 움직이지 않았다(배치 실측).
     /// </remarks>
     IEnumerator RunBE01a_SealedDoor()
     {
-        yield return FadeOut();
+        yield return FadeOut(instantBlackout);
 
-        // 암전 중에 정리한다. 정본 문단 456 — 단검을 파지 중이었다면 발동과 동시에 해제한다.
+        // 암전 중에 정리한다. 정본 문단 470 — 단검을 파지 중이었다면 발동과 동시에 해제한다.
+        // ⚠ 조임(가장자리 · 공간 · 저음)은 걷지 않는다 — 현관에서 이어져 끝까지 간다.
         DaggerFilterController.Instance?.SwitchToFantasyForced();
         FilterManager.Instance?.SetFilter(FilterType.Fantasy);
-        ScreenEdgeEffectController.ClearSustained();
         TeleportPlayer(frontDoorSpawn);
+        FaceLu(Vector2.down);                       // 현관문은 루의 아래쪽(남쪽 벽)이다
+        CameraDirector.Instance?.Hold();            // [CAM] 현관 전경에서 고정. 컷을 잇지 않는다(474)
 
         yield return FadeIn();
 
-        PlaySfxIfNamed(sfxKeySlipName);
-
-        // [CAM] 2026-09-27 개정 D 문단 474: 「현관 전경에서 고정. 컷을 잇지 않는다. 문이 루를 누르는 느낌은
-        //   카메라가 아니라 ▶ 화면 효과의 압박 연출이 맡는다.」 — 예전의 열쇠 구멍 → 손 → 문 줌 3단계를 걷어냈다
-        //   (E-64 줌 폐기). 압박은 C-14-2 연출의 마지막 단계가 그대로 이어진다(문단 477).
-        yield return WaitBeat();
+        // 루가 아무리 열쇠를 돌려도 문은 열리지 않는다(475). 헛도는 소리 + 같은 흔들림 두 번.
+        for (int i = 0; i < 2; i++)
+        {
+            PlaySfxIfNamed(sfxKeySlipName);
+            yield return KeyTurnMotion();
+            yield return new WaitForSecondsRealtime(0.45f);
+        }
 
         yield return YarnDialogue.PlayIfExists(yarnNode_BE01a, false);
-        yield return WaitBeat();
+
+        // 한 번 더 돌려보고 손을 뗀다(479).
+        PlaySfxIfNamed(sfxKeySlipName);
+        yield return KeyTurnMotion();
+        yield return new WaitForSecondsRealtime(0.3f);
+        yield return StepLu(Vector2.up * 0.25f, 0.12f);
+        yield return new WaitForSecondsRealtime(0.5f);
+
+        // 조임이 끝까지 간다 → 그대로 암전(477). 가장자리 효과가 접근성 설정으로 꺼져 있어도 암전은 온다.
+        yield return HouseEscapePressureController.CloseIn();
+        yield return FadeOut(cutFadeDuration * 0.5f);
+        HouseEscapePressureController.FinishFailPressure();   // 암전 속에서 조임·저음을 걷는다. BE#01-b 는 무음이다(487)
     }
 
     /// <remarks>
-    /// 정본 문단 477: 「페이드나 디졸브를 쓰지 않고 같은 컷 안에서 조명만 이동시킨다.」
-    /// 그래서 이 씬 <b>안에서는</b> 컷을 바꾸지 않는다. 거실로 옮기는 것은 앞 컷과의 전환이다.
-    /// 문단 479: '축적 없이 흐른다' 가 이 씬의 전부다 — 루의 자세도 바뀌지 않는다.
+    /// 정본 문단 488 · 491: 거실 전경 고정, 소파에 앉은 루. 「빛의 각도 변화 외에 화면에서 아무것도 움직이지 않는다.
+    /// 루의 자세도 바뀌지 않는다. 페이드나 디졸브를 쓰지 않고 같은 컷 안에서 조명만 이동시킨다.」
+    /// 그래서 이 씬 <b>안에서는</b> 컷을 바꾸지 않는다. BE#01-a 가 암전으로 끝났으므로 여기서는 밝아지기만 한다.
+    /// 493: '축적 없이 흐른다' 가 이 씬의 전부다.
+    /// 2026-09-27: 루가 소파 콜라이더에 밀려 0.57 위에 섰다 — 연출 동안 루의 충돌을 끈다(BeginPlayback).
     /// </remarks>
     IEnumerator RunBE01b_LivingWait()
     {
-        yield return CutTo(livingRoomSpawn);
+        TeleportPlayer(livingRoomSpawn);
+        FaceLu(Vector2.down);                       // 정면을 응시한다(489)
+        CameraDirector.Instance?.Hold();
+        yield return FadeIn();
+        yield return WaitBeat();
 
         // 단계 수는 빛 조각 쪽이 정한다. 빛 조각이 없으면 전체 조명 배열이 대신 정한다.
         int stages = (livingLightIntensities != null) ? livingLightIntensities.Length : 0;
@@ -283,7 +346,7 @@ public class BadEndingDirector : MonoBehaviour
                     Quaternion.Euler(0f, 0f, baseAngle + livingLightAngleStep * i);
             }
 
-            // 전체 조명은 같은 박자로 아주 조금만 내린다(정본 문단 474).
+            // 전체 조명은 같은 박자로 아주 조금만 내린다(정본 문단 491 — 페이드가 되면 안 된다).
             if (ambientLight != null && ambientIntensities != null && i < ambientIntensities.Length)
                 ambientLight.intensity = ambientIntensities[i];
 
@@ -292,42 +355,107 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <remarks>
-    /// 정본 문단 485: BE#01-b 의 루 정면 컷을 그대로 유지한다. 세라를 따로 잡지 않는다 — 카메라를 옮기지 않는다.
-    /// 문단 492: 세라는 코트를 언급하지 않는다. <b>시선이 코트에 잠깐도 머물지 않아야 한다.</b>
-    /// 문단 494: 세라는 화내지 않는다. 두 배드 엔딩 모두 같은 규칙이다.
+    /// 정본 문단 499: BE#01-b 의 고정 구도를 그대로 유지한다. <b>세라가 화면 안으로 걸어 들어온다.</b> 세라를 따로 잡지 않는다.
+    /// 502: 루는 고개를 돌려 세라를 바라본다. 여전히 멍한 표정이다. 505: 세라는 루를 한번 바라보며 웃고 부엌으로 들어간다.
+    /// 506: 세라는 코트를 언급하지 않는다. <b>시선이 코트에 잠깐도 머물지 않아야 한다</b> — 세라는 루 쪽(옆)만 본다.
+    /// 508: 세라는 화내지 않는다.
+    /// 2026-09-27: 전에는 세라가 그 자리에 켜졌다 꺼졌고, 렌더러가 꺼져 있어(외출 뒤 상태) 아예 보이지 않았다(배치 실측).
     /// </remarks>
     IEnumerator RunBE01c_SeraReturn()
     {
         PlaySfxIfNamed(sfxDoorOpenName);
-        yield return new WaitForSecondsRealtime(0.6f);
-        PlaySfxIfNamed(sfxBasketDownName);
+        yield return new WaitForSecondsRealtime(0.5f);
 
-        ShowSera(seraLivingSpawn);
+        ShowSera(seraEnterPoint);
+        _seraWalker?.Face(Vector2.up);
+        yield return new WaitForSecondsRealtime(0.3f);
+        PlaySfxIfNamed(sfxBasketDownName);
+        yield return new WaitForSecondsRealtime(0.4f);
+
+        if (_seraWalker != null) yield return _seraWalker.WalkTo(seraGreetPoint, walkSpeed);
+        _seraWalker?.FaceToward(LuPosition);
+
+        // 루는 세라가 들어와 설 때까지 정면을 보고 있다가, 고개만 돌린다.
         yield return WaitBeat();
+        FaceLu(seraGreetPoint - LuPosition);
+        yield return new WaitForSecondsRealtime(0.4f);
 
         yield return YarnDialogue.PlayIfExists(yarnNode_BE01c, false);
 
-        HideSera();
+        // 한번 바라보며 웃고 — 부엌으로 들어간다.
+        yield return new WaitForSecondsRealtime(0.5f);
+        if (_seraWalker != null) yield return _seraWalker.WalkTo(seraKitchenPoint, walkSpeed);
+        _seraWalker?.Face(Vector2.up);              // 싱크대를 향한다 — 저녁을 준비한다
         yield return WaitBeat();
     }
 
     /// <remarks>
-    /// 정본 문단 500: 세 개의 접시를 <b>S#04A 와 완전히 같은 구도</b>로 잡는다. 아침과 저녁의 빛만 다르다.
-    /// 문단 508: 루가 유의 자리를 보는 시간을 길게 두지 않는다. 한 박자면 된다.
-    /// 문단 514: 코트를 벗는 장면은 두지 않는다.
+    /// 정본 문단 515~522: 루도 일어나서 방으로 향한다 → (루의 방) 멀리 저녁을 만드는 소리 → 정적 → 「저녁 먹게 나오렴」
+    /// → 루가 부엌으로 가자 3명분의 밥 → 유의 자리를 한 박자 보고 → 「잘 먹겠습니다」.
+    /// 부름과 「잘 먹겠습니다」 사이의 장소 전환은 yarn <c>&lt;&lt;be_cut "dining"&gt;&gt;</c> 이 여기로 넘긴다(2026-09-27 사용자 결정).
+    /// 514: S#04A 와 같은 부엌 전경 고정 구도. 아침과 저녁의 빛만 다르다 — 거실에서 내린 전체 조명을 그대로 둔다.
+    /// 528: 코트를 벗는 장면은 두지 않는다.
     /// </remarks>
     IEnumerator RunBE01d_ThreePlates()
     {
-        yield return CutTo(diningSpawn);
+        // 루도 일어나서 방으로 향한다.
+        yield return new WaitForSecondsRealtime(0.4f);
+        yield return WalkLu(luLeaveSofaPoint);
+        yield return FadeOut();
 
+        // 루의 방. 부엌에서 저녁을 만드는 소리(멀리) → 정적.
+        HideSera();
+        TeleportPlayer(luRoomSpawn);
+        BindRoomBound(luRoomSpawn);
+        FaceLu(Vector2.down);
+        CameraDirector.Instance?.Hold();
+        yield return FadeIn();
+
+        PlayLoopIfNamed(sfxDistantCookingName);
+        yield return new WaitForSecondsRealtime(beatSeconds * 3f);
+        StopLoopIfNamed(sfxDistantCookingName);
+        yield return new WaitForSecondsRealtime(beatSeconds * 1.5f);   // 정적
+
+        // 세라가 부른다 → be_cut "dining" 이 식탁으로 넘긴다 → 잘 먹겠습니다.
+        _diningCutDone = false;
+        yield return YarnDialogue.PlayIfExists(yarnNode_BE01d, false);
+        if (!_diningCutDone) yield return CutToDining();   // 노드에 커맨드가 없어도 식탁은 보여준다
+        yield return WaitBeat();
+    }
+
+    /// <summary>BE#01-d 식탁 컷. 암전 → 식탁(S#04A 구도) → 식기 소리 → 유의 자리를 한 박자.</summary>
+    IEnumerator CutToDining()
+    {
+        _diningCutDone = true;
+        yield return FadeOut();
+
+        CameraFollow.Instance?.SetBound(null);      // 방에서 나온다
         SetPlates(three: true);
-        // 정본 문단 504 — 세라가 "저녁 먹게 나오렴" 하고 부른 자리다. 부엌에 있다.
-        ShowSera(seraDiningSpawn);
+        TeleportPlayer(diningSpawn);
+        ShowSera(seraDiningSpawn != null ? (Vector2)seraDiningSpawn.position : seraKitchenPoint);
+        _seraWalker?.FaceToward(LuPosition);
+        FaceLu(Vector2.right);                      // 식탁 쪽(세라 맞은편)
+        CameraDirector.Instance?.Hold();
+
+        yield return FadeIn();
         PlaySfxIfNamed(sfxTablewareName);
         yield return WaitBeat();
 
-        yield return YarnDialogue.PlayIfExists(yarnNode_BE01d, false);
+        // 유의 자리를 말없이 본다 — 한 박자면 된다. 그리고 바로 숟가락을 든다(522).
+        FaceLu(yuSeatPoint - LuPosition);
         yield return WaitBeat();
+        FaceLu(Vector2.right);
+    }
+
+    // <<be_cut "dining">> — BE#01-d. 세라의 부름(루의 방)과 「잘 먹겠습니다」(식탁) 사이. 컷이 끝날 때까지 대사를 멈춘다.
+    // Yarn Spinner 3.x: 인스턴스 [YarnCommand] 는 첫 인자를 GameObject 이름으로 해석하므로 static + Instance 패턴(KitchenTriggerCutscene 과 같다).
+    [Yarn.Unity.YarnCommand("be_cut")]
+    public static IEnumerator YarnBeCut(string where)
+    {
+        var d = Instance;
+        if (d == null || !IsPlaying) yield break;
+        if (where == "dining") { yield return d.StartCoroutine(d.CutToDining()); yield break; }
+        Debug.LogWarning($"[BadEndingDirector] be_cut \"{where}\" — 알 수 없는 자리. 무시한다.");
     }
 
     // ─── BE#02 — 마을 구간의 집 파트 ────────────────────────────────────────
@@ -341,47 +469,86 @@ public class BadEndingDirector : MonoBehaviour
         yield return RunBE02c_TwoPlates();
         Dbg.Log("[배드엔딩] BE#02 종료 — 엔딩 화면으로");
 
+        // 마지막 컷(식탁)에서 곧바로 암전한다. 먼저 정리하면 카메라가 루에게 되돌아간 화면이 엔딩 직전에 비친다(2026-09-27 실측).
+        yield return FadeOut();
         EndPlayback();
         EndingManager.TriggerBadEnding(BadEndingType.Captured);
     }
 
     /// <remarks>
-    /// 정본 문단 658: 세라는 한 마디도 하지 않는다. 문을 열고, 웃고, 놓고, 닫는다. 네 동작뿐이다.
-    /// 문단 661: BE#01 에서 계속 말을 걸던 목소리가 전부 사라지고 웃음만 남는다 — 그래서 대사가 0줄이다.
+    /// 개정 D 664~665 (BE#02-a 의 끝): 집에 도착하자 세라는 루를 방에 넣고 밖에서 문을 잠근다. 루는 허망하게 문을 바라본다.
+    /// 674: [CAM] 고정. 루의 방 전경. 문이 열리며 들어오는 빛이 바닥에 떨어지고, 세라는 문간에 역광 실루엣으로 선다.
+    /// 675~679: 시간이 흘렀다(멀리 저녁 만드는 소리). 문이 열린다 — 문틈이 아니라 문을 연다. 루의 얼굴을 본다.
+    /// <b>세라는 한 마디도 하지 않는다. 문을 열고, 웃고, 놓고, 닫는다. 네 동작뿐이다.</b>
+    /// 2026-09-27: 전에는 방에 2초 서 있다가 끝났다 — 잠김 · 문 바라보기 · 네 동작이 전부 없었다(배치 실측).
     /// </remarks>
     IEnumerator RunBE02b_LockedRoom()
     {
         // ⚠ 여기서 페이드 인을 하지 않는다. 마을에서 넘어올 때 TransitionManager 의
         //    씬 전환이 이미 페이드 인을 맡고 있고, 겹치면 두 코루틴이 같은 오버레이를 다툰다.
         //    이동은 코루틴의 첫 동기 구간에서 끝나므로 페이드가 걷힐 때 이미 방 안이다.
-        TeleportPlayer(luRoomSpawn);
+        SetLuPosition(luLockedRoomPoint);
+        BindRoomBound(luRoomSpawn);
+        FaceLu(seraDoorwayPoint - luLockedRoomPoint);   // 문을 바라본다
+        CameraDirector.Instance?.Hold();
+        if (dinnerTray != null) dinnerTray.SetActive(false);
 
-        PlaySfxIfNamed(sfxDistantCookingName);
+        // 밖에서 문을 잠근다. 루는 허망하게 문을 바라본다.
+        yield return new WaitForSecondsRealtime(0.6f);
+        PlaySfxIfNamed(sfxRoomDoorLockName);
         yield return new WaitForSecondsRealtime(beatSeconds * 2f);
 
-        // TODO(개정 D 문단 674): 클로즈업이 아니라 문간에 선 역광 실루엣 스프라이트다. 스프라이트가 오면 맵에 세운다.
-        //   그때까지는 그림이 없어 아무것도 뜨지 않는다(CloseupArt).
-        yield return FlashCloseup(backlitSeraCloseup);
+        // 시간이 흘렀다. 문 너머에서 저녁 만드는 소리 — 아주 멀게(673).
+        PlayLoopIfNamed(sfxDistantCookingName);
+        yield return new WaitForSecondsRealtime(beatSeconds * 4f);
+        StopLoopIfNamed(sfxDistantCookingName);
+        yield return new WaitForSecondsRealtime(beatSeconds);
+
+        // ① 문을 연다 — 문간에 선다. 역광 실루엣 스프라이트(703)와 바닥에 떨어지는 빛은 그림 대기라 지금은 세라의 모습만 선다.
+        PlaySfxIfNamed(sfxRoomDoorOpenName);
+        ShowSera(seraDoorwayPoint);
+        _seraWalker?.FaceToward(LuPosition);             // 루의 얼굴을 본다(679)
         yield return WaitBeat();
+
+        // ② 웃는다 — 말하지 않는다. 한 박자 그대로 둔다.
+        yield return WaitBeat();
+
+        // ③ 놓는다 — 밥을 방문 앞에 밀어넣는다(677).
+        if (dinnerTray != null) dinnerTray.SetActive(true);
+        yield return WaitBeat();
+
+        // ④ 닫는다.
+        HideSera();
+        PlaySfxIfNamed(sfxRoomDoorCloseName);
+        yield return new WaitForSecondsRealtime(beatSeconds * 1.5f);
     }
 
     /// <remarks>
-    /// 정본 문단 670: 루는 나오지 못한다. 세라가 문을 잠갔으니까.
-    /// 그래서 <b>루를 옮기지 않고 카메라만</b> 부엌으로 넘긴다. BE#01-d 와 같은 구도, 접시 수만 다르다.
-    /// 문단 673: 빈자리에 접시를 놓지 않는다. 치운 것이 아니라 처음부터 없었던 것처럼 차린다.
+    /// 개정 D 688: S#04A · BE#01-d 와 같은 부엌 전경 고정 구도. 접시 수만 다르다.
+    /// 689~693: 세라는 부엌으로 돌아가 식탁에 앉는다. 루는 나오지 못한다 — <b>루를 옮기지 않고 카메라만</b> 부엌으로 넘긴다.
+    /// 접시는 2개(세라 · 유). 빈자리에 접시를 놓지 않는다. 그녀는 잠시 루의 빈자리를 보다가 자신의 밥을 먹기 시작한다.
+    /// 2026-09-27: 전에는 루의 방 경계가 카메라를 붙잡아 부엌이 한 번도 보이지 않았다(배치 실측 cam 이 방 중앙에 고정).
     /// </remarks>
     IEnumerator RunBE02c_TwoPlates()
     {
         yield return FadeOut();
 
+        CameraFollow.Instance?.SetBound(null);            // 방 경계를 풀어야 카메라가 부엌으로 간다
         SetPlates(three: false);
         ShowSera(seraDiningSpawn);
-        MoveCameraTo(diningSpawn);
+        MoveCameraTo(diningSpawn);                        // BE#01-d 와 같은 자리 = 같은 구도
 
         yield return FadeIn();
 
+        PlaySfxIfNamed(sfxChairDragName);                 // 식탁에 앉는다
+        yield return WaitBeat();
+
+        // 잠시 루의 빈자리를 본다 → 자기 밥을 먹기 시작한다.
+        if (diningSpawn != null) _seraWalker?.FaceToward(diningSpawn.position);
+        yield return WaitBeat();
+        _seraWalker?.Face(Vector2.down);
         PlaySfxIfNamed(sfxTablewareName);
-        yield return new WaitForSecondsRealtime(beatSeconds * 3f);
+        yield return new WaitForSecondsRealtime(beatSeconds * 2.5f);
     }
 
     // ─── 재생 전후 ──────────────────────────────────────────────────────────
@@ -416,6 +583,21 @@ public class BadEndingDirector : MonoBehaviour
         {
             _origSeraActive = seraObject.activeSelf;
             _origSeraPos    = seraObject.transform.position;
+            // 걷기 · 방향 · 모습 표시는 S#02 · S#04 와 같은 공용 도구로 한다. 방향·렌더러 상태도 끝나면 되돌린다.
+            _seraWalker = SeraStageWalker.On(seraObject.GetComponent<Animator>());
+            _seraWalker?.Capture();
+        }
+
+        // 루를 가구 자리(소파 · 식탁 의자)에 정확히 앉히려면 충돌을 꺼야 한다 — 켜 두면 콜라이더가 밀어낸다(실측 0.38~0.57).
+        if (_lockedCtrl != null)
+        {
+            _luColliders = _lockedCtrl.GetComponents<Collider2D>();
+            _luColliderWasEnabled = new bool[_luColliders.Length];
+            for (int i = 0; i < _luColliders.Length; i++)
+            {
+                _luColliderWasEnabled[i] = _luColliders[i].enabled;
+                _luColliders[i].enabled = false;
+            }
         }
 
         if (livingLight != null)
@@ -437,11 +619,23 @@ public class BadEndingDirector : MonoBehaviour
 
         // 씬을 넘기기 전에 되돌려 둔다. 되감기 복귀 후 같은 씬을 다시 쓰기 때문이다.
         RestoreCamera();
+        CameraDirector.Instance?.Track();
+        CameraFollow.Instance?.SetBound(null);
+        StopLoopIfNamed(sfxDistantCookingName);
 
         if (seraObject != null)
         {
+            _seraWalker?.Restore();
+            _seraWalker = null;
             seraObject.transform.position = _origSeraPos;
             seraObject.SetActive(_origSeraActive);
+        }
+
+        if (_luColliders != null)
+        {
+            for (int i = 0; i < _luColliders.Length; i++)
+                if (_luColliders[i] != null) _luColliders[i].enabled = _luColliderWasEnabled[i];
+            _luColliders = null;
         }
 
         if (livingLight != null)
@@ -461,11 +655,13 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     // ─── 도구 ───────────────────────────────────────────────────────────────
-    IEnumerator FadeOut()
+    IEnumerator FadeOut() => FadeOut(cutFadeDuration);
+
+    IEnumerator FadeOut(float duration)
     {
         var tm = TransitionManager.Instance;
         if (tm == null) yield break;
-        yield return tm.FadeToBlack(cutFadeDuration);
+        yield return tm.FadeToBlack(duration);
     }
 
     IEnumerator FadeIn()
@@ -475,34 +671,95 @@ public class BadEndingDirector : MonoBehaviour
         yield return tm.FadeFromBlack(cutFadeDuration);
     }
 
-    /// <summary>암전 → 이동 → 밝아짐. 컷이 바뀌는 자리에 쓴다.</summary>
-    /// <remarks>
-    /// ⚠ 줌을 여기서 되돌린다. BE#01-a 가 문을 키우려고 orthoSize 를 좁혀 놓기 때문에,
-    /// 그대로 두면 BE#01-d 의 식탁이 바짝 당겨진 화면으로 잡힌다 —
-    /// 정본이 요구하는 「S#04A 와 완전히 같은 구도」(문단 500)가 깨진다.
-    /// 되돌리는 것은 암전 안에서 하므로 줌이 풀리는 과정이 보이지 않는다.
-    /// </remarks>
-    IEnumerator CutTo(Transform spawn)
-    {
-        yield return FadeOut();
-        TeleportPlayer(spawn);
-        yield return FadeIn();
-        yield return WaitBeat();
-    }
-
     WaitForSecondsRealtime WaitBeat() => new WaitForSecondsRealtime(beatSeconds);
+
+    ClearSky.SimplePlayerController Lu => _lockedCtrl != null
+        ? _lockedCtrl
+        : FindAnyObjectByType<ClearSky.SimplePlayerController>();
+
+    Vector2 LuPosition => Lu != null ? (Vector2)Lu.transform.position : Vector2.zero;
 
     void TeleportPlayer(Transform spawn)
     {
         if (spawn == null) return;
-        var ctrl = _lockedCtrl != null
-            ? _lockedCtrl
-            : FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (ctrl == null) return;
-
-        ctrl.transform.position = spawn.position;
+        SetLuPosition(spawn.position);
+        // 고정이 걸려 있으면 푼 뒤 스냅한다 — 새 자리에서 다시 고정한다(호출부).
+        CameraDirector.Instance?.Track();
         // 스냅하지 않으면 카메라가 이전 자리에서 새 자리까지 부드럽게 따라오는 것이 그대로 보인다.
         CameraFollow.Instance?.SnapCameraToFollow();
+    }
+
+    void SetLuPosition(Vector2 p)
+    {
+        var lu = Lu;
+        if (lu == null) return;
+        var rb = lu.GetComponent<Rigidbody2D>();
+        if (rb != null) { rb.position = p; rb.linearVelocity = Vector2.zero; }
+        lu.transform.position = new Vector3(p.x, p.y, lu.transform.position.z);
+    }
+
+    /// <summary>루가 delta 방향을 보게 한다. 0=아래 1=옆 2=위, 옆은 localScale.x 부호만 뒤집는다(양수가 왼쪽 — CLAUDE.md §11).</summary>
+    void FaceLu(Vector2 delta)
+    {
+        var lu = Lu;
+        if (lu == null || delta.sqrMagnitude < 0.0001f) return;
+        var anim = lu.GetComponent<Animator>();
+        int dir = Mathf.Abs(delta.x) >= Mathf.Abs(delta.y) ? 1 : (delta.y > 0f ? 2 : 0);
+        Vector3 s = lu.transform.localScale;
+        s.x = dir == 1 ? Mathf.Abs(s.x) * (delta.x > 0f ? -1f : 1f) : Mathf.Abs(s.x);
+        lu.transform.localScale = s;
+        if (anim != null) { anim.SetInteger("dir", dir); anim.SetBool("isRun", false); }
+    }
+
+    /// <summary>열쇠를 돌리는 흔들림 — S#06 손잡이 임시 동작과 같은 궤적(1픽셀 좌우). 그림이 오면 애니메이션으로 바꾼다.</summary>
+    IEnumerator KeyTurnMotion()
+    {
+        var lu = Lu;
+        if (lu == null) yield break;
+        Vector2 home = lu.transform.position;
+        const float px = 1f / 32f;
+        foreach (float k in new[] { 1f, 0f, -1f, 0f })
+        {
+            SetLuPosition(home + Vector2.right * (k * px));
+            yield return new WaitForSecondsRealtime(0.075f);
+        }
+        SetLuPosition(home);
+    }
+
+    /// <summary>짧게 한 걸음 — 손을 떼며 물러나는 동작.</summary>
+    IEnumerator StepLu(Vector2 delta, float duration)
+    {
+        Vector2 from = LuPosition, to = from + delta;
+        for (float t = 0f; t < duration; t += Time.unscaledDeltaTime)
+        {
+            SetLuPosition(Vector2.Lerp(from, to, t / duration));
+            yield return null;
+        }
+        SetLuPosition(to);
+    }
+
+    /// <summary>잠긴 루를 목표까지 걷게 한다. 컨트롤러가 잠겨 있어 위치로 옮긴다.</summary>
+    IEnumerator WalkLu(Vector2 target)
+    {
+        var lu = Lu;
+        if (lu == null) yield break;
+        var anim = lu.GetComponent<Animator>();
+        FaceLu(target - LuPosition);
+        if (anim != null) anim.SetBool("isRun", true);
+        while ((LuPosition - target).sqrMagnitude > 0.0001f)
+        {
+            SetLuPosition(Vector2.MoveTowards(LuPosition, target, walkSpeed * Time.unscaledDeltaTime));
+            yield return null;
+        }
+        if (anim != null) anim.SetBool("isRun", false);
+    }
+
+    /// <summary>방 안 지점이면 그 방 경계로 카메라를 묶는다(RoomTransfer 가 지점에 붙어 있다).</summary>
+    void BindRoomBound(Transform spawn)
+    {
+        if (spawn == null) return;
+        var room = spawn.GetComponentInParent<RoomTransfer>();
+        CameraFollow.Instance?.SetBound(room != null ? room.roomBound : null, snap: true);
     }
 
     /// <summary>클로즈업 Image 를 잠깐 띄웠다 끈다. 비어 있으면 조용히 건너뛴다.</summary>
@@ -537,13 +794,36 @@ public class BadEndingDirector : MonoBehaviour
     void ShowSera(Transform spawn)
     {
         if (seraObject == null) return;
-        if (spawn != null) seraObject.transform.position = spawn.position;
+        ShowSera(spawn != null ? (Vector2)spawn.position : (Vector2)seraObject.transform.position);
+    }
+
+    /// <remarks>
+    /// ⚠ 오브젝트만 켜면 안 된다. S#04H 외출 뒤 세라의 SpriteRenderer 가 꺼져 있어(2026-09-27 실측 en=False)
+    /// 켜진 채로 보이지 않았다. 렌더러까지 켠다 — 원래 상태는 EndPlayback 의 walker.Restore 가 되돌린다.
+    /// </remarks>
+    void ShowSera(Vector2 at)
+    {
+        if (seraObject == null) return;
+        seraObject.transform.position = new Vector3(at.x, at.y, seraObject.transform.position.z);
         seraObject.SetActive(true);
+        foreach (var r in seraObject.GetComponentsInChildren<SpriteRenderer>(true)) r.enabled = true;
     }
 
     void HideSera()
     {
         if (seraObject != null) seraObject.SetActive(false);
+    }
+
+    void PlayLoopIfNamed(string soundName)
+    {
+        if (string.IsNullOrEmpty(soundName)) return;
+        AudioManager.Instance?.PlayLoop(soundName);
+    }
+
+    void StopLoopIfNamed(string soundName)
+    {
+        if (string.IsNullOrEmpty(soundName)) return;
+        AudioManager.Instance?.StopLoop(soundName);
     }
 
     void SetPlates(bool three)

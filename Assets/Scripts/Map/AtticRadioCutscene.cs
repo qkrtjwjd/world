@@ -85,14 +85,15 @@ public class AtticRadioCutscene : MonoBehaviour
             AudioManager.Instance?.PlayLoop(sfxRadioStaticName);
         yield return new WaitForSeconds(1f);
 
+        // 잡음은 목소리 앞에서 끊는다 — 「유의 목소리 외에 아무 소리도 없어야 한다」(D 문단 374·375).
+        // 이 게임엔 음성이 없어 목소리는 대사창 글자뿐이므로, 유의 대사는 무음으로 흐른다(2026-09-27 사용자 결정 A).
+        if (!string.IsNullOrEmpty(sfxRadioStaticName))
+            AudioManager.Instance?.StopLoop(sfxRadioStaticName);
+
         // 아빠 녹음 Yarn 대사
         // ⚠ 정본: 유의 목소리가 나오는 동안 컷을 바꾸지 않는다. 루의 얼굴을 보여주지 않는다.
         if (!string.IsNullOrEmpty(yarnNode_radio))
             yield return YarnDialogue.PlayAndWait(yarnNode_radio, false);
-
-        // 잡음 정지
-        if (!string.IsNullOrEmpty(sfxRadioStaticName))
-            AudioManager.Instance?.StopLoop(sfxRadioStaticName);
 
         if (radioDialImage != null)
             yield return StartCoroutine(FadeOutImage(radioDialImage, 0.3f));

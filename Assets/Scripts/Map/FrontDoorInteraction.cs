@@ -74,16 +74,37 @@ public class FrontDoorInteraction : MonoBehaviour
     public string sfxHandReleaseName = "";
     [Tooltip("S#13 — 열쇠가 구멍에 들어가고 돌아가는 딸깍.")]
     public string sfxKeyUnlockName = "";
+    [Tooltip("S#13 — 문이 열리는 경첩 소리.")]
+    public string sfxHingeName = "";
+    [Tooltip("S#13 — 문 밖의 바람 소리. 결계 안에서 처음 들리는, 반복되지 않는 소리(D 416) — 루프로 등록하지 않는다.")]
+    public string sfxOutsideWindName = "";
+    [Tooltip("S#13 — 문이 열리는 순간 시작하는 아주 조용한 선율 하나(D 415). Resources 기준 경로(예: BGM/파일명). " +
+             "오르골 계열 음색을 쓰지 않는다. 비우면 무음.")]
+    public string departureBgmPath = "";
 
     [Header("S#13 — 문이 열린 뒤")]
-    [Tooltip("코트를 입은 루 스프라이트. 비우면 교체하지 않는다.")]
-    public Sprite coatedPlayerSprite;
+    // 코트는 S#11 다락방에서 입는다(AtticBoxInteraction.coatedLuAnimator · D 467 · 2026-09-27 사용자 결정). 여기서 갈아입히지 않는다.
     [Tooltip("문이 열리면 활성화할 오브젝트 (마당 배경·정문 등).")]
     public GameObject[] objectsToEnable;
     [Tooltip("문이 열리면 비활성화할 오브젝트 (닫힌 문 스프라이트·막는 콜라이더 등).")]
     public GameObject[] objectsToDisable;
     [Tooltip("문이 열린 뒤 플레이어가 서 있을 마당 위치. 비우면 이동하지 않는다.")]
     public Transform yardSpawnPoint;
+    [Tooltip("마당은 루가 현관문에서 걸어 나오는 모습으로 시작한다(D 418). 루는 spawn − 이 값(= 문 자리)에서 나타나\n" +
+             "spawn 까지 자동으로 걷고, 거기서 조작권을 받는다. 마당의 현관문 그림은 그 시작점에 둔다. 0 이면 걷지 않는다.")]
+    public Vector2 yardWalkOut = new Vector2(1.5f, 0f);
+    [Tooltip("딸깍 뒤 문이 열리기까지(초).")]
+    public float keyToOpenDelay = 0.6f;
+
+    // D 421: 「S#04C 에서 세라가 터뜨린 화이트아웃과 같은 밝기를 쓰지 않는다. 이 빛은 바깥의 것이다. 색온도를 다르게.」
+    //   세라의 문틈 빛은 0.15초 만에 차오른다(KitchenTriggerCutscene.DoorGapWhiteout). 이 빛은 더 느리고, 순백보다 낮고 차갑다.
+    //   ⚠ 색은 임시값이다 — 화면으로 보고 정한다(2026-09-27 사용자 결정: 자리만 먼저).
+    [Header("S#13 — 문 열림 빛 (D 421 · 색 미정)")]
+    public Color doorLightColor = new Color(0.84f, 0.88f, 0.94f, 1f);
+    [Tooltip("빛이 차오르는 시간. 다 차오른 순간 마당으로 넘어간다.")]
+    public float doorLightIn = 0.6f;
+    [Tooltip("마당에서 빛이 걷히는 시간. 루가 걸어 나오는 동안 걷힌다.")]
+    public float doorLightOut = 0.8f;
 
     [Header("목표")]
     public string refusedObjectiveHeader = "[목표 갱신]";
@@ -331,21 +352,24 @@ public class FrontDoorInteraction : MonoBehaviour
     }
 
     // ─── S#13 ────────────────────────────────────────────────────────────
+    // 2026-09-27 개정 D S#13 문단 415~425 에 맞춰 박자를 줬다. 전에는 퇴장 노드에 대사가 없어 딸깍·문 열림·마당 이동이
+    //   한 프레임에 끝났고, 「딱」이 문이 열리기 전에 울렸다(배치 플레이모드 실측).
+    //   순서: 문 앞 고정 → 딸깍 → 경첩 · 압박 해제 · 선율 · 바람 → 딱(yarn) → 빛이 차오름 → 마당 → 루가 문에서 걸어 나옴 → 조작권.
     IEnumerator DepartRoutine()
     {
         var ctrl = YarnDialogue.LockPlayer();
 
-        // S#06 의 고정이 걸린 채면 먼저 푼다.
+        // S#06 의 고정이 걸린 채면 먼저 푼다. 그리고 현관문 앞에서 고정(D 418). 열쇠를 넣는 손은 따로 보여주지 않는다.
         ReleaseDoorHold();
+        var lu = FindLu();
+        FaceLuTowardDoor(lu);
+        CameraDirector.Instance?.Hold();
 
         PlaySfxIfNamed(sfxKeyUnlockName);
+        yield return new WaitForSeconds(keyToOpenDelay);
 
-        // 코트를 입은 루로 교체 — 정본은 다락방이 아니라 현관에서 코트를 입는다.
-        // 소매가 손을 덮어 도자기 손가락이 가려지는 것이 이 스프라이트의 핵심이다.
-        ApplyCoatedSprite();
-
-        if (!string.IsNullOrEmpty(yarnNode_departure))
-            yield return YarnDialogue.PlayAndWait(yarnNode_departure, false);
+        // ── 문이 열린다 ──
+        PlaySfxIfNamed(sfxHingeName);
 
         // ── 현관문 통과 — 탈출 압박이 여기서 끝난다 (C-14-2-2 · F-6 「타이머·조임 정지 — 현관문 통과」) ──
         //
@@ -357,40 +381,124 @@ public class FrontDoorInteraction : MonoBehaviour
         GameState.isFrontDoorPassed = true;
         HouseEscapePressureController.NotifyEscaped();
 
+        // 집 안 목표(「나갈 방법을 찾으세요」 등)를 내린다. 마당에는 목표를 띄우지 않는다 —
+        // 「이동 중 이벤트는 넣지 않는다」(D 425). 2026-09-27 사용자 결정으로 「정문으로 걸어가세요」 삭제.
+        ObjectiveManager.Instance?.HideObjective();
+
+        if (!string.IsNullOrEmpty(departureBgmPath))
+            YarnCommandBridge.PlayBGM(departureBgmPath);
+        PlaySfxIfNamed(sfxOutsideWindName);
+
+        // 딱 — 문이 열린 직후 1회(D 422·423). House_FrontDoor_Depart 가 낸다.
+        if (!string.IsNullOrEmpty(yarnNode_departure))
+            yield return YarnDialogue.PlayAndWait(yarnNode_departure, false);
+
+        // 빛이 들어온 뒤 마당 맵으로 넘어간다(D 418 · 421).
+        var doorLight = CreateDoorLight();
+        yield return FadeDoorLight(doorLight, 0f, 1f, doorLightIn);
+
         foreach (var obj in objectsToEnable)
             if (obj != null) obj.SetActive(true);
         foreach (var obj in objectsToDisable)
             if (obj != null) obj.SetActive(false);
 
-        // 마당으로 내보낸다. 여기서부터 정문까지는 플레이어가 직접 걷는다 —
-        // '자신의 발로'라는 문장이 조작으로 성립해야 하므로 컷신을 넣지 않는다.
-        MoveToYard();
+        // 마당으로 내보낸다. 루는 문 자리에서 나타나 몇 발 걸어 나온다 — 밖에서 맞이하는 구도(D 418).
+        MoveToYard(lu);
+        CameraDirector.Instance?.Track();
+        CameraFollow.Instance?.SnapToTarget();
+
+        var fadeOut = StartCoroutine(FadeDoorLight(doorLight, 1f, 0f, doorLightOut));
+        yield return WalkOutOfDoor(lu);
+        yield return fadeOut;
+        if (doorLight != null) Destroy(doorLight.canvas.gameObject);
 
         _departed = true;
 
         var trigger = GetComponent<InteractionTrigger>();
         if (trigger != null) trigger.enabled = false;
 
+        // 여기서부터 정문까지는 플레이어가 직접 걷는다 —
+        // '자신의 발로'라는 문장이 조작으로 성립해야 하므로 컷신을 넣지 않는다.
         YarnDialogue.UnlockPlayer(ctrl);
     }
 
-    void ApplyCoatedSprite()
+    /// <summary>화면 전체를 덮는 문 빛. UI 층(Screen Space - Overlay)이라 색보정을 타지 않는다(CLAUDE.md §7).</summary>
+    UnityEngine.UI.Image CreateDoorLight()
     {
-        if (coatedPlayerSprite == null) return;
+        var go = new GameObject("__DoorLight", typeof(RectTransform));
+        var canvas = go.AddComponent<Canvas>();
+        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 500;
+        UiCanvasScale.Add(go);
 
-        var player = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (player == null) return;
-
-        var sr = player.GetComponentInChildren<SpriteRenderer>();
-        if (sr != null) sr.sprite = coatedPlayerSprite;
+        var imgGo = new GameObject("Light", typeof(RectTransform));
+        imgGo.transform.SetParent(go.transform, false);
+        var rt = (RectTransform)imgGo.transform;
+        rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+        var img = imgGo.AddComponent<UnityEngine.UI.Image>();
+        img.raycastTarget = false;
+        var c = doorLightColor; c.a = 0f;
+        img.color = c;
+        return img;
     }
 
-    void MoveToYard()
+    IEnumerator FadeDoorLight(UnityEngine.UI.Image img, float from, float to, float duration)
+    {
+        if (img == null) yield break;
+        var c = doorLightColor;
+        for (float t = 0f; t < duration; t += Time.deltaTime)
+        {
+            c.a = Mathf.Lerp(from, to, t / duration);
+            img.color = c;
+            yield return null;
+        }
+        c.a = to;
+        img.color = c;
+    }
+
+    /// <summary>문 자리(spawn − yardWalkOut)에서 spawn 까지 걷는 모습. 조작은 잠긴 채다.</summary>
+    IEnumerator WalkOutOfDoor(ClearSky.SimplePlayerController lu)
+    {
+        if (lu == null || yardSpawnPoint == null || yardWalkOut.sqrMagnitude < 0.0001f) yield break;
+
+        var rb   = lu.GetComponent<Rigidbody2D>();
+        var anim = lu.GetComponent<Animator>();
+        Vector2 to = yardSpawnPoint.position;
+
+        // 걷는 방향으로 돌려세운다. 옆은 localScale.x 부호만 뒤집는다(양수가 왼쪽 — CLAUDE.md §11).
+        Vector2 d = yardWalkOut;
+        int dir = Mathf.Abs(d.x) > Mathf.Abs(d.y) ? 1 : (d.y > 0f ? 2 : 0);
+        Vector3 s = lu.transform.localScale;
+        s.x = dir == 1 ? Mathf.Abs(s.x) * (d.x > 0f ? -1f : 1f) : Mathf.Abs(s.x);
+        lu.transform.localScale = s;
+        if (anim != null) { anim.SetInteger("dir", dir); anim.SetBool("isRun", true); }
+
+        // 잠긴 컨트롤러가 FixedUpdate 마다 속도를 0 으로 되돌리므로 위치로 옮긴다.
+        float speed = Mathf.Max(0.1f, lu.walkSpeed);
+        while (true)
+        {
+            Vector2 p = rb != null ? rb.position : (Vector2)lu.transform.position;
+            Vector2 np = Vector2.MoveTowards(p, to, speed * Time.fixedDeltaTime);
+            if (rb != null) rb.MovePosition(np); else lu.transform.position = new Vector3(np.x, np.y, lu.transform.position.z);
+            if ((np - to).sqrMagnitude < 0.0001f) break;
+            yield return new WaitForFixedUpdate();
+        }
+        if (anim != null) anim.SetBool("isRun", false);
+    }
+
+    void MoveToYard(ClearSky.SimplePlayerController player)
     {
         if (yardSpawnPoint == null) return;
 
-        var player = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
-        if (player != null) player.transform.position = yardSpawnPoint.position;
+        // 문 자리에 세운다. 거기서 spawn 까지 걸어 나온다(WalkOutOfDoor).
+        if (player != null)
+        {
+            Vector2 at = (Vector2)yardSpawnPoint.position - yardWalkOut;
+            var rb = player.GetComponent<Rigidbody2D>();
+            if (rb != null) { rb.position = at; rb.linearVelocity = Vector2.zero; }
+            player.transform.position = new Vector3(at.x, at.y, player.transform.position.z);
+        }
 
         var room = yardSpawnPoint.GetComponentInParent<RoomTransfer>();
         if (room != null)

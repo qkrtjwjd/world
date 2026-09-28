@@ -47,6 +47,14 @@ public class SeraPatrol : MonoBehaviour
              "세라는 걸어서 접근한다 — 뛰지 않고, 발각 후에도 같은 속도다(D-2 15-A).")]
     public float moveDuration = 5f;
 
+    // 2026-09-27 사용자 결정: 마을 첫 진입에서 세라는 「남쪽으로 걸어가는 중」이다(D 586 — 집에서 나온 루가 남쪽으로
+    //   걸어가는 세라의 뒷모습을 보는 첫 마주침). 광장에서 서 있는 채로 시작하면 루가 몇 초 만에 광장에 닿아 솔이 없는
+    //   광장에서 세라와 마주쳤다(실측). 되감기 복귀는 C-14-3-6 대로 광장 점검에서 시작한다(ResetPatrol).
+    [Header("첫 진입 (D 586)")]
+    [Tooltip("첫 진입 때 세라가 서 있다가 곧바로 걸어 나가는 구역의 번호. 다음 구역(마을 출구, 남쪽)으로 향한다.\n" +
+             "이 짧은 첫 구간은 1회차에 포함한다 — 라운드는 그 뒤 광장에서 시작하는 한 바퀴가 끝날 때 넘어간다.")]
+    public int openingZoneIndex = 2;
+
     [Header("연출")]
     [Tooltip("1회차 종료 예고. 걸음을 멈추고 손끝이 결계 쪽으로 당겨지는 시간(초).")]
     public float roundEndPauseDuration = 2.5f;
@@ -123,6 +131,10 @@ public class SeraPatrol : MonoBehaviour
             Debug.LogWarning($"[SeraPatrol] 순찰 1라운드가 {RoundSeconds:F1}초입니다. " +
                              "F-6 초안값은 110초(광장 30 + 나머지 20×3 + 이동 5×4)입니다.");
 
+        // VillagePatrolController.Start 가 먼저 돌아 순찰을 세웠으면(첫 진입 · 되감기) 그대로 둔다.
+        // 여기서 다시 광장으로 세우면 첫 진입의 「남쪽으로 걸어가는 중」이 지워진다.
+        if (_routine != null) return;
+
         SnapToStart();
 
         // ⚠⚠ 이미 돌고 있으면 갈아탄다. 새로 하나 더 만들면 안 된다.
@@ -173,12 +185,43 @@ public class SeraPatrol : MonoBehaviour
         Dbg.Log("[마을순찰] 초기화 — 1회차 · 광장 점검부터 다시 시작");
     }
 
-    IEnumerator PatrolRoutine()
+    /// <summary>순찰을 그 자리에서 멈춘다. BE#02-a 발각 — 세라가 순찰을 떠나 루에게 걸어간다.</summary>
+    public void Halt()
+    {
+        if (_routine != null) { StopCoroutine(_routine); _routine = null; }
+        CurrentZone = null;
+        SetAnimatorSpeed(0f);
+    }
+
+    /// <summary>
+    /// 마을 첫 진입 — 1회차로, <see cref="openingZoneIndex"/> 구역에서 다음 구역(마을 출구)으로 걸어 나가는 중에 시작한다(D 586).
+    /// 그 구역을 마치면 광장부터 정상 순환한다. 이 첫 구간은 라운드를 넘기지 않는다.
+    /// </summary>
+    public void StartOpening()
+    {
+        if (zones == null || zones.Length == 0) return;
+        int from = Mathf.Clamp(openingZoneIndex, 0, zones.Length - 1);
+        if (zones[from]?.point == null) { ResetPatrol(); return; }
+
+        if (_routine != null) { StopCoroutine(_routine); _routine = null; }
+        RoundNumber = 1;
+        transform.position = zones[from].point.position;
+        CurrentZone = null;
+
+        if (isActiveAndEnabled)
+            _routine = StartCoroutine(PatrolRoutine(from + 1, opening: true));
+
+        Dbg.Log($"[마을순찰] 첫 진입 — 1회차 · {zones[from].name} → 다음 구역으로 걸어가는 중에서 시작");
+    }
+
+    IEnumerator PatrolRoutine() => PatrolRoutine(0, opening: false);
+
+    IEnumerator PatrolRoutine(int firstIndex, bool opening)
     {
         // 집으로 돌아가지 않는 무한 루프 (C-14-3-1)
         while (true)
         {
-            for (int i = 0; i < zones.Length; i++)
+            for (int i = firstIndex; i < zones.Length; i++)
             {
                 PatrolZone zone = zones[i];
                 if (zone?.point == null) continue;
@@ -198,6 +241,14 @@ public class SeraPatrol : MonoBehaviour
                 yield return new WaitForSeconds(Mathf.Max(0f, zone.dwellSeconds));
 
                 CurrentZone = null;
+            }
+
+            firstIndex = 0;
+            if (opening)
+            {
+                // 첫 진입의 짧은 구간은 1회차의 앞부분이다. 라운드를 넘기지 않고 광장부터 한 바퀴를 돈다.
+                opening = false;
+                continue;
             }
 
             // 회차 종료 — 1회차 종료 예고 연출이 여기 붙는다.
@@ -333,6 +384,18 @@ public class SeraPatrol : MonoBehaviour
         // 스프라이트는 시야가 실제로 돌아본 순간에 맞춰 돌린다(OnTurnedToSound).
         // 여기서 바로 돌리면 지연 1초 동안 그림만 먼저 돌아 시야와 어긋난다.
         Vision?.NoticeSound(((Vector2)dir).normalized);
+    }
+
+    /// <summary>
+    /// 순찰 1회차 발각 뒤 — 「이내 고개를 돌려버린다. 루 생각을 너무 많이 했더니 보이는 착각이라고 치부해버린다.」(D 584)
+    /// 루 반대쪽을 보게 한다. 시야도 같이 돌린다 — 그래야 「그 자리를 벗어나면 넘어간다」(C-14-3-4)가 성립한다.
+    /// </summary>
+    public void LookAwayFrom(Vector3 worldPosition)
+    {
+        Vector3 away = transform.position - worldPosition;
+        if (away.sqrMagnitude < 0.0001f) return;
+        SetFacing(away);
+        Vision?.SetFacing(((Vector2)away).normalized);
     }
 
     /// <summary>시야가 소리 쪽으로 돌아본 순간 스프라이트도 같은 쪽을 보게 한다.</summary>

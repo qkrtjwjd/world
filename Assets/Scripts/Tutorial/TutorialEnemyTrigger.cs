@@ -28,6 +28,9 @@ public class TutorialEnemyTrigger : MonoBehaviour
 
         // 이미 이 단계를 완료했거나 아직 이 단계가 아니면 무시
         if (GameState.tutorialBattleStep != tutorialStep) return;
+        // 쿠루가 합류하기 전에는 발동하지 않는다 — S#16D 「따라와」 → S#17(D 789). 2026-09-27: 전에는 쿠루 바로 옆의
+        //   첫 늑대가 처음부터 살아 있어, 쿠루에게 다가가다 재회보다 전투가 먼저 날 수 있었다.
+        if (!GameState.isKuruJoined) return;
 
         if (TutorialBattleManager.Instance == null)
         {

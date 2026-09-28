@@ -52,6 +52,23 @@ public class CameraDirector : MonoBehaviour
         else Destroy(gameObject);
     }
 
+    void OnEnable()  => UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    void OnDisable() => UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+
+    /// <summary>
+    /// 씬을 통째로 바꾸면 추적으로 돌아간다. 고정·스크롤 앵커는 DontDestroyOnLoad 라 씬을 넘어 남는데,
+    /// 새 씬의 가상 카메라는 CameraFollow.OnSceneLoaded 가 루에게 다시 붙인다 — 앵커와 모드만 낡은 채 남는다.
+    /// 2026-09-27 S#13 정문(고정 → MapScene) 실측에서 확인. 전투 등 추가 로드(Additive)는 건드리지 않는다.
+    /// </summary>
+    void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        if (this != Instance || mode != UnityEngine.SceneManagement.LoadSceneMode.Single) return;
+        if (CurrentMode == Mode.Track) return;
+        StopScroll();
+        if (_anchor != null) { Destroy(_anchor); _anchor = null; }
+        CurrentMode = Mode.Track;
+    }
+
     // ─── 샷 VCam 등록 (SceneCameraSetup 호환) ─────────────────────────
     // 등록만 받는다. 샷 전환은 4종에 없어 걷어냈다(E-64).
 

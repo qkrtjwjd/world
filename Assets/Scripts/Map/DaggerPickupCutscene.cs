@@ -93,8 +93,10 @@ public class DaggerPickupCutscene : MonoBehaviour
         // ── 토글 조작권 개방 ──────────────────────────────────
         // 여기서부터 F키가 먹는다. 다락방에서 뽑아보지 않고 그냥 내려가도 막지 않는다.
         GameState.isDaggerToggleUnlocked = true;
+        // D 문단 403 [UI][튜토리얼] — 정본 문구 + 조작키. 한 번만 띄우고 강제하지 않는다(404).
+        // 2026-09-27: yarn 의 show_objective "[튜토리얼]" 은 뒤이은 목표에 덮여 보이지 않았고 저널에 목표로 남았다 → 이 힌트 하나로 통일.
         HintManager.ShowHint("dagger_filter",
-            $"[{SettingsManager.Instance?.keyDagger ?? KeyCode.F}] 키를 누르고 있으면 은빛 단검으로 현실을 볼 수 있습니다.", 5f);
+            $"단검을 뽑으면 진짜가 보입니다. [{SettingsManager.Instance?.keyDagger ?? KeyCode.F}]", 5f);
 
         YarnDialogue.UnlockPlayer(ctrl);
     }

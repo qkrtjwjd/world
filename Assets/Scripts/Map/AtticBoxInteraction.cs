@@ -19,8 +19,8 @@ using UnityEngine;
 ///   S#11 라디오 — 다이얼이 저 혼자 떨리며 아빠 목소리. 라디오 획득 + 시스템 활성화.
 ///   S#12 단검   — 단검 획득 → 0.5초 현실 컷 → 필터 토글 개방. DaggerPickupCutscene 소관.
 ///
-///   ⚠ 코트를 **입는** 것은 여기가 아니라 S#13 현관이다(FrontDoorInteraction).
-///      여기서는 끌어안기만 한다. 스프라이트 교체를 이 컴포넌트에서 하지 말 것.
+///   ⚠ 코트는 **S#11 끝에 여기서 입는다**(D 467 · 2026-09-27 사용자 결정). 전에는 S#13 현관에서 입혔다(D 420 쪽).
+///      S#11 의 「코트를 끌어안는」 동작(D 382)은 입기 전이다.
 ///   ⚠ 루가 둘러보는 모션(좌→우→원위치)은 정본에 없어 삭제했다.
 /// </summary>
 [RequireComponent(typeof(InteractionTrigger))]
@@ -57,6 +57,9 @@ public class AtticBoxInteraction : MonoBehaviour
     public ItemData radioItem;
     [Tooltip("비우면 씬에서 자동 탐색한다. 없으면 S#11을 건너뛴다.")]
     public AtticRadioCutscene radioCutscene;
+    [Tooltip("코트를 입은 루의 이동 애니메이터(4방향 · 소매가 손을 덮는 상태, D 456). 비우면 교체하지 않는다.\n" +
+             "스프라이트 한 장이 아니라 컨트롤러를 바꾼다 — SpriteRenderer.sprite 는 Animator 가 매 프레임 덮어쓴다.")]
+    public RuntimeAnimatorController coatedLuAnimator;
 
     // ── S#12 ─────────────────────────────────────────────────────────────
     [Header("S#12 — 단검")]
@@ -66,9 +69,8 @@ public class AtticBoxInteraction : MonoBehaviour
     public ItemData daggerItem;
 
     // ── 공통 ─────────────────────────────────────────────────────────────
-    [Header("목표 갱신")]
-    public string objectiveHeader = "현재 목표";
-    public string objectiveBody   = "아빠를 찾으러 가세요.";
+    // 2026-09-27: 시퀀스 끝의 목표 「아빠를 찾으러 가세요.」를 뺐다(사용자 결정). D 에 없는 문구이고,
+    //   S#12 [튜토리얼] 을 즉시 덮어써 보이지 않게 했다. D 는 S#12 뒤 튜토리얼 하나만 둔다(문단 403).
 
     [Tooltip("아빠의 유품을 발견했을 때의 인형화 변동. 정본 미명시 — 기존 값 유지.")]
     public float corruptionOnFindingKeepsakes = -3f;
@@ -83,6 +85,9 @@ public class AtticBoxInteraction : MonoBehaviour
             _used = true;
             GetComponent<InteractionTrigger>().enabled = false;
         }
+
+        // 세이브 로드 · 되감기로 S#11 이후에 다시 들어오면 코트 차림으로 시작한다. S#11 끝(WearCoat)과 같은 기준이다.
+        if (GameState.isAtticRadioPlayed) WearCoat();
     }
 
     /// <summary>InteractionTrigger.onInteract 에 연결.</summary>
@@ -106,7 +111,8 @@ public class AtticBoxInteraction : MonoBehaviour
         yield return StartCoroutine(RunS11_Radio());
         yield return StartCoroutine(RunS12_Dagger());
 
-        ObjectiveManager.Instance?.ShowObjective(objectiveHeader, objectiveBody);
+        // 다락방 진입 목표 「상자를 살펴보세요.」(AtticDoorCutscene)를 내린다. 예전엔 뒤이은 목표가 덮어써 가렸다.
+        ObjectiveManager.Instance?.HideObjective();
 
         YarnDialogue.UnlockPlayer(ctrl);
     }
@@ -175,21 +181,24 @@ public class AtticBoxInteraction : MonoBehaviour
         if (!string.IsNullOrEmpty(droneLoopName))
             AudioManager.Instance?.StopLoop(droneLoopName);
 
-        GiveItem(radioItem);
-        yield return WaitForAcquisitionNotice();
-
         var cutscene = radioCutscene
                        ?? AtticRadioCutscene.Instance
                        ?? Object.FindAnyObjectByType<AtticRadioCutscene>();
 
         if (cutscene == null)
-        {
             Debug.LogWarning("[AtticBoxInteraction] AtticRadioCutscene 이 씬에 없어 S#11을 건너뜁니다. " +
                              "Home 씬에 배치해야 합니다 (Assets/Docs/유니티_수동작업.md).");
-            yield break;
-        }
+        else
+            yield return StartCoroutine(cutscene.PlayRoutine());
 
-        yield return StartCoroutine(cutscene.PlayRoutine());
+        // 코트는 S#11 다락방에서 입는다(D 467 · 2026-09-27 사용자 결정 — D 420 「현관 앞 코트를 입은 루」와의 모순을 이쪽으로 정했다).
+        // 「데리러 갈게요」 직후다. 그래서 S#12 부터 발동하는 BE#01 에서 루는 언제나 코트 차림이다(D 465·467).
+        WearCoat();
+
+        // [아이템 획득: 라디오] 는 씬 끝(D 문단 385). 먼저 띄우면 다이얼이 「저 혼자」 떨리기 전에 알림이 앞선다.
+        // 2026-09-27 사용자 결정으로 컷씬 앞에서 뒤로 옮겼다. 컷씬이 없어도 라디오는 준다.
+        GiveItem(radioItem);
+        yield return WaitForAcquisitionNotice();
     }
 
     // ─── S#12 — 단검 ─────────────────────────────────────────────────────
@@ -216,6 +225,14 @@ public class AtticBoxInteraction : MonoBehaviour
     }
 
     // ─── 헬퍼 ────────────────────────────────────────────────────────────
+    void WearCoat()
+    {
+        if (coatedLuAnimator == null) return;
+        var lu = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
+        var anim = lu != null ? lu.GetComponent<Animator>() : null;
+        if (anim != null) anim.runtimeAnimatorController = coatedLuAnimator;
+    }
+
     void GiveItem(ItemData item)
     {
         if (item == null) return;

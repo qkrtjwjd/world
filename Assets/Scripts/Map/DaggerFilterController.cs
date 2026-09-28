@@ -105,7 +105,7 @@ public class DaggerFilterController : MonoBehaviour
         // ⚠ 토글이 열리기 전(S#12 이전)에는 띄우지 않는다. 쓸 수 없는 키를 안내하게 된다.
         if (_filterObjects.Length > 0 && GameState.isDaggerToggleUnlocked)
             HintManager.ShowHint("dagger_filter",
-                $"[{SettingsManager.Instance?.keyDagger ?? KeyCode.F}] 키를 누르고 있으면 은빛 단검으로 현실을 볼 수 있습니다.", 5f);
+                $"단검을 뽑으면 진짜가 보입니다. [{SettingsManager.Instance?.keyDagger ?? KeyCode.F}]", 5f);  // D 문단 403 — DaggerPickupCutscene 과 같은 문구
     }
 
     void Update()

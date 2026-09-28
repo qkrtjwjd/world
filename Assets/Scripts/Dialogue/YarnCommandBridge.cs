@@ -479,6 +479,23 @@ public class YarnCommandBridge : MonoBehaviour
     public static void StopBGM(float fadeOut = 0f)
         => SFXManager.Instance?.StopBGM(fadeOut);
 
+    // ── 아이템 ───────────────────────────────────────────────────────────
+
+    // <<give_item "Anemone">>  (Resources/Items/ 의 ItemData 에셋 파일명)
+    // D 의 [TRIGGER] [아이템 획득: …] 을 대사 흐름 안에서 옮긴다(F-4-10 「[TRIGGER]는 커맨드로 변환」).
+    // 2026-09-27 신설 — S#15 15-C 시든 아네모네가 지급되지 않던 것을 고치며 만들었다. 획득 알림은 AddItem 이 띄운다.
+    [YarnCommand("give_item")]
+    public static void GiveItem(string itemAsset)
+    {
+        var item = Resources.Load<ItemData>("Items/" + itemAsset);
+        if (item == null)
+        {
+            Debug.LogWarning($"[YarnCommand:give_item] Resources/Items/{itemAsset} 이 없습니다.");
+            return;
+        }
+        InventoryManager.Instance?.AddItem(item);
+    }
+
     // ── SFX ──────────────────────────────────────────────────────────────
 
     // <<play_sfx "soundName">>  (AudioManager.sounds에 등록된 이름)
