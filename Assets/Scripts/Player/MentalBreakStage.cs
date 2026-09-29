@@ -84,10 +84,13 @@ public class MentalBreakStage : MonoBehaviour
             case MentalStage.Anxiety:
             case MentalStage.Panic:
             case MentalStage.Collapse:
-                RestartHallucinationLoop();
-                // 불안/공황 구간 진입 시 붉은 심박 테두리 펄스
-                // (screenEdgeEffectEnabled=false면 내부에서 자동 무시됨)
-                ScreenEdgeEffectController.ShowHeartbeat();
+                // 2026-09-17: 구간 진입 시 붉은 심박 테두리 펄스와 무작위 환각 루프를 뺐다.
+                // Wizard 프리팹 maxMental 이 50 이라 시작 수치가 이미 불안 구간이고,
+                // PlayerStats.Start 가 수치를 채우는 순간 여기로 들어와 게임 시작마다
+                // 붉게 번쩍이고 속삭임·조작 반전·글리치가 무작위로 돌았다.
+                // C-7: 「멘탈 붕괴는 별도 게이지 없이 이벤트로 처리한다.」 — 수치 구간에 매달린
+                // 환각 루프는 정본에 없다. 되살리지 말 것.
+                StopHallucinationLoop();
                 break;
         }
     }
