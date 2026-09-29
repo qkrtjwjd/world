@@ -44,9 +44,15 @@ public class ForestEntranceDirector : MonoBehaviour
     [Tooltip("루가 손을 내려다보는 시간(초).")]
     public float lookDownSeconds = 0.9f;
 
+    [Header("마을 출구 점검 중 막힘 (C-14-3-1)")]
+    [Tooltip("세라가 이 이름의 순찰 구역에 머무는 동안 숲문을 막는다. SeraPatrol 의 구역 이름과 같아야 한다.\n" +
+             "C-14-3-1 「마을 출구가 마지막 점검 구역이므로 세라가 그곳에 있는 동안은 숲으로 나갈 수 없다」.")]
+    public string exitZoneName = "마을 출구";
+
     bool _passed;
     bool _inForest;
     bool _droneStopped;
+    BoxCollider2D _block;
 
     /// <summary>S#16C — 라디오가 나오는 순간 지속음을 끊는다(D 752). 이후 다시 켜지 않는다.</summary>
     public void StopDrone()
@@ -68,6 +74,49 @@ public class ForestEntranceDirector : MonoBehaviour
             _col = box;
         }
         _col.isTrigger = true;
+
+        // 출구 막힘 — 통과 판정과 같은 크기의 단단한 벽. 자식에 두어 통과 판정(트리거)의 메시지와 섞지 않는다.
+        // 막는 것은 벽이지만 이유는 화면에 보인다 — 세라가 이 틈 바로 안쪽에 서서 점검한다(순찰 「마을 출구」 지점).
+        var blockGo = new GameObject("ExitBlock [Auto]");
+        blockGo.transform.SetParent(transform, false);
+        _block = blockGo.AddComponent<BoxCollider2D>();
+        if (_col is BoxCollider2D src) { _block.size = src.size; _block.offset = src.offset; }
+        else _block.size = GetComponent<SpriteRenderer>()?.sprite?.bounds.size ?? Vector3.one;
+        _block.enabled = false;
+    }
+
+    /// <summary>
+    /// 세라가 마을 출구를 점검하는 동안 숲문을 막는다(C-14-3-1). 이동 중에는 열려 있다 —
+    /// 「그곳에 있는 동안」은 구역에 도착해 머무는 동안이다(<see cref="SeraPatrol.CurrentZone"/>).
+    /// </summary>
+    void Update()
+    {
+        var patrol = SeraPatrol.Instance;
+        bool guard = patrol != null && patrol.isActiveAndEnabled
+                     && patrol.CurrentZone != null && patrol.CurrentZone.name == exitZoneName;
+
+        if (guard == _block.enabled) return;
+        if (guard)
+        {
+            // 루가 틈 한가운데 서 있으면 벽을 세우지 않는다 — 겹친 채 켜면 물리가 루를 튕겨 낸다.
+            // 틈을 벗어나는 다음 프레임에 막힌다.
+            if (_col.bounds.Intersects(PlayerBounds())) return;
+            _block.enabled = true;
+            Dbg.Log("[S#16A] 세라가 마을 출구를 점검한다 — 숲문이 막힌다");
+        }
+        else
+        {
+            _block.enabled = false;
+            Dbg.Log("[S#16A] 세라가 마을 출구를 떠났다 — 숲문이 열린다");
+        }
+    }
+
+    Bounds PlayerBounds()
+    {
+        var p = GameObject.FindWithTag("Player");
+        if (p == null) return new Bounds(new Vector3(9999f, 9999f), Vector3.zero);
+        var c = p.GetComponent<Collider2D>();
+        return c != null ? c.bounds : new Bounds(p.transform.position, Vector3.one * 0.5f);
     }
 
     float WallBottomY => _col != null ? _col.bounds.min.y : transform.position.y;
