@@ -82,3 +82,6 @@ crashlytics-build.properties
 # 파이썬 바이트코드 캐시 (tools/ · .claude/skills/ 의 스크립트가 실행될 때마다 새로 써진다)
 __pycache__/
 *.py[cod]
+
+# 작업 부산물 — 임시 wav 사본 · 비교 이미지 (게임 에셋 아님)
+/Claude outputs/
