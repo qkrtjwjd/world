@@ -232,7 +232,8 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
             _forceReturnCoroutine = StartCoroutine(ForceReturnToValue(100f, 0f, 0.5f));
     }
 
-    public void ForceFantasyMax()
+    /// <param name="playSfx">false 면 전환음을 울리지 않는다(S#21C 결계 강화 — 마시멜로의 소리와 섞지 않는다).</param>
+    public void ForceFantasyMax(bool playSfx = true)
     {
         if (_forceReturnCoroutine != null)
             StopCoroutine(_forceReturnCoroutine);
@@ -242,7 +243,7 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
         OnGaugeChanged?.Invoke(fantasyRealityGauge);
         NotifyWorldObjects(true);   // 즉시 교체
 
-        AudioManager.Instance?.Play(sfxPop);
+        if (playSfx) AudioManager.Instance?.Play(sfxPop);
 
         if (_edgeEffectCoroutine != null)
             StopCoroutine(_edgeEffectCoroutine);

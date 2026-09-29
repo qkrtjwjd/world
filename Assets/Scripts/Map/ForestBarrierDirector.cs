@@ -119,6 +119,20 @@ public class ForestBarrierDirector : MonoBehaviour
     [Tooltip("번지는 물결 가장자리의 황금 테 세기(0~1).")]
     [Range(0f, 1f)] public float spreadRimStrength = 0.7f;
 
+    [Header("부감 컷 — 결계가 숲 전체를 감쌌다 (사용자 결정 2026-09-30)")]
+    [Tooltip("⑥ 루가 고개를 올려볼 때 띄우는 오버레이 컷(384×216) 프레임. 비우면 자리 표시 그림(ForestDomeOverlay)을 쓴다.\n" +
+             "서 호수 · 북 고목 · 동 회전목마(기계숲)를 암시한다. 이름도 표시도 붙이지 않는다.")]
+    public Sprite[] domeOverlayFrames;
+
+    [Tooltip("부감 컷을 띄워 두는 시간(초). 표시와 닫힘은 즉시다 — 페이드 없음(F-3-9).")]
+    public float domeOverlayDuration = 3.6f;
+
+    [Tooltip("컷 안 3프레임 반복의 한 프레임 길이(초). 안개가 「천천히」 흐르는 속도다.")]
+    public float domeFrameInterval = 0.3f;
+
+    [Tooltip("컷의 위쪽 여백(내부 해상도 픽셀). 대사창과 겹치지 않게 화면 위쪽에 둔다(F-3-9).")]
+    public float domeOverlayTopMargin = 8f;
+
     [Header("다시 걸음 → 끝")]
     [Tooltip("다시 걸어가는 방향. 옆모습 걷기만 그림이 있어 가로로 둔다(왼쪽 = −x).")]
     public Vector2 walkOffDirection = new Vector2(-1f, 0f);
@@ -185,11 +199,6 @@ public class ForestBarrierDirector : MonoBehaviour
     [Tooltip("⑥ 루가 고개를 올리기까지의 사이(초). 「천천히」가 이 값이다.")]
     public float lookUpDelay = 0.7f;
 
-    [Tooltip("애니메이터 dir 값 — 카메라 쪽(뒤를 돌아본다).")]
-    public int dirDown = 0;
-
-    [Tooltip("애니메이터 dir 값 — 위(고개를 올려본다).")]
-    public int dirUp = 2;
 
     [Header("강화 — 가장자리 보조 채널")]
     [Tooltip("잔광이 가장자리에 남는 진하기(0~1). " +
@@ -390,8 +399,8 @@ public class ForestBarrierDirector : MonoBehaviour
         //
         // ⚠ 이 자리가 노드를 둘로 나눈 이유다. 앞 노드에서 켜면 대사와 화면이 어긋난다.
         SetVisible(barrierTouch, true);
-        FaceDirection(kuru, dirDown);                       // 결계를 본다 — 창을 보는 중이며 루를 보지 않는다(정본 1263)
         _contact = ContactPoint(kuru != null ? kuru : player);
+        if (kuru != null) FaceVector(kuru, _contact - (Vector2)kuru.position);   // 결계를 본다 — 창을 보는 중이며 루를 보지 않는다(정본 1263)
         if (_fx != null)
         {
             _fx.ShowTouch(_contact);
@@ -590,9 +599,67 @@ public class ForestBarrierDirector : MonoBehaviour
         yield return PushAway(player, pairStepBack, 0.5f);
 
         // ── ⑥ 루가 천천히 고개를 위로 올려본다 ─────────────────────────────
-        Dbg.Log("[S#21] (6) 루가 천천히 고개를 올려본다");
+        Dbg.Log("[S#21] (6) 루가 천천히 고개를 올려본다 — 부감 컷");
         yield return new WaitForSeconds(lookUpDelay);
-        FaceDirection(player, dirUp);
+        // 탑다운에서는 「올려다본다」를 방향으로 그릴 수 없다 — 올려다본 것을 컷으로 보여 준다.
+        yield return ShowDomeOverlay();
+
+        // 루가 당황해서 쿠루를 쳐다본다(정본 1271) — 곧이어 「이거 어떡해요..」
+        FaceToward(player, kuru);
+    }
+
+    /// <summary>
+    /// 부감 오버레이 — 강화된 결계가 숲 전체를 감싼 한 장. 본편에서 돌 세 곳(서 호수 · 북 고목 · 동 회전목마)이
+    /// 흐르는 황금 안개 틈으로 비친다. 사용자 결정(2026-09-30) · F-3-9 오버레이 규칙을 따른다 —
+    /// 즉시 표시 · 즉시 닫힘 · 배경을 어둡게 덮지 않음 · 표시 중 맵 캐릭터 애니메이션 정지 · 그림 안 움직임은 3프레임 반복.
+    /// </summary>
+    IEnumerator ShowDomeOverlay()
+    {
+        Sprite[] frames = domeOverlayFrames != null && domeOverlayFrames.Length > 0
+            ? domeOverlayFrames : ForestDomeOverlay.Build(3);
+
+        var root = new GameObject("S21 DomeOverlay [Auto]");
+        var canvas = root.AddComponent<Canvas>();
+        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
+        canvas.sortingOrder = 97;                       // 황금 광막(96) 위, 암전(999) 아래
+        UiCanvasScale.Add(root);
+
+        var imgGo = new GameObject("Cut");
+        imgGo.transform.SetParent(root.transform, false);
+        var img = imgGo.AddComponent<Image>();
+        img.raycastTarget = false;
+        img.sprite = frames[0];
+        var rt = imgGo.GetComponent<RectTransform>();
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+        rt.pivot     = new Vector2(0.5f, 1f);
+        rt.sizeDelta = new Vector2(ForestDomeOverlay.W, ForestDomeOverlay.H);
+        rt.anchoredPosition = new Vector2(0f, -domeOverlayTopMargin);
+
+        // 표시 중 맵 위 캐릭터의 애니메이션을 멈춘다
+        var anims = new System.Collections.Generic.List<Animator>();
+        foreach (var t in new[] { player, FindCompanion() })
+        {
+            var a = t != null ? t.GetComponentInChildren<Animator>() : null;
+            if (a != null) { a.speed = 0f; anims.Add(a); }
+        }
+
+        float elapsed = 0f;
+        int fi = 0;
+        float nextFrame = domeFrameInterval;
+        while (elapsed < domeOverlayDuration)
+        {
+            elapsed += Time.deltaTime;
+            if (elapsed >= nextFrame && frames.Length > 1)
+            {
+                fi = (fi + 1) % frames.Length;
+                img.sprite = frames[fi];
+                nextFrame += Mathf.Max(0.05f, domeFrameInterval);
+            }
+            yield return null;
+        }
+
+        foreach (var a in anims) if (a != null) a.speed = 1f;
+        Destroy(root);                                  // 즉시 닫힘. ⚠ 씬 전환과 같은 프레임이 아니다(EndDemo 주석 참고)
     }
 
     /// <summary>
@@ -613,7 +680,9 @@ public class ForestBarrierDirector : MonoBehaviour
 
         DaggerFilterController.Instance?.SwitchToFantasyForced();
         FilterManager.Instance?.SetFilter(FilterType.Fantasy);
-        GaugeManager.Instance?.ForceFantasyMax();
+        // 마시멜로의 「퐁」은 울리지 않는다 — 정본 S#21C 의 소리는 부엉이와 딱딱뿐이고, 같은 소리로 계통을 들려주면
+        // 설명이 된다(사용자 결정 2026-09-30). 강화음은 sfxReinforce 슬롯이 맡는다.
+        GaugeManager.Instance?.ForceFantasyMax(playSfx: false);
         DaggerFilterController.SealToggle();
         driver?.SnapToGauge();                          // 화면 전체가 같이 서서히 바뀌면 물결이 안 보인다
 
@@ -700,9 +769,20 @@ public class ForestBarrierDirector : MonoBehaviour
     /// </summary>
     void LookBack()
     {
-        FaceVector(player, Vector2.down);
-        FaceVector(FindCompanion(), Vector2.down);
+        // 결계를 등지고 온 길 쪽을 본다 — S#16A 「뒤를 돌아보면 안 된다」의 회수다(정본 1303).
+        // ⚠ 방향 번호를 고정하지 않는다. 9-17 판은 결계가 북쪽이라고 가정해 정면(남)을 보게 했는데
+        //   실제 결계는 남쪽이라 결계를 정면으로 보는 그림이 됐다(2026-09-30 실측). 결계 반대쪽을 좌표로 잰다.
+        FaceAwayFromBarrier(player);
+        FaceAwayFromBarrier(FindCompanion());
         Dbg.Log("[S#21] 둘이 돌아본다 — 아무것도 없다");
+    }
+
+    void FaceAwayFromBarrier(Transform who)
+    {
+        if (who == null) return;
+        var col = barrier.GetComponent<Collider2D>();
+        Vector2 near = col != null ? col.ClosestPoint(who.position) : (Vector2)barrier.position;
+        FaceVector(who, (Vector2)who.position - near);
     }
 
     Transform FindCompanion()
