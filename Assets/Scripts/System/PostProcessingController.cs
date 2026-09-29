@@ -13,7 +13,7 @@ using UnityEngine.Rendering.Universal;
 ///                    (0.0 = -2EV, 0.5 = 0EV, 1.0 = +2EV)
 /// saturationVolume : ColorAdjustments 프로파일을 가진 Volume.
 ///                    채도 강도 설정이 saturation 으로 반영됨.
-///                    (0.0 = -100, 0.5 = 0, 1.0 = +100)
+///                    (0.0 = -100 완전 흑백, 1.0 = 0 원본)
 /// </summary>
 public class PostProcessingController : MonoBehaviour
 {
@@ -133,9 +133,16 @@ public class PostProcessingController : MonoBehaviour
     }
 
     /// <summary>
-    /// 채도 강도 슬라이더 0~1 → ColorAdjustments.saturation -100 ~ +100 매핑.
-    /// 0.5 = 원본 채도 유지.
-    /// saturationVolume이 없으면 무시.
+    /// 「색채 강도 (채도)」 슬라이더 0~1 → ColorAdjustments.saturation -100 ~ 0 매핑.
+    /// <b>1.0(=100%)이 원본이고 0.0(=0%)이 완전 흑백이다.</b>
+    ///
+    /// <para>⚠ 과채도(+100)로 올릴 수 있게 두지 않는다. 설정 패널의 다른 「강도」 슬라이더가
+    /// 전부 100% = 기본값이고(<see cref="SettingsManager.saturation"/> 기본값도 1),
+    /// 무엇보다 이 게임은 채도 자체가 이야기의 언어다 — 접근성 슬라이더가 그 위로 올라가면 안 된다.
+    /// 예전 매핑(0.5 = 원본 · 1.0 = +100)은 SettingsManager 기본값 1 과 어긋나 있었고,
+    /// Volume 이 미배선이라 화면에 드러나지 않았을 뿐이다(2026-09-17 수정).</para>
+    ///
+    /// <para>saturationVolume 이 없으면 무시한다.</para>
     /// </summary>
     void ApplySaturation(float value)
     {
@@ -143,7 +150,7 @@ public class PostProcessingController : MonoBehaviour
             saturationVolume.profile.TryGet(out _saturationCA);
         if (_saturationCA == null) return;
 
-        float sat = Mathf.Lerp(-100f, 100f, value);
+        float sat = Mathf.Lerp(-100f, 0f, value);
         _saturationCA.saturation.Override(sat);
     }
 }
