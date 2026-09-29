@@ -87,6 +87,54 @@ public class ForestBarrierDirector : MonoBehaviour
     [Tooltip("밀려오는 데 걸리는 시간(초).")]
     public float reinforcedPushDuration = 1.2f;
 
+    // ── 코드로 그리는 결계 빛 (BarrierLightFx) ───────────────────────────────
+    [Header("결계 빛 — 아트 전까지 코드로 그린다")]
+    [Tooltip("① 평상 판의 진하기. 「눈엔 안 보이겠지만」 — 거의 투명하게 둔다.\n" +
+             "barrierIdle 이 비어 있으면 결계 오브젝트의 회색 상자 그림을 끄고 이 판을 쓴다.")]
+    [Range(0f, 1f)] public float idlePlateAlpha = 0.05f;
+
+    [Tooltip("① 걷는 중 황금색이 한 번 스치는 거리(월드 유닛). S#20 이 끝난 뒤 이 안에 들어오면 1회.\n" +
+             "⚠ triggerDistance 보다 커야 도착 전에 스친다.")]
+    public float glintDistance = 5.5f;
+
+    [Tooltip("① 스치는 빛의 피크 진하기. 강조하지 않는다 — 자세히 봐야 알 정도(정본 1261).")]
+    [Range(0f, 1f)] public float glintAlpha = 0.35f;
+
+    [Tooltip("① 스치는 빛이 판을 가로지르는 시간(초).")]
+    public float glintDuration = 1.1f;
+
+    [Tooltip("③ 두꺼워지는 황금 막의 피크 높이(월드 유닛).")]
+    public float curtainPeakHeight = 2.6f;
+
+    [Tooltip("잔광에서 막의 높이(월드 유닛). 이 상태로 데모가 끝난다.")]
+    public float curtainRestHeight = 1.5f;
+
+    [Tooltip("효과의 정렬 순서. 결계 오브젝트와 같은 정렬 레이어에 그린다.")]
+    public int fxSortingOrder = 300;
+
+    [Header("필터 — 번지는 전환 (정본 1287)")]
+    [Tooltip("결계에서 번진 환상이 화면을 다 덮는 데 걸리는 시간(초). 컷이 아니다 — S#12 의 「끊긴 것」과 구분된다.")]
+    public float spreadDuration = 1.8f;
+
+    [Tooltip("번지는 물결 가장자리의 황금 테 세기(0~1).")]
+    [Range(0f, 1f)] public float spreadRimStrength = 0.7f;
+
+    [Header("다시 걸음 → 끝")]
+    [Tooltip("다시 걸어가는 방향. 옆모습 걷기만 그림이 있어 가로로 둔다(왼쪽 = −x).")]
+    public Vector2 walkOffDirection = new Vector2(-1f, 0f);
+
+    [Tooltip("쿠루가 먼저 걸음을 옮기고 루가 눈치를 보다 따라가기까지(초).")]
+    public float walkOffLuDelay = 0.7f;
+
+    [Tooltip("둘이 걷기 시작하고 암전이 시작되기까지(초). 암전 중에도 계속 걷는다.")]
+    public float walkBeforeFade = 1.6f;
+
+    [Tooltip("황금빛이 가라앉는 시간(초). 걷기 시작과 함께 시작한다.")]
+    public float sinkDuration = 3f;
+
+    [Tooltip("종료 화면의 한 줄이 떠오르는 시간(초).")]
+    public float endCardTextFade = 1.2f;
+
     // ── 강화 연출 (정본 문단 1259) ──────────────────────────────────────────
     [Header("강화 — 황금 광막")]
     [Tooltip("황금빛의 기준 색. 피크에서는 흰빛 쪽으로 섞여 「눈이 부실 만큼」이 된다.")]
@@ -207,6 +255,11 @@ public class ForestBarrierDirector : MonoBehaviour
     ClearSky.SimplePlayerController _lockedCtrl;
     Vector3 _reinforcedOrigin;
     GameObject _glowRoot;
+    BarrierLightFx _fx;
+    bool _glinted;
+    Vector2 _contact;
+    CompanionFollow _kuruFollow;
+    Vector2 _lastPlayerPos;
 
     void Awake()
     {
@@ -219,9 +272,29 @@ public class ForestBarrierDirector : MonoBehaviour
         SetVisible(barrierReinforced, false);
     }
 
+    void Start()
+    {
+        // 결계 빛. 평상 판은 거의 투명하다 — 「눈엔 안 보이겠지만 이게 결계야」.
+        // ⚠ 평상 그림이 없으면 결계 오브젝트의 회색 상자(자리 표시용 사각형)가 불투명한 흰 막대로
+        //   처음부터 보인다(2026-09-30 실측). 그 그림만 끄고 판은 이쪽이 그린다. 콜라이더는 그대로다.
+        SpriteRenderer own = barrier.GetComponent<SpriteRenderer>();
+        if (barrierIdle == null && own != null) own.enabled = false;
+
+        var col = barrier.GetComponent<Collider2D>();
+        Bounds b = col != null ? col.bounds : (own != null ? own.bounds : new Bounds(barrier.position, new Vector3(4f, 0.5f, 0f)));
+        _fx = BarrierLightFx.Create(barrier, b,
+                                    own != null ? own.sortingLayerID : 0, fxSortingOrder);
+        _fx.gold              = glowColor;
+        _fx.idleAlpha         = idlePlateAlpha;
+        _fx.glintAlpha        = glintAlpha;
+        _fx.curtainPeakHeight = curtainPeakHeight;
+        _fx.curtainRestHeight = curtainRestHeight;
+    }
+
     void OnDestroy()
     {
         if (Instance == this) Instance = null;
+        RealityGradeRenderFeature.Instance?.ClearSpread();
     }
 
     void Update()
@@ -239,6 +312,20 @@ public class ForestBarrierDirector : MonoBehaviour
 
         // 2D 탑다운이라 z 는 보지 않는다. 카메라·정렬 때문에 z 가 서로 다를 수 있다.
         float d = Vector2.Distance(player.position, barrier.position);
+
+        // ① 걷는 동안 황금색이 한 번 언뜻 비친다. 루도 쿠루도 반응하지 않으며 카메라도 돌리지 않는다(정본 1243 · 1256).
+        //    S#20 이 끝난 뒤(솔 재조우 이후)의 이동 중에만 — 그 전에 스치면 복선이 아니라 그냥 배경이 된다.
+        //    ⚠ 솔의 자리가 이미 이 거리 안이다 — 걷고 있을 때만 센다. 거래창이 떠 있는 동안 스치면 아무도 못 본다.
+        bool walking = ((Vector2)player.position - _lastPlayerPos).sqrMagnitude > 0.0004f;
+        _lastPlayerPos = player.position;
+        if (!_glinted && _fx != null && walking && GameState.isForestSolMet && !YarnDialogue.IsRunning
+            && d <= glintDistance)
+        {
+            _glinted = true;
+            Dbg.Log("[S#21] 걷는 중 결계의 황금색이 한 번 스친다");
+            _fx.StartCoroutine(_fx.Glint(glintDuration));
+        }
+
         if (d > triggerDistance) return;
 
         _fired = true;
@@ -276,6 +363,18 @@ public class ForestBarrierDirector : MonoBehaviour
 
         Dbg.Log("[S#21] 결계 도달 — 데모 종료 연출 시작");
 
+        // 끝까지 쿠루를 직접 세운다. 동행 추적이 켜져 있으면 매 프레임 방향·속도를 덮어써서
+        // 열쇠를 대는 자세·돌아보기·먼저 걸음을 옮기는 것이 전부 지워진다.
+        Transform kuru = FindCompanion();
+        _kuruFollow = kuru != null ? kuru.GetComponent<CompanionFollow>() : null;
+        if (_kuruFollow != null)
+        {
+            _kuruFollow.enabled = false;
+            var krb = kuru.GetComponent<Rigidbody2D>();
+            if (krb != null) krb.linearVelocity = Vector2.zero;
+            kuru.GetComponentInChildren<Animator>()?.SetBool("isRun", false);
+        }
+
         // ── S#21A 1/2 — 결계 도달 ───────────────────────────────────────────
         // [FILTER] 직전 씬의 필터를 유지한다. 강제하지 않으며 어떤 값도 건드리지 않는다(F 문단 813).
         //   여기서 set_filter 를 부르지 않는 것이 그 지시다.
@@ -291,12 +390,20 @@ public class ForestBarrierDirector : MonoBehaviour
         //
         // ⚠ 이 자리가 노드를 둘로 나눈 이유다. 앞 노드에서 켜면 대사와 화면이 어긋난다.
         SetVisible(barrierTouch, true);
+        FaceDirection(kuru, dirDown);                       // 결계를 본다 — 창을 보는 중이며 루를 보지 않는다(정본 1263)
+        _contact = ContactPoint(kuru != null ? kuru : player);
+        if (_fx != null)
+        {
+            _fx.ShowTouch(_contact);
+            _fx.OpenKeyWindows(_contact);                   // 푸른 창 — 내용은 판독되지 않는다(정본 1255)
+        }
 
         // ── S#21A 2/2 — 열쇠를 댄 뒤 ────────────────────────────────────────
         yield return YarnDialogue.PlayAndWait(YarnNodes.Forest_Barrier_KeyCheck, false);
 
         // ── 결계 강화 ───────────────────────────────────────────────────────
-        // 쿠루가 고개를 돌리는 순간이다. 「…뭐?」 바로 뒤.
+        // 쿠루가 고개를 돌리는 순간이다. 「…뭐?」 바로 뒤. 처음으로 루 쪽으로 고개가 돌아간다(정본 1263).
+        FaceToward(kuru, player);
         yield return new WaitForSeconds(delayBeforeReinforce);
         yield return ReinforceBarrier();
 
@@ -325,11 +432,78 @@ public class ForestBarrierDirector : MonoBehaviour
         // ── S#21C 3/3 — 다시 걸음 ───────────────────────────────────────────
         yield return YarnDialogue.PlayAndWait(YarnNodes.Forest_Demo_End, false);
 
-        // 딱딱. 두 번 — 다시 걷기 시작하는 순간에 맞춘다.
+        // 쿠루가 먼저 걸음을 옮기고, 루가 눈치를 보다가 따라간다(정본 1280 · 1282).
+        // 종결이 아니라 정지 — 갇힌 것을 알면서 앞으로 가는 그림이다(정본 1306).
+        if (_fx != null) _fx.StartCoroutine(_fx.Sink(sinkDuration));   // 황금빛이 서서히 가라앉는다
+        StartCoroutine(WalkOff(kuru));
+        FaceToward(player, kuru);
+        yield return new WaitForSeconds(walkOffLuDelay);
+        StartCoroutine(WalkOff(player));
+
+        // 딱딱. 두 번 — 다시 걷기 시작하는 순간에 맞춘다(루가 걷기 시작하는 순간).
         yield return PlayClickingTwice();
+        yield return new WaitForSeconds(walkBeforeFade);
 
         // ── 종료 ────────────────────────────────────────────────────────────
         yield return EndDemo();
+    }
+
+    /// <summary>
+    /// 걸어서 떠난다. 잠긴 컨트롤러가 속도를 0 으로 되돌리므로 위치로 옮긴다(FrontDoorInteraction 과 같은 방식).
+    /// 암전이 끝나 씬이 넘어갈 때까지 계속 걷는다.
+    /// </summary>
+    IEnumerator WalkOff(Transform who)
+    {
+        if (who == null || walkOffDirection.sqrMagnitude < 0.0001f) yield break;
+        Vector2 dir = walkOffDirection.normalized;
+
+        var anim = who.GetComponentInChildren<Animator>();
+        var rb   = who.GetComponent<Rigidbody2D>();
+        FaceVector(who, dir);
+        if (anim != null) anim.SetBool("isRun", true);
+
+        var lu = who.GetComponent<ClearSky.SimplePlayerController>();
+        float speed = lu != null ? Mathf.Max(0.1f, lu.walkSpeed) : 2f;
+
+        while (who != null && IsPlaying)
+        {
+            Vector2 p  = rb != null ? rb.position : (Vector2)who.position;
+            Vector2 np = p + dir * speed * Time.fixedDeltaTime;
+            if (rb != null) rb.MovePosition(np); else who.position = new Vector3(np.x, np.y, who.position.z);
+            yield return new WaitForFixedUpdate();
+        }
+    }
+
+    /// <summary>열쇠가 결계에 닿는 자리 — 결계 판 위에서 그 사람과 가장 가까운 점.</summary>
+    Vector2 ContactPoint(Transform who)
+    {
+        var col = barrier.GetComponent<Collider2D>();
+        Vector2 from = who != null ? (Vector2)who.position : (Vector2)barrier.position;
+        return col != null ? col.ClosestPoint(from) : (Vector2)barrier.position;
+    }
+
+    /// <summary>상대 쪽을 본다. 옆을 볼 때는 localScale.x 부호만 뒤집는다(양수가 왼쪽 — CLAUDE.md §11).</summary>
+    static void FaceToward(Transform who, Transform target)
+    {
+        if (who == null || target == null) return;
+        FaceVector(who, (Vector2)(target.position - who.position));
+    }
+
+    static void FaceVector(Transform who, Vector2 d)
+    {
+        if (who == null || d.sqrMagnitude < 0.0001f) return;
+        Vector3 s = who.localScale;
+        if (Mathf.Abs(d.x) >= Mathf.Abs(d.y))
+        {
+            FaceDirection(who, 1);
+            s.x = Mathf.Abs(s.x) * (d.x > 0f ? -1f : 1f);
+        }
+        else
+        {
+            FaceDirection(who, d.y > 0f ? 2 : 0);
+            s.x = Mathf.Abs(s.x);
+        }
+        who.localScale = s;
     }
 
     /// <summary>
@@ -368,10 +542,12 @@ public class ForestBarrierDirector : MonoBehaviour
         SetVisible(barrierIdle, false);
         SetVisible(barrierReinforced, true);
         PlaySfxIfNamed(sfxReinforce);
+        if (_fx != null) _fx.StartCoroutine(_fx.RevealPlate(0.55f, 0.3f));   // 접촉 자리만이 아니라 판 전체가 드러난다
         yield return FadeGlow(glowImage, 0f, revealAlpha, 0.25f, glowColor);
 
         // ── ② 쿠루의 푸른빛을 전부 튕겨낸다 · 열쇠까지 집어삼키려 한다 ──────
         Dbg.Log("[S#21] (2) 푸른빛을 튕겨낸다");
+        _fx?.RepelKeyLight(_contact);                        // 푸른 창이 부서져 흩어진다
         YarnCommandBridge.PlaySnap();
         YarnCommandBridge.PlayGlitch(repelGlitchDuration);
         CameraDirector.YarnCamShake(repelShake, repelGlitchDuration);
@@ -390,22 +566,23 @@ public class ForestBarrierDirector : MonoBehaviour
         //    결계가 강화되는 지점이다. [FILTER] 가 「강화 발동과 동시에」라고 못박는다.
         Dbg.Log("[S#21] (4) 광명이 두꺼워진다 — 필터 환상 강제 · 토글 봉인");
 
-        // 미는 주체는 세라다. 마시멜로가 게이지를 환상 극값으로 옮기는 것과 같은 계통이며
-        // (C-3-2 · S#04E) 새 규칙이 아니라 기존 강제 전환의 세 번째 발생원이다.
-        // 루가 단검을 파지한 상태여도 덮인다.
-        DaggerFilterController.Instance?.SwitchToFantasyForced();
-        FilterManager.Instance?.SetFilter(FilterType.Fantasy);
-        DaggerFilterController.SealToggle();
-
         CameraDirector.YarnCamShake(surgeShake, surgeDuration);
         StartCoroutine(PushBarrierInward());          // 스프라이트 오프셋으로만(F-6)
+        if (_fx != null) _fx.StartCoroutine(_fx.Surge(surgeDuration));  // 막이 솟고 빛기둥이 서고 빛 가루가 오른다
 
-        // 피크까지 올렸다가 잔광으로 내려앉힌다. 계속 덮어두면 이후 대사가 안 보인다 —
-        // 두꺼워지는 것은 결계이지 화면이 아니다.
-        yield return FadeGlow(glowImage, revealAlpha, surgePeakAlpha, surgeDuration * 0.55f,
+        // 순간 번쩍 — 피크에 머무르지 않는다. 두꺼워지는 것은 결계이지 화면이 아니다.
+        yield return FadeGlow(glowImage, revealAlpha, surgePeakAlpha, 0.18f,
                               Color.Lerp(glowColor, Color.white, 0.75f));
+
+        // 빛이 가장 밝은 순간에 필터가 넘어간다. 미는 주체는 세라다 — 마시멜로가 게이지를 환상 극값으로
+        // 옮기는 것과 같은 계통이며(C-3-2 · S#04E) 새 규칙이 아니라 기존 강제 전환의 세 번째 발생원이다.
+        // 루가 단검을 파지한 상태여도 덮인다.
+        // ⚠ 보이는 필터는 게이지다. DaggerFilterController · FilterManager 만 바꾸면 화면이 현실 그대로
+        //   남는다(2026-09-30 실측 — S#19 뒤 현실로 온 플레이어가 끝까지 현실 화면으로 데모를 마쳤다).
+        StartCoroutine(SpreadFantasy());
         ScreenEdgeEffectController.SetSustainedLevel(glowColor, afterglowEdgeAlpha, afterglowEdgeRatio);
-        yield return FadeGlow(glowImage, surgePeakAlpha, afterglowAlpha, surgeDuration * 0.45f, glowColor);
+        yield return FadeGlow(glowImage, surgePeakAlpha, afterglowAlpha, surgeDuration, glowColor);
+        if (_fx != null) _fx.StartCoroutine(_fx.Settle(1.4f));          // 잔광으로 내려앉아 끝까지 반짝인다
 
         // ── ⑤ 쿠루와 루가 뒤로 몇 발자국 물러난다 ───────────────────────────
         Dbg.Log("[S#21] (5) 둘이 몇 발자국 물러난다");
@@ -416,6 +593,53 @@ public class ForestBarrierDirector : MonoBehaviour
         Dbg.Log("[S#21] (6) 루가 천천히 고개를 올려본다");
         yield return new WaitForSeconds(lookUpDelay);
         FaceDirection(player, dirUp);
+    }
+
+    /// <summary>
+    /// 필터 강제 전환 — <b>컷이 아니라 번지는 형태</b>(정본 1287). S#12 의 「끊긴 것」과 구분된다.
+    ///
+    /// <para>게이지는 한 번에 환상 극값으로 옮기고, 화면은 결계의 접촉 자리에서 시작한 물결이 지나간
+    /// 자리부터 환상 색이 된다. 물결 가장자리에 황금 테가 선다. 물결 바깥은 전환 전 색 그대로다.</para>
+    ///
+    /// <para>⚠ 환상으로 덮은 <b>뒤에</b> 토글을 봉인한다. 봉인이 먼저면 전환 자체가 막힌다.
+    /// 잠겼다는 UI 표시를 두지 않는다(정본 1288).</para>
+    /// </summary>
+    IEnumerator SpreadFantasy()
+    {
+        var driver  = FindAnyObjectByType<RealityGaugeDriver>();
+        var feature = RealityGradeRenderFeature.Instance;
+        float outer = driver != null ? driver.CurrentNormalized
+                    : (GaugeManager.Instance != null ? GaugeManager.Instance.fantasyRealityGauge / 100f : 1f);
+
+        DaggerFilterController.Instance?.SwitchToFantasyForced();
+        FilterManager.Instance?.SetFilter(FilterType.Fantasy);
+        GaugeManager.Instance?.ForceFantasyMax();
+        DaggerFilterController.SealToggle();
+        driver?.SnapToGauge();                          // 화면 전체가 같이 서서히 바뀌면 물결이 안 보인다
+
+        var cam = Camera.main;
+        if (feature == null || cam == null) yield break;
+
+        Vector2 c = cam.WorldToViewportPoint(_contact);
+        float aspect = cam.aspect;
+        float maxR = 0f;
+        foreach (var corner in new[] { Vector2.zero, Vector2.right, Vector2.up, Vector2.one })
+            maxR = Mathf.Max(maxR, Vector2.Scale(corner - c, new Vector2(aspect, 1f)).magnitude);
+        maxR += 0.15f;                                  // 가장자리의 울퉁불퉁한 물결까지 다 지나가게
+
+        Color rim = Color.Lerp(glowColor, Color.white, 0.3f);
+        rim.a = spreadRimStrength;
+
+        float t = 0f;
+        while (t < spreadDuration)
+        {
+            t += Time.deltaTime;
+            float k = Mathf.Clamp01(t / spreadDuration);
+            float r = maxR * (1f - Mathf.Pow(1f - k, 2.2f));   // 빨리 터져 나가다 느려진다
+            feature.SetSpread(c, r, outer, rim);
+            yield return null;
+        }
+        feature.ClearSpread();
     }
 
     /// <summary>강화된 결계가 화면 안쪽으로 밀려온다. 스프라이트 오프셋으로만 만든다(F-6).</summary>
@@ -476,8 +700,8 @@ public class ForestBarrierDirector : MonoBehaviour
     /// </summary>
     void LookBack()
     {
-        FaceDirection(player, dirDown);
-        FaceDirection(FindCompanion(), dirDown);
+        FaceVector(player, Vector2.down);
+        FaceVector(FindCompanion(), Vector2.down);
         Dbg.Log("[S#21] 둘이 돌아본다 — 아무것도 없다");
     }
 
@@ -565,6 +789,20 @@ public class ForestBarrierDirector : MonoBehaviour
         if (YarnDialogue.IsRunning) YarnDialogue.Runner.Stop();
 
         GameObject card = BuildEndCard(CurrentPuppetization());
+
+        // 한 줄이 검은 화면 위로 천천히 떠오른다. 문구는 그대로다 — 크레딧을 올리지 않는다.
+        var line = card != null ? card.GetComponentInChildren<TextMeshProUGUI>() : null;
+        if (line != null)
+        {
+            float t = 0f;
+            while (t < endCardTextFade)
+            {
+                t += Time.unscaledDeltaTime;
+                line.alpha = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / Mathf.Max(0.01f, endCardTextFade)));
+                yield return null;
+            }
+            line.alpha = 1f;
+        }
         yield return new WaitForSecondsRealtime(endCardDuration);
 
         IsPlaying = false;
@@ -586,6 +824,12 @@ public class ForestBarrierDirector : MonoBehaviour
 
         // ② 황금 광막 — 씬 오브젝트라 전환에 파괴되지만, 전환 전 한 프레임을 남기지 않는다.
         if (_glowRoot != null) { Destroy(_glowRoot); _glowRoot = null; }
+        // ⚠ 결계 빛(_fx)은 여기서 Destroy 하지 않는다. 직접 파괴한 같은 프레임에 LoadScene 하면 Unity 가
+        //   씬을 내리다 멈췄다(2026-09-30 배치 실측 — 재현 2회, 파괴를 빼면 정상). 씬 오브젝트라 씬과 함께 사라지고,
+        //   이 시점 화면은 이미 종료 화면(검정)이라 남아도 보이지 않는다.
+
+        // ②-2 번지는 전환의 값 — 컬러 그레이드 머티리얼은 공유 에셋이라 끄지 않으면 다음 화면까지 남는다.
+        RealityGradeRenderFeature.Instance?.ClearSpread();
 
         // ③ 필터 토글 봉인 — static 이라 씬을 넘어 유지된다.
         //    ⚠ GameState 의 초기화는 [RuntimeInitializeOnLoadMethod] 라 에디터 플레이를
@@ -632,7 +876,7 @@ public class ForestBarrierDirector : MonoBehaviour
         var text = textGo.AddComponent<TextMeshProUGUI>();
         text.text          = $"인형화 {Mathf.RoundToInt(puppetization):00}%";
         text.fontSize      = 22f;
-        text.color         = Color.white;
+        text.color         = new Color(1f, 1f, 1f, 0f);   // EndDemo 가 떠오르게 한다
         text.alignment     = TextAlignmentOptions.Center;
         text.raycastTarget = false;
         var textRt = textGo.GetComponent<RectTransform>();

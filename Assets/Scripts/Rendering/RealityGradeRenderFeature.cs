@@ -32,6 +32,8 @@ public class RealityGradeRenderFeature : ScriptableRendererFeature
         {
             renderPassEvent = RenderPassEvent.AfterRenderingPostProcessing
         };
+        // 번짐 값은 공유 머티리얼 에셋에 남는다 — 새로 만들 때마다 꺼 둔다.
+        _pass.ClearSpread();
     }
 
     public override void AddRenderPasses(ScriptableRenderer renderer, ref RenderingData renderingData)
@@ -53,6 +55,17 @@ public class RealityGradeRenderFeature : ScriptableRendererFeature
     public void SetGauge(float normalizedGauge)
     {
         _pass?.SetGauge(normalizedGauge);
+    }
+
+    /// <summary>번지는 전환(S#21C). 물결 안쪽은 새 게이지, 바깥쪽은 <paramref name="outerGauge"/>(0~1).</summary>
+    public void SetSpread(Vector2 centerViewport, float radius, float outerGauge, Color rim)
+    {
+        _pass?.SetSpread(centerViewport, radius, outerGauge, rim);
+    }
+
+    public void ClearSpread()
+    {
+        _pass?.ClearSpread();
     }
 
     protected override void Dispose(bool disposing)

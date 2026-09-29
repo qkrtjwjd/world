@@ -12,6 +12,11 @@ using UnityEngine.Rendering.RenderGraphModule.Util;
 public class RealityGradeRenderPass : ScriptableRenderPass
 {
     private static readonly int PropGauge = Shader.PropertyToID("_Gauge");
+    private static readonly int PropSpreadActive = Shader.PropertyToID("_SpreadActive");
+    private static readonly int PropSpreadCenter = Shader.PropertyToID("_SpreadCenter");
+    private static readonly int PropSpreadRadius = Shader.PropertyToID("_SpreadRadius");
+    private static readonly int PropSpreadOuter  = Shader.PropertyToID("_SpreadOuterGauge");
+    private static readonly int PropSpreadRim    = Shader.PropertyToID("_SpreadRim");
 
     private readonly Material _material;
 
@@ -25,6 +30,25 @@ public class RealityGradeRenderPass : ScriptableRenderPass
     public void SetGauge(float normalizedGauge)
     {
         _material?.SetFloat(PropGauge, normalizedGauge);
+    }
+
+    /// <summary>번지는 전환(S#21C). 물결 안쪽은 _Gauge, 바깥쪽은 outerGauge.</summary>
+    public void SetSpread(Vector2 centerViewport, float radius, float outerGauge, Color rim)
+    {
+        if (_material == null) return;
+        _material.SetFloat(PropSpreadActive, 1f);
+        _material.SetVector(PropSpreadCenter, centerViewport);
+        _material.SetFloat(PropSpreadRadius, radius);
+        _material.SetFloat(PropSpreadOuter, outerGauge);
+        _material.SetColor(PropSpreadRim, rim);
+    }
+
+    /// <summary>번짐을 끈다. 머티리얼은 에셋이라 끄지 않으면 값이 남는다.</summary>
+    public void ClearSpread()
+    {
+        if (_material == null) return;
+        _material.SetFloat(PropSpreadActive, 0f);
+        _material.SetFloat(PropSpreadRadius, 0f);
     }
 
     public override void RecordRenderGraph(RenderGraph renderGraph, ContextContainer frameData)

@@ -1,12 +1,19 @@
 // RealityColorGrade.shader — 환상/현실 게이지 전체 화면 컬러 그레이드
 // URP Blit 전용. _BlitTexture 는 Blitter 가 공급.
 // _Gauge: 0(완전 환상) ~ 1(완전 현실), 스크립트에서 0~100 → 0~1 정규화.
+// _Spread*: 번지는 전환(S#21C). _SpreadActive 가 0 이면 전부 무시되고 결과는 예전과 같다.
+//   물결 안쪽은 _Gauge, 바깥쪽은 _SpreadOuterGauge(전환 전 값)를 쓰고, 물결 가장자리에 황금 테를 얹는다.
 
 Shader "Custom/RealityColorGrade"
 {
     Properties
     {
         _Gauge ("Gauge (0-1 normalized)", Range(0,1)) = 0.3
+        _SpreadActive ("Spread Active (0/1)", Float) = 0
+        _SpreadCenter ("Spread Center (viewport xy)", Vector) = (0.5, 0.5, 0, 0)
+        _SpreadRadius ("Spread Radius (height units)", Float) = 0
+        _SpreadOuterGauge ("Gauge outside the wave", Range(0,1)) = 1
+        _SpreadRim ("Rim color (rgb) · strength (a)", Color) = (1, 0.85, 0.45, 0.6)
     }
 
     SubShader
@@ -34,7 +41,31 @@ Shader "Custom/RealityColorGrade"
 
             CBUFFER_START(UnityPerMaterial)
                 float _Gauge;
+                float _SpreadActive;
+                float4 _SpreadCenter;
+                float _SpreadRadius;
+                float _SpreadOuterGauge;
+                float4 _SpreadRim;
             CBUFFER_END
+
+            // 번짐 가장자리를 물감처럼 울퉁불퉁하게 만드는 값 노이즈
+            float Hash21(float2 p)
+            {
+                p = frac(p * float2(123.34, 456.21));
+                p += dot(p, p + 45.32);
+                return frac(p.x * p.y);
+            }
+            float ValueNoise(float2 p)
+            {
+                float2 i = floor(p);
+                float2 f = frac(p);
+                f = f * f * (3.0 - 2.0 * f);
+                float a = Hash21(i);
+                float b = Hash21(i + float2(1, 0));
+                float c = Hash21(i + float2(0, 1));
+                float d = Hash21(i + float2(1, 1));
+                return lerp(lerp(a, b, f.x), lerp(c, d, f.x), f.y);
+            }
 
             // 휘도 가중 그레이스케일 (ITU-R BT.709)
             static const half3 LumWeights = half3(0.2126h, 0.7152h, 0.0722h);
@@ -62,6 +93,23 @@ Shader "Custom/RealityColorGrade"
                 // ─── ② 종 모양 채도 감소 (게이지 50에서 최대) ──────────────
                 // bell(g) = 1 − 4*(g−0.5)^2  → g=0:0, g=0.5:1, g=1:0
                 float g = _Gauge;
+
+                // ─── ⓪ 번지는 전환 (S#21C) ───────────────────────────────────
+                // 물결 안쪽은 새 값(_Gauge), 바깥쪽은 전환 전 값. 거리는 화면 높이 단위.
+                float rim = 0.0;
+                if (_SpreadActive > 0.5)
+                {
+                    float aspect = _ScreenParams.x / _ScreenParams.y;
+                    float2 dv = (uv - _SpreadCenter.xy) * float2(aspect, 1.0);
+                    float n = ValueNoise(uv * float2(aspect, 1.0) * 9.0) * 0.6
+                            + ValueNoise(uv * float2(aspect, 1.0) * 23.0) * 0.4;
+                    float dist = length(dv) + (n - 0.5) * 0.09;
+                    float outside = smoothstep(_SpreadRadius - 0.03, _SpreadRadius + 0.03, dist);
+                    g = lerp(_Gauge, _SpreadOuterGauge, outside);
+                    float band = (dist - _SpreadRadius) / 0.045;
+                    rim = exp(-band * band) * step(0.001, _SpreadRadius);
+                }
+
                 float d = g - 0.5;
                 float bell = saturate(1.0 - 4.0 * d * d);
 
@@ -93,6 +141,9 @@ Shader "Custom/RealityColorGrade"
                 // warmCool=-1→+0.09  /  warmCool=0→0  /  warmCool=+1→-0.09
                 float brightBias = -warmCool * 0.09;
                 c += brightBias;
+
+                // 번짐 물결의 황금 테 — 더해서 빛나게 한다
+                c += _SpreadRim.rgb * (rim * _SpreadRim.a);
 
                 c = saturate(c);
                 return half4(c, orig.a);

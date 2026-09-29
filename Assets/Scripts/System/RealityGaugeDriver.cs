@@ -53,6 +53,20 @@ public class RealityGaugeDriver : MonoBehaviour
         ApplyToFeature(_currentNormalized);
     }
 
+    /// <summary>
+    /// 따라가는 중간값 없이 지금 게이지로 바로 맞춘다. 번지는 전환(S#21C)이 경계를 직접 그리므로
+    /// 화면 전체가 같이 서서히 바뀌면 물결이 보이지 않는다.
+    /// </summary>
+    public void SnapToGauge()
+    {
+        if (GaugeManager.Instance == null) return;
+        _currentNormalized = GaugeManager.Instance.fantasyRealityGauge / 100f;
+        ApplyToFeature(_currentNormalized);
+    }
+
+    /// <summary>화면에 지금 걸려 있는 정규화 게이지(0~1).</summary>
+    public float CurrentNormalized => _currentNormalized;
+
     void ApplyToFeature(float normalized)
     {
         var f = Feature;
