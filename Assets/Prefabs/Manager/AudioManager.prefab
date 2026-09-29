@@ -155,4 +155,16 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: b877836319a2b7b429c32023254e3bf6, type: 3}
     loop: 0
     category: 0
+  - name: doorbell
+    clip: {fileID: 8300000, guid: a1c7f3e05b9d4e2ca8f61d3407b5e920, type: 3}
+    loop: 0
+    category: 0
+  - name: refusal_low
+    clip: {fileID: 8300000, guid: b4e29d16c07a48f3b915ce720d8a3f61, type: 3}
+    loop: 0
+    category: 0
+  - name: radio_static
+    clip: {fileID: 8300000, guid: c9f5081ad3624b7e8a20f47c16d9b5e3, type: 3}
+    loop: 1
+    category: 3
   audioSource: {fileID: 0}
