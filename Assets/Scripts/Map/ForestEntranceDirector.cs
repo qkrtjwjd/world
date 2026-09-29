@@ -15,7 +15,7 @@ using UnityEngine;
 /// 2026-09-27 신설. 전에는 S#16A 가 배선돼 있지 않았다 — ForestKnockTrigger 는 씬에 없었고
 /// Forest_Entrance 노드(주석뿐)를 부르는 곳도 없었다. 「숲문」은 콜라이더 없는 빈 오브젝트였다.
 ///
-/// 소리 이름은 전부 비어 있으면 무음이다(오디오 파일 미제작 — 수동작업 4).
+/// 소리 이름은 전부 비어 있으면 무음이다(오디오 파일 미제작 — 수동작업 2).
 /// </summary>
 public class ForestEntranceDirector : MonoBehaviour
 {

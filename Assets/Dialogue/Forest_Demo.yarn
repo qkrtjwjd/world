@@ -522,7 +522,7 @@ tags: ingame
 //    갈라진 뒤에는 재판정하지 않으므로 분기 노드 안에 조건문을 두지 않는다.
 //    디스패처는 정본 대사가 0줄이라 node_map.json 에 등재하지 않았다.
 //
-//  ⚠ 거래창은 아직 게임에 없다(수동작업 15번 — SolStock·TradeItem·SolTradeUI 0개).
+//  ⚠ 거래창은 아직 게임에 없다(수동작업 6-3번 — SolStock·TradeItem·SolTradeUI 0개).
 //    open_sol_trade 는 SolStock 에셋 이름을 인자로 받는데 그 에셋이 없으므로
 //    커맨드를 지어 넣지 않고 [TRIGGER] 주석으로 남긴다(CLAUDE.md §0-4).
 //
@@ -648,7 +648,7 @@ tags: ingame
 ---
 // S#20-B 각설탕 거절 — 분기 판정만 한다. 대사 없음.
 // [TRIGGER] 거래창에서 각설탕 선택
-//   ⚠ TradeItem(각설탕) 의 rejectNodeForest 가 이 노드를 가리켜야 한다. 에셋은 수동작업 15번.
+//   ⚠ TradeItem(각설탕) 의 rejectNodeForest 가 이 노드를 가리켜야 한다. 에셋은 수동작업 6-3번.
 <<if $인형화 >= 31>>
     <<jump Forest_Sol_Reject_Sugar_High>>
 <<else>>
