@@ -65,9 +65,10 @@ public class NightSequenceManager : MonoBehaviour
     [Tooltip("세라 걷는 속도(월드 유닛/초). 정본 「느리고 규칙적」.")]
     public float seraWalkSpeed = 1.2f;
 
-    [Header("S#02 — 이불 여미는 손 클로즈업 (D 문단 45)")]
-    [Tooltip("이불을 여미는 손 스프라이트. S#03 과 같은 closeupImage 에 띄운다. 비우면 건너뛴다(에셋 미제작).")]
+    [Header("S#02 — 이불 여미는 손 오버레이 (D 문단 45)")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템으로 옮겼다. 그림은 Resources/Overlays/house_overlay_sera_tuck_hand.png. 직렬화 값 때문에 필드만 남긴다.")]
     public Sprite tuckHandSprite;
+    [Tooltip("이불 여미는 손 오버레이를 띄워 두는 시간(초).")]
     public float  tuckCloseupDuration = 1.2f;
 
     [Header("S#02 — 세라 조명 (문틈으로 새는 빛)")]
@@ -93,8 +94,10 @@ public class NightSequenceManager : MonoBehaviour
     public string yarnNode_S3_Owl   = "House_Unheard_Owl";
     public string yarnNode_S3_Close = "House_Unheard_Close";
 
-    [Header("S#03 — 도자기 손가락 클로즈업 (초기 비활성)")]
+    [Header("S#03 — 도자기 손가락 오버레이")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image  closeupImage;
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 그림은 Resources/Overlays/house_overlay_lu_porcelain_hand_2.png(두 마디). 직렬화 값 때문에 필드만 남긴다.")]
     public Sprite ceramicFingerSprite;
     // ⚠ 밤 씬은 딱딱 무음 확정(루 캐릭터 설정서 10-3: 집 = 없음).
     //    도자기 손은 소리 없는 시각 연출로만 노출한다. 여기서 SFX를 재생하지 말 것.
@@ -132,7 +135,6 @@ public class NightSequenceManager : MonoBehaviour
     private static readonly WaitForSeconds _wait05s = new WaitForSeconds(0.5f);
     private static readonly WaitForSeconds _wait07s = new WaitForSeconds(0.7f);
     private static readonly WaitForSeconds _wait1s  = new WaitForSeconds(1f);
-    private static readonly WaitForSeconds _wait15s = new WaitForSeconds(1.5f);
     private static readonly WaitForSeconds _wait3s  = new WaitForSeconds(3f);
 
     // ── 내부 상태 ─────────────────────────────────
@@ -293,14 +295,8 @@ public class NightSequenceManager : MonoBehaviour
         }
         yield return _wait05s;
 
-        // 이불 여미기 — 다정함과 구속이 같은 그림이 되어야 한다(문단 45). 손 스프라이트가 없으면 건너뛴다.
-        if (closeupImage != null && tuckHandSprite != null)
-        {
-            closeupImage.sprite = tuckHandSprite;
-            closeupImage.gameObject.SetActive(true);
-            yield return new WaitForSeconds(tuckCloseupDuration);
-            closeupImage.gameObject.SetActive(false);
-        }
+        // 이불 여미기 — 다정함과 구속이 같은 그림이 되어야 한다(문단 45). 오버레이 컷(F-3-9).
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseSeraTuckHand, tuckCloseupDuration);
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S2_Tuck, false);
 
@@ -332,13 +328,8 @@ public class NightSequenceManager : MonoBehaviour
 
         // 도자기 손가락 클로즈업 — 소리 없이 시각으로만.
         // 루는 자기 손을 이상하게 여기지 않는다. 그 무반응이 인형화 20%의 표현이다.
-        if (closeupImage != null && ceramicFingerSprite != null)
-        {
-            closeupImage.sprite = ceramicFingerSprite;
-            closeupImage.gameObject.SetActive(true);
-            yield return _wait15s;
-            closeupImage.gameObject.SetActive(false);
-        }
+        // 마디 수(인형화 단계)는 OverlayCut 이 고른다 — 여기서는 20 이라 두 마디다.
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseLuPorcelainHand, 1.5f);
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S3_Close, false);
 

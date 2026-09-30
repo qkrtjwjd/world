@@ -26,10 +26,12 @@ public class AtticDoorCutscene : MonoBehaviour
     }
 
     // ── S#08 ─────────────────────────────────────────────────────────────
-    [Header("S#08 — 손+자물쇠 클로즈업 Image (Canvas)")]
+    // ⛔ 2026-10-01: 손+자물쇠 클로즈업 · 문 열리는 배경 두 컷은 정본(D · F-3-9 오버레이 목록)에 근거가 없어
+    //   띄우지 않는다(사용자 결정). 직렬화 값 때문에 필드만 남긴다. 되살리지 말 것.
+    [Header("손+자물쇠 컷 — 폐기됨 (쓰지 않는다)")]
     public Image handLockCloseupImage;
 
-    [Header("S#08 — 문 열리는 배경 Image (Canvas)")]
+    [Header("문 열리는 배경 — 폐기됨 (쓰지 않는다)")]
     public Image doorOpenBgImage;
 
     [Header("S#08 — 효과음")]
@@ -57,16 +59,8 @@ public class AtticDoorCutscene : MonoBehaviour
     {
         var ctrl = YarnDialogue.LockPlayer();
 
-        // 손+자물쇠 클로즈업
-        if (CloseupArt.Has(handLockCloseupImage))
-            yield return StartCoroutine(FadeInImage(handLockCloseupImage, 1f, 0.3f));
-
         AudioManager.Instance?.Play(sfxLockClick);
         yield return new WaitForSeconds(0.5f);
-
-        // 문 열리는 배경으로 전환
-        if (handLockCloseupImage != null) handLockCloseupImage.gameObject.SetActive(false);
-        if (CloseupArt.Has(doorOpenBgImage)) doorOpenBgImage.gameObject.SetActive(true);
 
         AudioManager.Instance?.Play(sfxDoorCreak);
         yield return new WaitForSeconds(0.8f);
@@ -75,8 +69,6 @@ public class AtticDoorCutscene : MonoBehaviour
         if (!string.IsNullOrEmpty(yarnNode))
             yield return YarnDialogue.PlayAndWait(yarnNode);
 
-        if (doorOpenBgImage != null)
-            yield return StartCoroutine(FadeOutImage(doorOpenBgImage, 0.4f));
 
         // 플레이어 위치이동·룸전환
         unlockAction?.Invoke();
@@ -91,38 +83,4 @@ public class AtticDoorCutscene : MonoBehaviour
         YarnDialogue.UnlockPlayer(ctrl);
     }
 
-    IEnumerator FadeInImage(Image image, float targetAlpha, float duration)
-    {
-        Color c = image.color;
-        c.a = 0f;
-        image.color = c;
-        image.gameObject.SetActive(true);
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            c.a = Mathf.Lerp(0f, targetAlpha, elapsed / duration);
-            image.color = c;
-            yield return null;
-        }
-        c.a = targetAlpha;
-        image.color = c;
-    }
-
-    IEnumerator FadeOutImage(Image image, float duration)
-    {
-        Color c = image.color;
-        float start = c.a;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            c.a = Mathf.Lerp(start, 0f, elapsed / duration);
-            image.color = c;
-            yield return null;
-        }
-        c.a = 0f;
-        image.color = c;
-        image.gameObject.SetActive(false);
-    }
 }

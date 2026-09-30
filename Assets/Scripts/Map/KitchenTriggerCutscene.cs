@@ -99,11 +99,12 @@ public class KitchenTriggerCutscene : MonoBehaviour
     [Tooltip("AudioManager 프리팹 Sounds 배열에 동일 name으로 등록된 BGM 클립 이름 (category: BGM)")]
     public string bgmMusicBoxName = "music_box";
 
-    [Header("S#04B — 각설탕 클로즈업")]
-    [Tooltip("각설탕 클로즈업 Image (Canvas). 결계 밖 물건이라 채도·윤곽이 달라야 한다.")]
+    [Header("S#04B — 각설탕 오버레이")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_sugarcube_palm)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image sugarCubeCloseupImage;
 
-    [Header("S#04B·S#04C — 루 도자기 손 클로즈업")]
+    [Header("S#04B·S#04C — 루 도자기 손 오버레이")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_lu_porcelain_hand)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image  ceramicHandCloseupImage;
     [Tooltip("AudioManager 등록명. 밤 씬과 달리 부엌 구간에서는 딱 소리가 난다.")]
     public string ceramicTapSfxName = "ceramic_tap";
@@ -138,9 +139,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public WindowTrigger kitchenWindowTrigger;
     [Tooltip("창밖 보기를 기다리는 최대 시간(초). 지나면 자동 진행해 소프트락을 막는다.")]
     public float yardLookTimeout = 25f;
-    [Tooltip("마당에 떨어진 각설탕 클로즈업 Image. 결계 밖 물건이라 채도·윤곽이 달라야 한다.")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_yard_sugarcube)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image yardSugarCloseupImage;
-    [Tooltip("풀린 상태의 창문 잠금장치 클로즈업 Image. S#02의 잠긴 상태 에셋을 풀린 상태로 재사용.")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_window_lock_open)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image windowLockCloseupImage;
     [Tooltip("설거지 물소리 (AudioManager 등록 이름, 루프). 비우면 무음.")]
     public string sfxDishwashingLoopName = "";
@@ -247,13 +248,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Tap, false);
 
-        // 각설탕 — 결계 밖에서 들어온 물건이라 채도·윤곽이 다르다
-        if (CloseupArt.Has(sugarCubeCloseupImage))
-        {
-            sugarCubeCloseupImage.gameObject.SetActive(true);
-            yield return _wait1s;
-            sugarCubeCloseupImage.gameObject.SetActive(false);
-        }
+        // 각설탕 — 결계 밖에서 들어온 물건이라 채도·윤곽이 다르다(그림이 맡는다). 오버레이 컷(F-3-9).
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseSugarcubePalm, 1f);
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Sugar, false);
 
@@ -365,9 +361,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
         GameState.isYardSugarSeen = true;
 
-        // 각설탕 → 잠금장치 순서로 클로즈업. 각설탕만 채도·윤곽이 다르다.
-        yield return StartCoroutine(FlashCloseup(yardSugarCloseupImage, 1.2f));
-        yield return StartCoroutine(FlashCloseup(windowLockCloseupImage, 1f));
+        // 각설탕 → 잠금장치 순서로 오버레이를 차례로 띄운다(D 235). 각설탕만 채도·윤곽이 다르다.
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseYardSugarcube, 1.2f);
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseWindowLockOpen, 1f);
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4F_YardSugar, false);
     }
@@ -576,11 +572,10 @@ public class KitchenTriggerCutscene : MonoBehaviour
         InventoryManager.Instance.AddItem(item);
     }
 
-    /// <summary>도자기 손가락 클로즈업 + 딱 소리 count회.</summary>
+    /// <summary>도자기 손가락 오버레이 + 딱 소리 count회. 마디 수는 OverlayCut 이 인형화 단계로 고른다.</summary>
     IEnumerator ShowCeramicHand(int count)
     {
-        if (CloseupArt.Has(ceramicHandCloseupImage))
-            ceramicHandCloseupImage.gameObject.SetActive(true);
+        OverlayCut.Instance.Show(OverlayIds.HouseLuPorcelainHand);
 
         for (int i = 0; i < count; i++)
         {
@@ -589,8 +584,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         }
         yield return _wait05s;
 
-        if (ceramicHandCloseupImage != null)
-            ceramicHandCloseupImage.gameObject.SetActive(false);
+        OverlayCut.Instance.Hide();
     }
 
     /// <summary>문틈의 가는 빛이 화면 전체를 삼킬 만큼 확 밝아진다.</summary>
@@ -644,16 +638,6 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
         if (!kitchenWindowTrigger.HasReached)
             Dbg.Log("[KitchenTriggerCutscene] S#04F 창밖 보기 타임아웃 — 자동 진행");
-    }
-
-    /// <summary>클로즈업 Image 를 잠깐 띄웠다 끈다. 비어 있으면 조용히 건너뛴다.</summary>
-    IEnumerator FlashCloseup(Image image, float holdSeconds)
-    {
-        if (!CloseupArt.Has(image)) yield break;   // 그림이 없으면 흰 화면만 뜬다
-
-        image.gameObject.SetActive(true);
-        yield return new WaitForSeconds(holdSeconds);
-        image.gameObject.SetActive(false);
     }
 
     IEnumerator FadeInImage(Image image, float targetAlpha, float duration)

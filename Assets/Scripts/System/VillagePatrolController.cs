@@ -27,9 +27,9 @@ public class VillagePatrolController : MonoBehaviour
     public string yarnNode_captured = "Village_Sera_Captured";
 
     [Header("BE#02-a — 발각 컷 (D-BE#02-a 문단 632~648)")]
-    [Tooltip("손을 잡는 순간의 클로즈업. 세라의 손과 루의 도자기 손가락이 한 화면에 들어오는 컷. 아트가 아직 없으므로 비워 두면 조용히 건너뛴다.")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · town_overlay_sera_take_hand)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image handTakenCloseup;
-    [Tooltip("클로즈업을 띄워 두는 시간(초).")]
+    [Tooltip("손 오버레이를 띄워 두는 시간(초).")]
     public float closeupHoldSeconds = 1.4f;
     [Tooltip("뒤에서 다가오는 발소리(AudioManager 등록 이름. 비우면 무음).")]
     public string sfxApproachStepsName = "";
@@ -199,7 +199,7 @@ public class VillagePatrolController : MonoBehaviour
 
         // [CAM] 손을 잡는 순간 손 클로즈업 — 세라의 손과 루의 도자기 손가락이 한 화면에(D-BE#02-a 문단 638).
         PlaySfxIfNamed(sfxHandTakenName);
-        yield return FlashCloseup(handTakenCloseup);
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.TownSeraTakeHand, closeupHoldSeconds);
 
         yield return YarnDialogue.PlayIfExists(yarnNode_captured, false);
 
@@ -222,15 +222,6 @@ public class VillagePatrolController : MonoBehaviour
             TransitionManager.Instance.DoSceneTransition(SceneNames.Home);
         else
             SceneManager.LoadScene(SceneNames.Home);
-    }
-
-    /// <summary>클로즈업 Image 를 잠깐 띄웠다 끈다. 비어 있으면 조용히 건너뛴다.</summary>
-    IEnumerator FlashCloseup(Image image)
-    {
-        if (image == null) yield break;
-        image.gameObject.SetActive(true);
-        yield return new WaitForSeconds(closeupHoldSeconds);
-        image.gameObject.SetActive(false);
     }
 
     void PlaySfxIfNamed(string soundName)

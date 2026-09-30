@@ -19,7 +19,7 @@ using UnityEngine.UI;
 ///
 /// <para>넣는 법 — <c>Assets/Resources/Readables/{id}.png</c> (640×360, 종이 밖 투명).
 /// ⚠ 그림이 없으면 <b>아무 일도 일어나지 않는다</b> — 경고 한 줄만 남기고 넘어간다.
-/// 일러 컷(<see cref="CutsceneCGView"/>)과 같은 방침이다. 아트가 없다고 진행이 멈추면 안 된다.</para>
+/// 포트레이트와 같은 방침이다. 아트가 없다고 진행이 멈추면 안 된다.</para>
 /// </summary>
 public class ReadableOverlay : MonoBehaviour
 {
@@ -59,7 +59,7 @@ public class ReadableOverlay : MonoBehaviour
     {
         if (_instance != null && _instance != this)
         {
-            // CutsceneCGView 와 같은 방침 — 같은 GO 의 다른 컴포넌트까지 날리지 않는다.
+            // SingletonGuard 와 같은 방침 — 같은 GO 의 다른 컴포넌트까지 날리지 않는다.
             Destroy(this);
             return;
         }
@@ -80,7 +80,7 @@ public class ReadableOverlay : MonoBehaviour
 
         _canvas = go.AddComponent<Canvas>();
         _canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-        _canvas.sortingOrder = 210;              // 대사창 · 토스트(120) · 일러 컷(200)보다 위
+        _canvas.sortingOrder = 210;              // 대사창 · 토스트(120) · 오버레이 컷(100)보다 위
         UiCanvasScale.Add(go);                   // 640x360 Expand — 단일 출처
 
         _group = go.AddComponent<CanvasGroup>();

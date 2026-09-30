@@ -45,7 +45,7 @@ public class AtticRadioCutscene : MonoBehaviour
     public string yarnNode_radio = "House_Radio_Yu_First";
 
     [Header("연출")]
-    [Tooltip("라디오 다이얼 클로즈업 Image. 정본: 유의 목소리가 나오는 동안 컷을 바꾸지 않는다.")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_radio_dial)으로 옮겼다. 직렬화 값 때문에 필드만 남긴다.")]
     public Image radioDialImage;
 
     // ─────────────────────────────────────────────────────────────────────
@@ -75,8 +75,9 @@ public class AtticRadioCutscene : MonoBehaviour
         // 다이얼이 저 혼자 떨린다 — 루는 버튼을 누르지 않았다.
         AudioManager.Instance?.Play(sfxRadioButton);
 
-        if (CloseupArt.Has(radioDialImage))
-            yield return StartCoroutine(FadeInImage(radioDialImage, 1f, 0.3f));
+        // 라디오 · 다이얼 떨림 오버레이(F-3-9) — 즉시 띄우고, 떨림은 그림 안 2~3프레임 반복이 맡는다.
+        // 정본: 유의 목소리가 나오는 동안 컷을 바꾸지 않는다 — 대사가 끝날 때까지 그대로 둔다.
+        OverlayCut.Instance.Show(OverlayIds.HouseRadioDial);
 
         yield return new WaitForSeconds(0.5f);
 
@@ -95,8 +96,7 @@ public class AtticRadioCutscene : MonoBehaviour
         if (!string.IsNullOrEmpty(yarnNode_radio))
             yield return YarnDialogue.PlayAndWait(yarnNode_radio, false);
 
-        if (radioDialImage != null)
-            yield return StartCoroutine(FadeOutImage(radioDialImage, 0.3f));
+        OverlayCut.Instance.Hide();
 
         yield return new WaitForSeconds(0.3f);
 
@@ -113,38 +113,4 @@ public class AtticRadioCutscene : MonoBehaviour
         YarnDialogue.UnlockPlayer(ctrl);
     }
 
-    IEnumerator FadeInImage(Image image, float targetAlpha, float duration)
-    {
-        Color c = image.color;
-        c.a = 0f;
-        image.color = c;
-        image.gameObject.SetActive(true);
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            c.a = Mathf.Lerp(0f, targetAlpha, elapsed / duration);
-            image.color = c;
-            yield return null;
-        }
-        c.a = targetAlpha;
-        image.color = c;
-    }
-
-    IEnumerator FadeOutImage(Image image, float duration)
-    {
-        Color c = image.color;
-        float start = c.a;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            c.a = Mathf.Lerp(start, 0f, elapsed / duration);
-            image.color = c;
-            yield return null;
-        }
-        c.a = 0f;
-        image.color = c;
-        image.gameObject.SetActive(false);
-    }
 }

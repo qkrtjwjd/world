@@ -32,11 +32,12 @@ public class KitchenDrawerCutscene : MonoBehaviour
     [Header("Yarn 노드 이름")]
     public string yarnNode = "House_Kitchen_Drawer";
 
-    [Header("서랍 안 클로즈업 (D S#08 문단 324 · 433)")]
-    [Tooltip("전체화면 클로즈업을 띄울 Image (Canvas). 아래 스프라이트가 있을 때만 쓴다.")]
+    [Header("서랍 안 오버레이 (D S#08 문단 324 · 433)")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_kitchen_drawer)으로 옮겼다. " +
+             "그림은 Resources/Overlays/house_overlay_kitchen_drawer.png. 아래 스프라이트와 함께 직렬화 값 때문에 필드만 남긴다.")]
     public Image handCloseupImage;
     [Tooltip("「부엌 서랍 — 열린 상태 내부 클로즈업」. 잡동사니 사이 열쇠 하나를 **구석에** 그려 넣는다\n" +
-             "(카메라가 열쇠를 중앙에 두지 않는다 — 플레이어가 먼저 찾아내게). 비우면 월드 카메라 클로즈업으로 대신한다.")]
+             "(카메라가 열쇠를 중앙에 두지 않는다 — 플레이어가 먼저 찾아내게). ⛔ 폐기됨(2026-10-01) — 그림은 Resources/Overlays/house_overlay_kitchen_drawer.png.")]
     public Sprite drawerInteriorSprite;
     [Tooltip("⛔ 쓰지 않는다 — 2026-09-27 카메라 대체 클로즈업 폐기(E-64).")]
     public Transform drawerCloseupTarget;
@@ -45,7 +46,8 @@ public class KitchenDrawerCutscene : MonoBehaviour
     //   그 Image 는 S#03 도자기 손가락과 공용이고 스프라이트가 비어 있어(흰색) 서랍을 열면
     //   1.5초간 화면 전체가 흰 사각형으로 덮였다. 스프라이트가 있을 때만 띄운다.
     //   같은 날 넣었던 「그림이 없으면 월드 카메라 클로즈업」은 줌 폐기(E-64)로 걷어냈다.
-    //   서랍 안은 오버레이 컷(house_overlay_*, F-3-9)으로 옮길 자리다 — 매핑표 확정 대기.
+    //   2026-10-01: 서랍 안은 오버레이 컷(house_overlay_kitchen_drawer, F-3-9)으로 옮겼다.
+    //   조사로 여는 오버레이이므로 확인 키로 닫는다(F-3-9 문단 287) — 열쇠 획득까지 진행한 뒤 플레이어가 닫는다.
 
     [Header("효과음")]
     public AudioClip sfxDrawerOpen;
@@ -69,13 +71,8 @@ public class KitchenDrawerCutscene : MonoBehaviour
     {
         var ctrl = YarnDialogue.LockPlayer();
 
-        bool useImage   = handCloseupImage != null && drawerInteriorSprite != null;
-        if (useImage)
-        {
-            handCloseupImage.sprite = drawerInteriorSprite;
-            yield return StartCoroutine(FadeInImage(handCloseupImage, 1f, 0.3f));
-        }
-        // 그림이 없으면 카메라로 대신하지 않는다 — 클로즈업은 카메라가 아니라 오버레이 컷이다(개정 D 문단 336 · E-64).
+        // 서랍 안 — 즉시 띄운다(페이드 없음 · F-3-9). 카메라로 대신하지 않는다(개정 D 문단 336 · E-64).
+        OverlayCut.Instance.Show(OverlayIds.HouseKitchenDrawer);
 
         AudioManager.Instance?.Play(sfxDrawerOpen);
         yield return new WaitForSeconds(0.5f);
@@ -93,46 +90,12 @@ public class KitchenDrawerCutscene : MonoBehaviour
         if (atticKeyItem != null)
             InventoryManager.Instance?.AddItem(atticKeyItem);
 
-        if (useImage)
-            yield return StartCoroutine(FadeOutImage(handCloseupImage, 0.3f));
+        // 조사로 연 오버레이 — 플레이어가 확인 키로 닫는다.
+        yield return OverlayCut.Instance.WaitForClose();
 
         ObjectiveManager.Instance?.ShowObjective(objectiveHeader, objectiveBody);
 
         YarnDialogue.UnlockPlayer(ctrl);
     }
 
-    IEnumerator FadeInImage(Image image, float targetAlpha, float duration)
-    {
-        Color c = image.color;
-        c.a = 0f;
-        image.color = c;
-        image.gameObject.SetActive(true);
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            c.a = Mathf.Lerp(0f, targetAlpha, elapsed / duration);
-            image.color = c;
-            yield return null;
-        }
-        c.a = targetAlpha;
-        image.color = c;
-    }
-
-    IEnumerator FadeOutImage(Image image, float duration)
-    {
-        Color c = image.color;
-        float start = c.a;
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            elapsed += Time.deltaTime;
-            c.a = Mathf.Lerp(start, 0f, elapsed / duration);
-            image.color = c;
-            yield return null;
-        }
-        c.a = 0f;
-        image.color = c;
-        image.gameObject.SetActive(false);
-    }
 }

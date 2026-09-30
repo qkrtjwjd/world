@@ -28,7 +28,7 @@ public class AtticBoxInteraction : MonoBehaviour
 {
     // ── S#09 ─────────────────────────────────────────────────────────────
     [Header("S#09 — 상자 개방")]
-    [Tooltip("세 물건이 함께 놓인 상태를 보여주는 Image (Canvas). 순서대로 비추지 않는다.")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_attic_box)으로 옮겼다. 세 물건이 함께 놓인 한 장이며 순서대로 비추지 않는다. 직렬화 값 때문에 필드만 남긴다.")]
     public UnityEngine.UI.Image boxContentsImage;
     public string yarnNode_S9_Box = "House_Attic_Box";
     [Tooltip("상자 뚜껑이 열리는 소리.")]
@@ -47,7 +47,7 @@ public class AtticBoxInteraction : MonoBehaviour
     public ItemData coatItem;
     [Tooltip("Resources/Items/FrontDoorKey.asset — S#13 현관문을 여는 열쇠")]
     public ItemData frontDoorKeyItem;
-    [Tooltip("주머니를 더듬는 손 / 꺼낸 열쇠 클로즈업 Image.")]
+    [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_front_door_key)으로 옮겼다. 「주머니를 더듬는 손」 컷은 E-64 에서 내렸다. 직렬화 값 때문에 필드만 남긴다.")]
     public UnityEngine.UI.Image coatPocketCloseupImage;
     public AudioClip sfxClothRustle;
 
@@ -128,17 +128,14 @@ public class AtticBoxInteraction : MonoBehaviour
         if (!string.IsNullOrEmpty(droneLoopName))
             AudioManager.Instance?.PlayLoop(droneLoopName);
 
-        // 열린 상자 오버레이 컷(개정 D 문단 348). 그림이 없으면 카메라로 대신하지 않는다(E-64 줌 폐기).
-        if (CloseupArt.Has(boxContentsImage))
-        {
-            boxContentsImage.gameObject.SetActive(true);
-            yield return new WaitForSeconds(0.8f);
-        }
+        // 열린 상자 오버레이 컷(개정 D 문단 348 · F-3-9). 카메라로 대신하지 않는다(E-64 줌 폐기).
+        OverlayCut.Instance.Show(OverlayIds.HouseAtticBox);
+        yield return new WaitForSeconds(0.8f);
 
         if (!string.IsNullOrEmpty(yarnNode_S9_Box))
             yield return YarnDialogue.PlayIfExists(yarnNode_S9_Box, false);
 
-        if (boxContentsImage != null) boxContentsImage.gameObject.SetActive(false);
+        OverlayCut.Instance.Hide();
     }
 
     // ─── S#10 — 코트 주머니 ──────────────────────────────────────────────
@@ -148,11 +145,9 @@ public class AtticBoxInteraction : MonoBehaviour
     {
         AudioManager.Instance?.Play(sfxClothRustle);
 
-        if (CloseupArt.Has(coatPocketCloseupImage))
-        {
-            coatPocketCloseupImage.gameObject.SetActive(true);
-            yield return new WaitForSeconds(0.8f);
-        }
+        // 꺼낸 현관문 열쇠 오버레이 컷(F-3-9). 주머니를 더듬는 손은 E-64 에서 내렸다.
+        OverlayCut.Instance.Show(OverlayIds.HouseFrontDoorKey);
+        yield return new WaitForSeconds(0.8f);
 
         GiveItem(coatItem);
         GiveItem(frontDoorKeyItem);
@@ -167,7 +162,7 @@ public class AtticBoxInteraction : MonoBehaviour
         if (!string.IsNullOrEmpty(yarnNode_S10_Coat))
             yield return YarnDialogue.PlayAndWait(yarnNode_S10_Coat, false);
 
-        if (coatPocketCloseupImage != null) coatPocketCloseupImage.gameObject.SetActive(false);
+        OverlayCut.Instance.Hide();
     }
 
     // ─── S#11 — 라디오 ───────────────────────────────────────────────────

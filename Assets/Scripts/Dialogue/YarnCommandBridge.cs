@@ -399,36 +399,35 @@ public class YarnCommandBridge : MonoBehaviour
     // 추가 Yarn 커맨드 — 필터 · 오디오 · UI · 씬 전환 · 연출
     // ════════════════════════════════════════════════════════════════════
 
-    // ── 일러 컷 (CG) ─────────────────────────────────────────────────────
-    // 규격서 8장 — 전부 640x360 전면. 그림은 Assets/Resources/CG/{id}.png 에 넣는다.
-    // 목록은 Assets/Docs/일러컷_파일명.md 에 있다.
-    // ⚠ 그림이 없으면 아무 일도 일어나지 않는다. 경고 한 줄만 남기고 넘어간다 —
-    //    포트레이트와 같은 방침이다. 아트가 없다고 대사가 멈추면 안 된다.
+    // ── 오버레이 컷 ─────────────────────────────────────────────────────
+    // F-3-9 — 맵 위에 띄우는 384×216 한 장. ID 는 F-8-3 매핑표(OverlayIds)에 있는 것만 받는다.
+    // 옛 일러 컷(show_cg · 640×360 전면)은 2026-10-01 사용자 승인으로 폐기하고 이것으로 통합했다.
+    // ⚠ 그림이 없으면 에디터 · 개발 빌드는 자리 표시 틀, 출시 빌드는 건너뛴다. 대사는 멈추지 않는다.
 
-    // <<show_cg "sera_door_gap">>
-    [YarnCommand("show_cg")]
-    public static void ShowCG(string id)
+    // 컷신 중 — 스크립트(또는 hide_overlay)가 닫는다.
+    // <<show_overlay "house_overlay_radio_dial">>
+    [YarnCommand("show_overlay")]
+    public static void ShowOverlay(string id) => OverlayCut.Instance.Show(id);
+
+    // <<hide_overlay>>
+    [YarnCommand("hide_overlay")]
+    public static void HideOverlay()
     {
-        var view = CutsceneCGView.Instance;
-        if (view == null)
-        {
-            Debug.LogWarning($"[YarnCommandBridge] show_cg '{id}': 씬에 CutsceneCGView 가 없습니다.");
-            return;
-        }
-        view.Show(id);
+        if (OverlayCut.IsOpen) OverlayCut.Instance.Hide();
     }
 
-    // <<hide_cg>>
-    [YarnCommand("hide_cg")]
-    public static void HideCG()
+    // 조사로 여는 오버레이 — 확인 키로 닫을 때까지 대사 진행을 멈춘다(F-3-9 문단 287).
+    // <<show_overlay_wait "house_overlay_kitchen_drawer">>
+    [YarnCommand("show_overlay_wait")]
+    public static IEnumerator ShowOverlayWait(string id)
     {
-        CutsceneCGView.Instance?.Hide();
+        yield return OverlayCut.Instance.ShowAndWait(id);
     }
 
     // ── 읽는 물건 ([읽기]) ──────────────────────────────────────────────
     // F-8-9 — 문구까지 그려 넣은 이미지 1장을 전체화면으로 띄우고, 플레이어가 닫을 때까지
     // 대사 진행을 멈춘다. 문구를 문자열로 출력하지 않는다. 그림은 Assets/Resources/Readables/{id}.png.
-    // ⚠ 그림이 없으면 일러 컷과 같이 경고만 남기고 곧바로 넘어간다.
+    // ⚠ 그림이 없으면 경고만 남기고 곧바로 넘어간다.
 
     // <<show_readable "kuru_note">>
     [YarnCommand("show_readable")]
