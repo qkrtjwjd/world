@@ -233,11 +233,17 @@ def read_docx(path: str) -> list[Para]:
         pieces: list[tuple[str, bool, bool]] = []   # (text, bold, italic)
         for rm in _R.finditer(pm.group(0)):
             rv = rm.group(0)
+            # 줄바꿈 <w:br/> 은 <w:t> 밖에 있어 글자만 모으면 사라진다 — 모으기 전에 글자로 바꾼다.
+            # 표 칸 하나에 여러 행을 줄바꿈으로 적은 곳(F-8-3 매핑표)이 붙어 읽히지 않게 「 / 」로 가른다.
+            # 줄바꿈만 있는 run 은 서식 판정(첫 run · 전체 이탤릭)을 바꾸지 않게 앞 조각에 붙인다.
+            # (2026-10-01 현재 D 에는 <w:br/> 이 없다 — 게이트 결과와 무관)
+            rv = _BR.sub("<w:t> </w:t>", rv)
             raw = "".join(_T.findall(rv))
             raw = _TAB.sub("\t", raw)
-            raw = _BR.sub(" ", raw)
-            t = _unescape(raw)
-            if not t.strip():
+            t = _unescape(raw).replace(" ", " / ")
+            if not t.strip(" /"):
+                if t and pieces:
+                    pieces[-1] = (pieces[-1][0] + t, pieces[-1][1], pieces[-1][2])
                 continue
             rpr_m = _RPR.search(rv)
             rpr = rpr_m.group(0) if rpr_m else ""
