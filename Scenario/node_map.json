@@ -242,17 +242,13 @@
       "scene": "S#07", "expected": 0, "file": "House_Attic",
       "by_speaker": {},
       "nodes": [
-        { "node": "House_Search_Drawer",   "count": 0, "anchor": null },
-        { "node": "House_Search_SeraDoor", "count": 0, "anchor": null }
+        { "node": "House_Search_Drawer",   "count": 0, "anchor": null }
       ],
       "_note": [
-        "⚠ 승격 대기 중이다. CLAUDE.md §9-1 — D 에 아직 없으므로 현재 기준은 0 이다.",
-        "D 에 들어가면 이렇게 올린다 (그 전에는 절대 미리 올리지 않는다):",
-        "  expected 2 · by_speaker {\"루독백\": 2}",
-        "  House_Search_Drawer   count 1 · anchor \"비어 있다.\"                       ← 거실 서랍장",
-        "  House_Search_SeraDoor count 1 · anchor \"잠겨 있다. 손잡이는… 뜨겁지 않네.\"  ← 세라의 방 문",
-        "현재 D 에는 '·' 에셋 목록으로만 존재해 차단된다.",
-        "현행 yarn 의 같은 2줄은 수기 작성분이며, 차단됐다고 지우지 않는다 (CLAUDE.md §6 차단된 대사 처리)."
+        "2026-10-01 사용자 결정 — 승격 대기 2줄을 정리했다. 기대값은 0 그대로다.",
+        "  서랍장 「비어 있다.」 → D 323 에셋 목록 줄에 덧붙여 정본에 올렸다(새 문단을 끼우지 않음).",
+        "    '·' 에셋 목록이라 파서가 차단한다. yarn 의 같은 줄은 수동 보정 레이어로 유지.",
+        "  세라 방 문 「잠겨 있다. 손잡이는… 뜨겁지 않네.」 → 삭제. House_Search_SeraDoor 노드도 지웠다."
       ]
     },
     {

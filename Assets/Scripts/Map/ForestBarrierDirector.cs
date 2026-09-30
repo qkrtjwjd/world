@@ -189,6 +189,20 @@ public class ForestBarrierDirector : MonoBehaviour
              "⚠ 흔들기만 쓴다. 줌은 정사영 크기를 바꿔 픽셀 정수배를 깨뜨린다(F-6 · §11).")]
     public float surgeShake = 0.6f;
 
+    [Header("도착 — 쿠루가 루 앞으로 나선다")]
+    [Tooltip("도착하면 쿠루가 루보다 이만큼 결계 쪽으로 나서서 선다(월드 유닛). 「팔을 벌려 루를 막는다」(정본 1247)의 자리다. " +
+             "그래서 「…뭐?」에서 고개를 돌리면 뒤의 루를 돌아보는 그림이 된다(정본 1263 · 2026-09-30 사용자 결정).")]
+    public float kuruBlockAhead = 1.0f;
+
+    [Tooltip("쿠루가 결계 판에서 떨어져 서는 최소 거리(월드 유닛). 루가 결계에 너무 붙어 도착했을 때 판을 넘어가지 않게 한다.")]
+    public float kuruBarrierGap = 0.6f;
+
+    [Tooltip("쿠루가 루를 비켜 지나갈 옆 간격(월드 유닛). 루를 뚫고 걷지 않게 옆으로 돌아 나선다.")]
+    public float kuruSidestep = 0.8f;
+
+    [Tooltip("쿠루가 나서는 걸음 속도(월드 유닛/초).")]
+    public float kuruStepInSpeed = 2.5f;
+
     [Header("강화 — 물러섬과 시선")]
     [Tooltip("③ 쿠루가 열쇠를 회수하며 물러나는 거리(월드 유닛).")]
     public float kuruStepBack = 0.35f;
@@ -389,6 +403,13 @@ public class ForestBarrierDirector : MonoBehaviour
         //   여기서 set_filter 를 부르지 않는 것이 그 지시다.
         //
         // ⚠ 결계는 아직 보이지 않는다. 루가 「아무것도 안 보이는데요」라고 말하는 자리다.
+        //
+        // 쿠루가 먼저 루 앞(결계 쪽)으로 나서서 결계를 본다 — 「쿠루가 멈춰 선 채」(정본 1243) ·
+        // 「팔을 벌려 루를 막는다」(1247). 루는 쿠루가 보는 곳을 본다(1245).
+        // 이 자리 덕에 「…뭐?」에서 고개를 돌리는 것이 뒤의 루를 돌아보는 그림이 된다(1263).
+        yield return KuruStepInFront(kuru);
+        if (kuru != null) FaceVector(kuru, ContactPoint(kuru) - (Vector2)kuru.position);
+        if (player != null) FaceVector(player, ContactPoint(player) - (Vector2)player.position);
         yield return YarnDialogue.PlayAndWait(YarnNodes.Forest_Barrier_Arrival, false);
 
         // ── 열쇠를 댄다 ─────────────────────────────────────────────────────
@@ -481,6 +502,53 @@ public class ForestBarrierDirector : MonoBehaviour
             if (rb != null) rb.MovePosition(np); else who.position = new Vector3(np.x, np.y, who.position.z);
             yield return new WaitForFixedUpdate();
         }
+    }
+
+    /// <summary>
+    /// 쿠루가 루 앞(결계 쪽)으로 나선다. 루에서 결계로 가는 선 위, 루보다 <see cref="kuruBlockAhead"/> 앞이다.
+    /// 쿠루가 루 뒤에 있으면 곧게 가면 루를 뚫으므로 루 옆(<see cref="kuruSidestep"/>)을 한 번 거친다.
+    /// 잠긴 컨트롤러가 속도를 0 으로 되돌리므로 위치로 옮긴다(<see cref="WalkOff"/> 와 같은 방식).
+    /// </summary>
+    IEnumerator KuruStepInFront(Transform kuru)
+    {
+        if (kuru == null || player == null) yield break;
+
+        Vector2 lu      = player.position;
+        Vector2 contact = ContactPoint(player);
+        Vector2 toBar   = contact - lu;
+        float   dist    = toBar.magnitude;
+        if (dist < 0.0001f) yield break;
+        Vector2 fwd = toBar / dist;
+
+        float   ahead  = Mathf.Min(kuruBlockAhead, Mathf.Max(0f, dist - kuruBarrierGap));
+        Vector2 target = lu + fwd * ahead;
+
+        // 쿠루가 루보다 뒤(결계 반대쪽)에 있으면 루 옆으로 비켜 돈다. 원래 서 있던 쪽 옆을 쓴다.
+        Vector2 k     = kuru.position;
+        Vector2 side  = new Vector2(-fwd.y, fwd.x);
+        if (Vector2.Dot(k - lu, side) < 0f) side = -side;
+        var route = new System.Collections.Generic.List<Vector2>();
+        if (Vector2.Dot(k - lu, fwd) < ahead * 0.5f) route.Add(lu + side * kuruSidestep + fwd * (ahead * 0.5f));
+        route.Add(target);
+
+        var anim = kuru.GetComponentInChildren<Animator>();
+        var rb   = kuru.GetComponent<Rigidbody2D>();
+        if (anim != null) anim.SetBool("isRun", true);
+
+        foreach (Vector2 point in route)
+        {
+            Vector2 p = rb != null ? rb.position : (Vector2)kuru.position;
+            FaceVector(kuru, point - p);
+            while (kuru != null && (point - p).sqrMagnitude > 0.0004f)
+            {
+                p = Vector2.MoveTowards(p, point, Mathf.Max(0.1f, kuruStepInSpeed) * Time.fixedDeltaTime);
+                if (rb != null) rb.MovePosition(p); else kuru.position = new Vector3(p.x, p.y, kuru.position.z);
+                yield return new WaitForFixedUpdate();
+            }
+        }
+
+        if (anim != null) anim.SetBool("isRun", false);
+        Dbg.Log($"[S#21] 쿠루가 루 앞으로 나섰다 — 쿠루 {(Vector2)kuru.position} · 루 {lu} · 접촉 {contact}");
     }
 
     /// <summary>열쇠가 결계에 닿는 자리 — 결계 판 위에서 그 사람과 가장 가까운 점.</summary>

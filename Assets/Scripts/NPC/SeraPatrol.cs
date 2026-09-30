@@ -26,7 +26,7 @@ public class SeraPatrol : MonoBehaviour
                  "⚠ 20~30 난수는 폐기된 값이다(탈출 압박 v1.0 표지 2절). 되돌리지 말 것. " +
                  "라운드 합계가 110초로 떨어져야 하므로 흔들면 안 된다.")]
         public float dwellSeconds = 20f;
-        [Tooltip("세라가 이 구역에 들어오면 솔이 사라진다. 상점 구역에만 체크한다.")]
+        [Tooltip("세라가 이 구역에 들어오면 솔이 사라진다. 우물가 구역(옛 이름 「상점」)에만 체크한다.")]
         public SeraApproachTrigger approachTrigger;
 
         [Tooltip("이 구역으로 오는 도중 거쳐 갈 지점들. 비어 있으면 직선으로 간다.\n" +

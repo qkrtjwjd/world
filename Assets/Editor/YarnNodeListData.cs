@@ -44,7 +44,7 @@ public class YarnNodeListData : ScriptableObject
         "House_Yard_Sugar", "House_Yard_Refuse", "House_Yard_Refuse2",
         "House_Window_Plea",
         // House_Attic.yarn (D-1 정본 S#06~S#13)
-        "House_Doorknob_Refused", "House_Search_Drawer", "House_Search_SeraDoor",
+        "House_Doorknob_Refused", "House_Search_Drawer",
         "House_Kitchen_Drawer", "House_Attic_Box", "House_Coat_Key",
         "House_Radio_Yu_First", "House_Dagger_Flash", "House_FrontDoor_Depart",
         // 집 안 상호작용 (개별 .yarn)
