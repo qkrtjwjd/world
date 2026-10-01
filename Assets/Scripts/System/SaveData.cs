@@ -19,7 +19,7 @@ public class JournalEntrySave
 [System.Serializable]
 public class SaveData
 {
-    public const int CurrentVersion = 8;
+    public const int CurrentVersion = 9;
     public int    saveVersion = CurrentVersion;
     public string sceneName;
     public float  playTime;
@@ -84,6 +84,18 @@ public class SaveData
     ///   그것이 곧 「아직 통과하지 않았다」로 예전과 같은 동작이라 마이그레이션이 필요 없다.
     /// </summary>
     public bool isFrontDoorPassed;
+
+    /// <summary>
+    /// 환상/현실 심리 게이지(v9 · F-9-3 「위치 · 인형화 · 아이템 · 심리 게이지」). 단검을 쥐고 있던 일시 값은 넣지 않는다.
+    /// v8 이하는 이 필드가 없어 <see cref="GaugeManager.DEFAULT_GAUGE"/> 로 둔다(SaveManager 마이그레이션).
+    /// </summary>
+    public float fantasyRealityGauge = GaugeManager.DEFAULT_GAUGE;
+
+    /// <summary>
+    /// 이 진행의 「마지막 토끼 슬롯」(v9 · F-9-3). 토끼로 저장했거나 불러온 슬롯 번호, 없으면 -1.
+    /// 중단 저장에도 같이 들어간다 — 중단 저장은 불러오면 지워지므로 진행 상태로 들고 다닌다(F-9-3 ※ · E-33-6).
+    /// </summary>
+    public int lastRabbitSlot = -1;
 
     // 처치된 적 ID (HashSet은 JSON 직렬화 불가 → List 사용)
     public List<string> defeatedEnemyIDs   = new List<string>();

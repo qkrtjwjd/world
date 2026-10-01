@@ -1523,6 +1523,22 @@ public class BattleSystem : MonoBehaviour
 
     IEnumerator EndBattleCoroutine()
     {
+        // 쓰러짐 — 숲 전투 사망 화면(F-9 · C-13-5). 「패배했다…」 문구와 대기 없이 곧바로 넘긴다(F-9-1 ① 입력 즉시 차단).
+        //   정리는 아래 공통 구간과 같다. 사망 화면이 입력 · 시간을 쥐므로 정리 뒤에 띄운다.
+        if (State == BattleState.LOST)
+        {
+            ItemUseTracker.Instance?.ResetAll();
+            GameState.battleReturn.SetReturning(GameState.battleReturn.returnSceneName, 2.5f);
+            EncounterManager.Instance?.OnBattleEnded();
+            var lostPil = PlayerInputLock.Instance;
+            if (lostPil != null && lostPil.IsLocked) lostPil.Unlock();
+            Time.timeScale = 1f;
+
+            BattleDeathScreen.Show();
+            Destroy(gameObject.transform.root.gameObject);
+            yield break;
+        }
+
         if (State == BattleState.WON && _escaped)
         {
             // 도망: 적을 처치한 것이 아니므로 처치 등록·전리품·인형화 없음
@@ -1594,14 +1610,6 @@ public class BattleSystem : MonoBehaviour
         var pil = PlayerInputLock.Instance;
         if (pil != null && pil.IsLocked) pil.Unlock();
         Time.timeScale = 1f;
-
-        // 패배 → 게임오버 UI 표시 후 종료
-        if (State == BattleState.LOST)
-        {
-            GameOverUI.Instance?.Show();
-            Destroy(gameObject.transform.root.gameObject);
-            yield break;
-        }
 
         // 2026-08-27 — 현실 전용 씬(DarkReality)을 폐기하면서, 현실씬 위 오버레이 턴제에서
         // 환상 맵으로 되돌리던 분기를 함께 제거했다. 현실/환상은 이제 한 씬 안에서 F키로 오간다.

@@ -15,6 +15,10 @@ public class MainMenu : MonoBehaviour
 
     static void StartIntro()
     {
+        // 이전 진행을 걷는다 — 게임 안에서 타이틀로 왔다 새로 시작하면 플래그 · 인형화 · 아이템이 남아 있었다(2026-10-01).
+        //   이름은 방금 정했으므로 그대로 둔다.
+        NewGameReset.Apply();
+
         if (TransitionManager.Instance != null)
             TransitionManager.Instance.DoSceneTransition(SceneNames.Intro);
         else

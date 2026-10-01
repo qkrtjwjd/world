@@ -152,7 +152,7 @@ public class TutorialBattleManager : MonoBehaviour
         var entrance = FindAnyObjectByType<ForestEntranceDirector>();
         CameraDirector.Instance?.Track(entrance != null ? entrance.forwardOffset : Vector2.zero);
 
-        // 지면 튜토리얼을 끝낸 것으로 치지 않는다 — 게임 오버에서 전투 직전으로 되돌아가 다시 싸운다.
+        // 지면 튜토리얼을 끝낸 것으로 치지 않는다 — 쓰러지면 사망 화면을 거쳐 마지막 토끼(없으면 S#01)로 돌아간다(F-9-3).
         if (_battle1Outcome == BattleOutcome.Lost) yield break;
         GameState.tutorialBattleStep = 1;
     }

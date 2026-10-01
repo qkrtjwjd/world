@@ -10,6 +10,14 @@ public class SaveManager : PersistentSingleton<SaveManager>
     // 로딩 중 임시 보관
     private bool     _isLoading   = false;
     private SaveData _pendingData = null;
+    private int      _pendingSlot = -1;   // 슬롯 3개 중 하나를 불러오는 중이면 그 번호
+
+    /// <summary>
+    /// 이 진행의 「마지막 토끼 슬롯」 — 토끼로 저장했거나 불러온 슬롯 번호, 없으면 -1 (F-9-3).
+    /// 숲 전투 사망 · 인형화 100 배드 엔딩이 여기로 돌아간다(<see cref="ReturnToLastRabbit"/>).
+    /// 저장 데이터에도 같이 넣어, 중단 저장 · 되감기에서 이어 한 진행도 같은 슬롯을 기억한다.
+    /// </summary>
+    public int LastRabbitSlot { get; private set; } = -1;
 
     // ─────────────────────────────────────────────
     //  초기화
@@ -65,6 +73,8 @@ public class SaveManager : PersistentSingleton<SaveManager>
             saveTicks  = System.DateTime.Now.Ticks,
             corruption = CorruptionManager.Instance != null
                          ? CorruptionManager.Instance.currentCorruption : 0f,
+            fantasyRealityGauge = DaggerFilterController.GaugeWithoutHold(),
+            lastRabbitSlot      = LastRabbitSlot,
         };
 
         data.playerLevel    = PlayerGrowth.Level;
@@ -132,6 +142,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
 
     public void SaveGame(int slot)
     {
+        LastRabbitSlot = slot;   // 토끼로 저장한 슬롯이 복귀 지점이 된다(F-9-3)
         SaveData data = BuildSaveData();
         PlayerPrefs.SetString(SlotKey(slot), JsonUtility.ToJson(data));
         PlayerPrefs.Save();
@@ -344,6 +355,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         if (data == null) { Debug.LogWarning($"[SaveManager] 슬롯 {slot} 데이터 없음"); return; }
 
         _pendingData = data;
+        _pendingSlot = slot;
         _isLoading   = true;
         if (TransitionManager.Instance != null)
             TransitionManager.Instance.DoSceneTransition(data.sceneName);
@@ -445,6 +457,19 @@ public class SaveManager : PersistentSingleton<SaveManager>
             data.isFrontDoorKeyFound     = false;
             data.isDaggerToggleUnlocked  = data.isDaggerAcquired;
         }
+        if (data.saveVersion < 9)
+        {
+            // 심리 게이지 · 마지막 토끼 슬롯 이전의 세이브(F-9-3, 2026-10-01).
+            data.fantasyRealityGauge = GaugeManager.DEFAULT_GAUGE;
+            data.lastRabbitSlot      = -1;
+        }
+
+        // ── 마지막 토끼 슬롯 — 슬롯을 불러왔으면 그 슬롯, 아니면(중단 저장 · 되감기 등) 저장해 둔 값 ──
+        LastRabbitSlot = _pendingSlot >= 0 ? _pendingSlot : data.lastRabbitSlot;
+        _pendingSlot   = -1;
+
+        // ── 심리 게이지 — 컷으로 맞춘다(글리치 · 보간 없이) ──
+        GaugeManager.Instance?.CutGauge(data.fantasyRealityGauge);
 
         // ── 성장 복원 ──
         PlayerGrowth.Load(data.playerLevel, data.playerExp);
@@ -545,6 +570,43 @@ public class SaveManager : PersistentSingleton<SaveManager>
     }
 
     // ─────────────────────────────────────────────
+    //  마지막 저장 지점으로 복귀 (F-9-3 · C-13-4)
+    // ─────────────────────────────────────────────
+
+    /// <summary>
+    /// 숲 전투 사망 · 인형화 100 배드 엔딩의 복귀. 마지막 토끼 슬롯을 불러온다.
+    /// 토끼 저장이 없으면(또는 그 슬롯이 지워졌으면) 새 게임 시작 지점 — S#01 루의 방 — 으로 간다(F-9-3 · 2026-10-01 사용자 결정).
+    /// 페널티는 없다. 쓰러진 것으로 어떤 값도 바꾸지 않는다.
+    /// </summary>
+    public void ReturnToLastRabbit()
+    {
+        int slot = LastRabbitSlot;
+        if (slot >= 0 && LoadSaveData(slot) != null)
+        {
+            LoadGame(slot);
+            return;
+        }
+
+        Dbg.Log("[SaveManager] 토끼 저장이 없어 새 게임 시작 지점(S#01)으로 돌아갑니다.");
+        NewGameReset.Apply();
+        if (TransitionManager.Instance != null)
+            TransitionManager.Instance.DoSceneTransition(SceneNames.Home);
+        else
+            SceneManager.LoadScene(SceneNames.Home);
+    }
+
+    /// <summary><see cref="NewGameReset"/> 가 부른다. 슬롯 · 중단 저장은 남기고 진행에 딸린 것만 지운다.</summary>
+    public void ResetProgressForNewGame()
+    {
+        LastRabbitSlot  = -1;
+        currentPlayTime = 0f;
+        PlayerPrefs.DeleteKey(PreBattleKey);
+        PlayerPrefs.DeleteKey(CheckpointKey);
+        PlayerPrefs.DeleteKey(RewindKey);
+        PlayerPrefs.Save();
+    }
+
+    // ─────────────────────────────────────────────
     //  삭제
     // ─────────────────────────────────────────────
     /// <summary>지정 슬롯의 저장 데이터를 삭제합니다.</summary>
@@ -571,6 +633,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         // 같은 이유 — 남겨두면 새 게임에서 이전 플레이의 중단 지점을 이어받는다
         PlayerPrefs.DeleteKey(SuspendKey);
         PlayerPrefs.Save();
+        LastRabbitSlot = -1;
         Dbg.Log("[SaveManager] 모든 슬롯 삭제 완료");
     }
 

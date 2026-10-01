@@ -996,45 +996,9 @@ public class ForestBarrierDirector : MonoBehaviour
         return GameState.player.IsInitialized ? GameState.player.puppetization : 0f;
     }
 
-    /// <summary>검은 화면에 한 줄. 페이드(999) 위에 얹는다.</summary>
+    /// <summary>검은 화면에 한 줄. 페이드(999) 위에 얹는다. 틀은 사망 화면(F-9)과 공용이다 — <see cref="BlackLineCard"/>.</summary>
     static GameObject BuildEndCard(float puppetization)
-    {
-        var root = new GameObject("S21 EndCard [Auto]");
-        DontDestroyOnLoad(root);
-
-        var canvas = root.AddComponent<Canvas>();
-        canvas.renderMode   = RenderMode.ScreenSpaceOverlay;
-        canvas.sortingOrder = 1000;          // TransitionManager 의 암전(999) 위
-        UiCanvasScale.Add(root);
-        root.AddComponent<GraphicRaycaster>();
-
-        var bgGo = new GameObject("Black");
-        bgGo.transform.SetParent(root.transform, false);
-        var bg = bgGo.AddComponent<Image>();
-        bg.color = Color.black;
-        bg.raycastTarget = true;             // 뒤쪽 UI 클릭을 막는다
-        var bgRt = bgGo.GetComponent<RectTransform>();
-        bgRt.anchorMin = Vector2.zero;
-        bgRt.anchorMax = Vector2.one;
-        bgRt.offsetMin = Vector2.zero;
-        bgRt.offsetMax = Vector2.zero;
-
-        var textGo = new GameObject("Line");
-        textGo.transform.SetParent(root.transform, false);
-        var text = textGo.AddComponent<TextMeshProUGUI>();
-        text.text          = $"인형화 {Mathf.RoundToInt(puppetization):00}%";
-        text.fontSize      = 22f;
-        text.color         = new Color(1f, 1f, 1f, 0f);   // EndDemo 가 떠오르게 한다
-        text.alignment     = TextAlignmentOptions.Center;
-        text.raycastTarget = false;
-        var textRt = textGo.GetComponent<RectTransform>();
-        textRt.anchorMin = Vector2.zero;
-        textRt.anchorMax = Vector2.one;
-        textRt.offsetMin = Vector2.zero;
-        textRt.offsetMax = Vector2.zero;
-
-        return root;
-    }
+        => BlackLineCard.Build("S21 EndCard [Auto]", $"인형화 {Mathf.RoundToInt(puppetization):00}%", alpha: 0f);   // EndDemo 가 떠오르게 한다
 
     static void SetVisible(SpriteRenderer sr, bool on)
     {

@@ -309,8 +309,16 @@ public class BadEndingSequence : MonoBehaviour
             return;
         }
 
-        // 인형화 100 은 '마지막 저장 지점'으로 돌아간다(C-2-6). 탈출 압박 2종만 전용 되감기 지점을 쓴다.
-        if (type != BadEndingType.Doll && sm.HasRewindSave)
+        // 인형화 100 은 '마지막 저장 지점' — 마지막 토끼 슬롯 — 으로 돌아간다(C-2-6 · F-9-3 ※ · E-66-1).
+        //   숲 전투 사망과 같은 기준이며 사망 화면은 붙이지 않는다(전용 배드 엔딩 연출이 그 자리를 맡는다).
+        if (type == BadEndingType.Doll)
+        {
+            sm.ReturnToLastRabbit();
+            return;
+        }
+
+        // 탈출 압박 2종(BE#01 · BE#02)은 전용 되감기 지점을 쓴다 — 복귀 원리 미적용, 설명 없는 되감기(C-13-4).
+        if (sm.HasRewindSave)
         {
             sm.LoadRewindPoint();
             return;

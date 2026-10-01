@@ -234,6 +234,16 @@ public class DaggerFilterController : MonoBehaviour
     // 화면 색은 게이지가 정한다 — IsReality 만 바꾸면 화면은 그대로다(2026-10-01 실측).
     // 전환은 위의 글리치(짧은 노이즈, D 406) 아래에서 CutGauge 로 그 프레임에 바꾼다.
 
+    /// <summary>
+    /// 저장할 심리 게이지 — F키로 쥐고 있는 동안의 일시 값(100 · 풀리는 중)이 아니라 누르기 전 값.
+    /// 쥔 채 저장한 파일을 불러와 현실에 고정되지 않게 한다(F-9-3 · 2026-10-01).
+    /// </summary>
+    public static float GaugeWithoutHold()
+    {
+        if (Instance != null && Instance._holdingGauge) return Instance._gaugeBeforeHold;
+        return GaugeManager.Instance != null ? GaugeManager.Instance.fantasyRealityGauge : GaugeManager.DEFAULT_GAUGE;
+    }
+
     void GrabGauge()
     {
         var g = GaugeManager.Instance;

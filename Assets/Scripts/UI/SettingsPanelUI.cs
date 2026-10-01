@@ -559,9 +559,8 @@ public class SettingsPanelUI : MonoBehaviour
             .alignment = TextAlignmentOptions.MidlineLeft;
 
         int s = slot;
-        var saveBtn = MakeButton(p.transform, "저장", new Vector2(130f, y + 8f), new Vector2(72f, 30f),
-            () => { SaveManager.Instance?.SaveGame(s); });
-        saveBtn.GetComponent<Image>().color = new Color(0.18f, 0.45f, 0.18f, 1f);
+        // 저장 버튼은 두지 않는다 — 저장은 그림자 토끼로만 한다(CLAUDE.md §8 · C-13).
+        //   여기서 저장하면 그 슬롯이 「마지막 토끼 슬롯」이 되어 숲 전투 사망의 복귀 지점이 된다(F-9-3). 2026-10-01 사용자 결정으로 제거.
 
         var loadBtn = MakeButton(p.transform, "불러오기", new Vector2(212f, y + 8f), new Vector2(80f, 30f),
             () => { SaveManager.Instance?.LoadGame(s); Hide(); });

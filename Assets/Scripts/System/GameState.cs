@@ -150,7 +150,13 @@ public static class GameState
     //  (Unity 에디터에서 정적 변수는 플레이 세션 사이에 유지되므로 명시적으로 리셋)
     // ──────────────────────────────────────────
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    static void ResetOnPlay()
+    static void ResetOnPlay() => ResetForNewGame();
+
+    /// <summary>
+    /// 정적 진행 상태를 새 게임 값으로 되돌린다. 플레이 시작 때 · 새 게임 시작 때(<see cref="NewGameReset"/>) 부른다.
+    /// 예전에는 플레이 시작 때만 돌아, 게임 안에서 타이틀로 갔다 새로 시작하면 이전 진행이 남았다(2026-10-01).
+    /// </summary>
+    public static void ResetForNewGame()
     {
         player                   = PlayerState.Default;
         mentalBreakdownTimer     = 0f;

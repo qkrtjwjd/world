@@ -58,6 +58,9 @@ public class CorruptionManager : PersistentSingleton<CorruptionManager>
         CheckEnding();
     }
 
+    /// <summary>새 게임 시작값(데모 시작 20 — CLAUDE.md §2)으로 되돌린다. 이벤트를 발생시키지 않는다.</summary>
+    public void ResetForNewGame() => LoadCorruption(DefaultCorruption);
+
     /// <summary>세이브 로드 전용. 이벤트를 발생시키지 않고 수치를 직접 복원합니다.</summary>
     public void LoadCorruption(float value)
     {

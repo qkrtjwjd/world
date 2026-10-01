@@ -402,17 +402,16 @@ public class HackSlashCombatManager : MonoBehaviour
     // ─────────────────────────────────────────────
     void ShowResult(bool playerWon, int gainedXp = 0)
     {
+        // 쓰러짐 — 숲 전투 사망 화면(F-9 · C-13-5). 「전투 패배…」 문구 · 대기 없이 곧바로 넘긴다(F-9-1 ① 입력 즉시 차단).
+        if (!playerWon)
+        {
+            BattleDeathScreen.Show();
+            return;
+        }
+
         string msg = playerWon ? "전투 승리!" : "전투 패배...";   // ⚔·💀 는 Pretendard 에 없어 □ 로 나왔다(2026-09-28)
         if (playerWon && gainedXp > 0) msg += $" 경험치 +{gainedXp}";
         ShowMessage(msg);
-        if (!playerWon)
-            StartCoroutine(ShowGameOverAfterDelay(resultDisplayTime));
-    }
-
-    IEnumerator ShowGameOverAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        GameOverUI.Instance?.Show();
     }
 
     void ShowMessage(string message)

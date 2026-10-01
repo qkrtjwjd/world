@@ -32,6 +32,13 @@ public class BattleTransitionManager : MonoBehaviour
     [Tooltip("현실 전투 BGM AudioSource.")]
     [SerializeField] private AudioSource _realityBGM;
 
+    /// <summary>전투 BGM 을 끊는다 — 숲 전투 사망 화면(F-9-1 ②).</summary>
+    public void StopBattleBGM()
+    {
+        if (_fantasyBGM != null) _fantasyBGM.Stop();
+        if (_realityBGM != null) _realityBGM.Stop();
+    }
+
     [Header("Color Grading — 현실 톤 (무채색)")]
     [SerializeField] private float _realitySaturation  = -100f;
     [SerializeField] private float _realityContrast    =   20f;
