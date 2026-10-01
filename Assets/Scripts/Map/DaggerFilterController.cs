@@ -249,6 +249,26 @@ public class DaggerFilterController : MonoBehaviour
     {
         StopHoldDecay();
         if (!_holdingGauge) return;   // 강제 전환(S#12 · MentalBreakStage)으로 켜진 현실은 그쪽이 게이지를 맡는다
+
+        // 전투 중엔 유지한다(C-4-2 문단 437) — 여기서 되돌리면 핵앤슬래시가 도는 채로 화면만 환상이 된다(2026-10-01 실측).
+        //   전투가 끝난 뒤에 누르기 전 값으로 돌린다.
+        if (InBattle)
+        {
+            _holdDecayCoroutine = StartCoroutine(ReleaseAfterBattle());
+            return;
+        }
+
+        _holdingGauge = false;
+        GaugeManager.Instance?.CutGauge(_gaugeBeforeHold);
+    }
+
+    static bool InBattle => BattleSystem.IsActive || HackSlashCombatManager.IsActive;
+
+    IEnumerator ReleaseAfterBattle()
+    {
+        while (InBattle) yield return null;
+        _holdDecayCoroutine = null;
+        if (!_holdingGauge) yield break;
         _holdingGauge = false;
         GaugeManager.Instance?.CutGauge(_gaugeBeforeHold);
     }
@@ -266,7 +286,7 @@ public class DaggerFilterController : MonoBehaviour
         while (t < duration)
         {
             yield return null;
-            if (BattleSystem.IsActive || HackSlashCombatManager.IsActive) continue;
+            if (InBattle) continue;
             t += Time.deltaTime;
             GaugeManager.Instance?.DriftGauge(Mathf.Lerp(100f, target, t / duration));
         }
