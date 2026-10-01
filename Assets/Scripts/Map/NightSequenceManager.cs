@@ -264,7 +264,7 @@ public class NightSequenceManager : MonoBehaviour
         yield return SeraWalkTo(seraDoorOutsidePoint);
         SeraFace(Vector2.up);
 
-        // 문틈 — 「잘못 들은 거니…?」 까지. 문틈 클로즈업은 yarn 의 showSprite door_gap 이 맡는다.
+        // 문틈 — 「잘못 들은 거니…?」 까지. 문틈 눈 오버레이 컷은 노드 안의 show_overlay · hide_overlay 가 맡는다.
         yield return YarnDialogue.PlayAndWait(yarnNode_S2_Enter, false);
 
         // 방 안으로 들어와 창가로 걸어간다. 루 쪽에서는 뒷모습만 보인다.

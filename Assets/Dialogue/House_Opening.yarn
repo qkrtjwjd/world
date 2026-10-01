@@ -74,12 +74,16 @@ title: House_Sera_Lock_Enter
 // [지문 제거] 문이 반쯤 열리며 세라가 방 안을 들여다본다. 그녀의 눈이 어둠 속에서 희미하게 빛난다.
 
 // 2026-08-08: camera_closeup "세라" 제거.
-//   씬의 세라 오브젝트는 낮 씬용으로 **정원**에 서 있고(약 -5.7, 27.9),
-//   밤 씬에서 코드가 위치를 옮기지 않는다. 그대로 두면 카메라가
-//   루의 방을 떠나 정원을 비춘다. 정본이 요구하는 "문툴 사이 세라의 눈 클로즈업"은
-//   아래 showSprite "세라" "door_gap" 이 담당한다.
-<<showSprite "세라" "door_gap" "left" "fixed">>
+// 2026-10-01: 문틈 눈은 포트레이트(door_gap)가 아니라 오버레이 컷이다(D 39 · 46 · D-0 문단 9).
+//   눈만 보이게 · 0.5초 정지 → 「잘못 들은 거니…?」 동안 유지 → 세라가 방에 들어오기 전에 닫는다.
+//   눈이 화면에 있으므로 이 대사에는 포트레이트를 띄우지 않는다.
+//   문틈 빛(door_gap 프리셋 · D 46 「빛 속성 발광을 아주 약하게」)은 예전엔 showSprite 가 켰다 — 이제 sera_light 가 켠다.
+<<hideSprite "both">>
+<<sera_light "door_gap">>
+<<show_overlay "house_overlay_sera_door_eye">>
+<<wait 0.5>>
 세라: 잘못 들은 거니…?
+<<hide_overlay>>
 ===
 
 title: House_Sera_Lock_Window
@@ -223,7 +227,10 @@ title: House_Doorbell_Tap
 
 세라: …길을 잘못 드셨네요. 이 근처엔 아무것도 없어요.
 
-<<showSprite "쿠루" "half_face" "left" "fixed">>
+// 2026-10-01: 쿠루의 얼굴은 포트레이트(half_face)가 아니라 「문틈으로 절반만 보이는 얼굴 컷」 오버레이다(D 118).
+//   「설탕은 제가 가져왔어요.」까지 띄워 두고, 닫지 않은 채 KitchenTriggerCutscene 의 손바닥 각설탕 컷으로 바로 바꾼다.
+<<hideSprite "both">>
+<<show_overlay "house_overlay_kuru_door_face">>
 쿠루: 그렇죠? 아무것도 없는데 여기엔 꽃이 펴서 신기해서요.
 
 // [지문 제거] 문틈으로 보이는 쿠루의 얼굴은 웃고 있다. 눈은 웃지 않는다. 그가 세라의 어깨 너머, 식탁 앞에 굳어 선 {이름조사("를")} 정확히 한 번 꿰뚫어 보고 시선을 거둔다.
@@ -518,11 +525,12 @@ title: House_Yard_Refuse
 <<hideSprite "both">>
 <<sera_walk "window">>
 
-// 연출 — 세라의 시선 이동을 카메라로 따라간다. 각설탕 위를 지나가는데 멈추지 않는다.
-// 플레이어는 각설탕이 화면에 있다는 것을 알고 있으므로, 세라가 그것을 보지 못한다는 사실이 그대로 전달된다.
-
+// 개정 D 258: 세라가 창가에 서는 동안 S#04F 의 마당 각설탕 오버레이를 다시 띄운다. 카메라는 움직이지 않는다.
+//   오버레이가 떠 있는 채로 세라의 다음 대사가 나온다 — 각설탕이 화면에 그대로 있는데 세라는 괜찮다고 말한다.
+<<show_overlay "house_overlay_yard_sugarcube">>
 <<showSprite "세라" "warm_smile" "left" "fixed">>
 세라: 엄마 눈엔 괜찮아 보이는걸.
+<<hide_overlay>>
 
 // [SFX] 창문 잠금장치 딸깍 — 밤 씬(House_Sera_Lock_Window)과 같은 소리  ← AudioManager 등록 필요
 // <<play_sfx "???">>

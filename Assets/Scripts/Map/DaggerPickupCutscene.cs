@@ -31,6 +31,9 @@ public class DaggerPickupCutscene : MonoBehaviour
     [Tooltip("현실 필터를 보여주는 시간(초). 정본 지정값 0.5초.")]
     public float realityFlashDuration = 0.5f;
 
+    [Tooltip("단검 쥔 손 오버레이 컷을 띄워 두는 시간(초). D 에 수치가 없어 S#04B 손바닥 각설탕(1초)에 맞췄다. 닫히는 순간 현실 컷이 들어간다(D 395).")]
+    public float gripOverlayDuration = 1f;
+
     [Header("현실 오브젝트 (강제 전환 중 활성)")]
     [Tooltip("DaggerFilterController 가 씬을 훑어 처리하므로 보통 비워 둡니다. 개별 지정이 필요할 때만 채우세요.")]
     public RealityFilterObject[] realityFilterObjects;
@@ -67,6 +70,10 @@ public class DaggerPickupCutscene : MonoBehaviour
         if (daggerItem != null)
             InventoryManager.Instance?.AddItem(daggerItem);
         DaggerSystem.Instance?.Equip();
+
+        // ── 단검을 쥐는 손 — 오버레이 컷(D 395 · F-3-9) ─────────
+        // 다락방 전경은 그대로 두고 손만 맵 위에 띄운다. 닫히는 그 순간이 현실 컷 인이다.
+        yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseDaggerGrip, gripOverlayDuration);
 
         // ── 0.5초 현실 — 컷 인 ───────────────────────────────
         // 전환 순간에만 짧은 고역 노이즈. 복귀할 때는 소리를 넣지 않는다(정본).

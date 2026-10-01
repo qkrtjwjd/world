@@ -249,6 +249,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Tap, false);
 
         // 각설탕 — 결계 밖에서 들어온 물건이라 채도·윤곽이 다르다(그림이 맡는다). 오버레이 컷(F-3-9).
+        //   앞 노드가 쿠루 문틈 얼굴 오버레이를 띄운 채 끝난다 — Show 가 그림만 바꾸므로 닫힘 없이 이어진다.
         yield return OverlayCut.Instance.ShowForSeconds(OverlayIds.HouseSugarcubePalm, 1f);
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Sugar, false);

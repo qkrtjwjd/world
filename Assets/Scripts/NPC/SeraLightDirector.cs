@@ -316,6 +316,25 @@ public class SeraLightDirector : MonoBehaviour
     }
 
     /// <summary>
+    /// 포트레이트 없이 세라의 빛만 바꾼다. 클로즈업이 포트레이트에서 오버레이 컷으로 옮겨 가며
+    /// showSprite 가 빠진 자리에 쓴다(S#02 문틈 — 2026-10-01). 감정 ID 는 showSprite 와 같은 등록값이다.
+    /// <c>&lt;&lt;sera_light "door_gap"&gt;&gt;</c>
+    /// </summary>
+    [Yarn.Unity.YarnCommand("sera_light")]
+    public static void SetMoodFromYarn(string emotionId)
+    {
+        bool found = false;
+        foreach (var d in FindObjectsByType<SeraLightDirector>(FindObjectsSortMode.None))
+        {
+            if (d.characterId != "세라") continue;
+            d.SetMood(emotionId, instant: false);
+            found = true;
+        }
+        if (!found)
+            Dbg.LogWarning($"[{nameof(SeraLightDirector)}] sera_light '{emotionId}' — 켜져 있는 세라 빛이 없습니다.");
+    }
+
+    /// <summary>
     /// 기분을 바꿉니다. 목록에 없는 ID 는 <b>경고를 남기고 무시</b>합니다 —
     /// 조용히 버리지 않는다 (CLAUDE.md §0-7).
     /// </summary>
