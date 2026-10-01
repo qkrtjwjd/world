@@ -232,6 +232,33 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
             _forceReturnCoroutine = StartCoroutine(ForceReturnToValue(100f, 0f, 0.5f));
     }
 
+    /// <summary>
+    /// <see cref="CutGauge"/> 가 구독자에게 알리는 동안만 true. 구독자는 이때 보간 · 글리치 없이 그 프레임에 맞춘다.
+    /// </summary>
+    public static bool IsCutting { get; private set; }
+
+    /// <summary>
+    /// 컷 전환 — 게이지를 바꾸고 화면을 그 프레임에 맞춘다. 전환음 · 경계 글리치 · 가장자리 효과 · 균열 이벤트를 붙이지 않는다.
+    /// S#12 의 0.5초 강제 현실처럼 「세상이 끊긴」 전환에만 쓴다(D 398 · 406). 플레이어 조작 전환은 이것을 쓰지 않는다.
+    /// </summary>
+    public void CutGauge(float value)
+    {
+        if (_forceReturnCoroutine != null) { StopCoroutine(_forceReturnCoroutine); _forceReturnCoroutine = null; }
+
+        fantasyRealityGauge = Mathf.Clamp(value, 0f, 100f);
+        IsCutting = true;
+        try
+        {
+            OnGaugeChanged?.Invoke(fantasyRealityGauge);
+            NotifyWorldObjects(true);
+        }
+        finally { IsCutting = false; }
+
+        // 화면 색(RealityGradeRenderFeature)은 RealityGaugeDriver 가 게이지를 따라가며 그린다 — 따라가지 않고 맞춘다.
+        foreach (var d in FindObjectsByType<RealityGaugeDriver>(FindObjectsSortMode.None))
+            d.SnapToGauge();
+    }
+
     /// <param name="playSfx">false 면 전환음을 울리지 않는다(S#21C 결계 강화 — 마시멜로의 소리와 섞지 않는다).</param>
     public void ForceFantasyMax(bool playSfx = true)
     {

@@ -67,6 +67,11 @@ public class CharacterSpriteController : MonoBehaviour
         if (shouldBeReality == _isRealityMode) return;
 
         if (_switchCoroutine != null) StopCoroutine(_switchCoroutine);
+        _switchCoroutine = null;
+
+        // 컷 전환(GaugeManager.CutGauge) — 글리치 없이 그 프레임에 바꾼다.
+        if (GaugeManager.IsCutting) { ApplyImmediate(shouldBeReality); return; }
+
         _switchCoroutine = StartCoroutine(SwitchWithGlitch(shouldBeReality));
     }
 

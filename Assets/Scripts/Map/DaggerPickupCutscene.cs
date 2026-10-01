@@ -83,11 +83,17 @@ public class DaggerPickupCutscene : MonoBehaviour
         foreach (var r in realityFilterObjects)
             if (r != null) r.SetFilter(true);
 
+        // 보이는 필터는 심리 게이지가 정한다 — DaggerFilterController 만으로는 화면이 바뀌지 않는다(2026-10-01 실측).
+        //   CutGauge 는 소리 · 글리치 · 보간 없이 그 프레임에 바꾼다. 복귀도 같은 컷이고 원래 값으로 돌아간다.
+        var gauge = GaugeManager.Instance;
+        float gaugeBefore = gauge != null ? gauge.fantasyRealityGauge : 0f;
+        gauge?.CutGauge(100f);
         DaggerFilterController.Instance?.SwitchToRealityForced();
 
         yield return new WaitForSeconds(realityFlashDuration);
 
         // ── 컷 아웃 (페이드 아님) ─────────────────────────────
+        gauge?.CutGauge(gaugeBefore);
         DaggerFilterController.Instance?.SwitchToFantasyForced();
 
         foreach (var r in realityFilterObjects)

@@ -102,6 +102,14 @@ public class PostProcessingController : MonoBehaviour
         _targetReality = gauge / 100f;
         _targetFantasy = 1f - _targetReality;
         _targetGlitch  = (gauge > 30f && gauge < 70f) ? 1f : 0f;
+
+        // 컷 전환(GaugeManager.CutGauge) — 따라가지 않고 그 프레임에 맞춘다.
+        if (GaugeManager.IsCutting)
+        {
+            if (fantasyVolume != null) fantasyVolume.weight = _targetFantasy;
+            if (realityVolume != null) realityVolume.weight = _targetReality;
+            if (glitchVolume  != null) glitchVolume.weight  = _targetGlitch;
+        }
     }
 
     void Update()

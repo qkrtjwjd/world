@@ -74,6 +74,14 @@ public class GaugeBoundaryMonitor : MonoBehaviour
     // ──────────────────────────────────────────
     void OnGaugeChanged(float gauge)
     {
+        // 컷 전환(GaugeManager.CutGauge) — 경계 글리치 · 구간 돌파 처리 없이 상태만 맞춘다(D 406 · 강제 전환은 컷).
+        if (GaugeManager.IsCutting)
+        {
+            _realityThresholdGlitchFired = gauge >= glitchRealityBoundary;
+            SilentSetZone(gauge);
+            return;
+        }
+
         if (gauge < glitchRealityBoundary)
         {
             _realityThresholdGlitchFired = false;
