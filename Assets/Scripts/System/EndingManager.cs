@@ -19,6 +19,13 @@ public static class EndingManager
     /// </summary>
     public static BadEndingType PendingBadEnding { get; private set; } = BadEndingType.Doll;
 
+    /// <summary>
+    /// 씬을 직접 여는 쪽이 엔딩 종류만 넘길 때 쓴다(인형화 100 — <see cref="CorruptionManager"/>).
+    /// 넘기지 않으면 같은 세션에서 앞서 겪은 BE#01 · BE#02 의 종류가 남아, 인형화 100 이 그 엔딩으로
+    /// 처리되고 마지막 토끼가 아니라 되감기 지점으로 돌아간다(2026-10-01 발견).
+    /// </summary>
+    public static void SetPending(BadEndingType type) => PendingBadEnding = type;
+
     public static void TriggerGoodEnding()
     {
         if (TransitionManager.Instance != null)

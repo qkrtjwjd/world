@@ -73,6 +73,7 @@ public class CorruptionManager : PersistentSingleton<CorruptionManager>
         if (GetStage(currentCorruption) == CorruptionStage.Doll && !_isEnding)
         {
             _isEnding = true;
+            EndingManager.SetPending(BadEndingType.Doll);   // 앞서 겪은 BE#01 · BE#02 종류가 남지 않게(C-2-6 복귀 기준)
             OnCorruptionMaxReached?.Invoke();
             Time.timeScale = 1f; // 턴제 전투(timeScale 0) 중 도달해도 배드엔딩이 정지되지 않도록
             SceneManager.LoadScene(SceneNames.BadEnding);
