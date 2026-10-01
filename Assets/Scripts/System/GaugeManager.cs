@@ -259,6 +259,20 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
             d.SnapToGauge();
     }
 
+    /// <summary>
+    /// 단검 현실이 시간이 지나며 풀리는 동안 쓴다(C-4-2) — 게이지를 바꾸고 알리되 균열 이벤트를 검사하지 않는다.
+    /// 풀리는 것은 루가 환상으로 미끄러지는 것이지 균열이 아니다. 화면은 평소처럼 따라간다.
+    /// </summary>
+    public void DriftGauge(float value)
+    {
+        float prev = fantasyRealityGauge;
+        fantasyRealityGauge = Mathf.Clamp(value, 0f, 100f);
+        if (Mathf.Approximately(prev, fantasyRealityGauge)) return;
+
+        OnGaugeChanged?.Invoke(fantasyRealityGauge);
+        NotifyWorldObjects(false);
+    }
+
     /// <param name="playSfx">false 면 전환음을 울리지 않는다(S#21C 결계 강화 — 마시멜로의 소리와 섞지 않는다).</param>
     public void ForceFantasyMax(bool playSfx = true)
     {

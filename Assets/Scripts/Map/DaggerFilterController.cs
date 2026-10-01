@@ -4,8 +4,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// F키 홀드로 환상/현실 필터를 전환합니다.
-/// - 누르는 동안: 현실 모드 (realityObjects 활성)
-/// - 떼면: 환상 모드 복귀
+/// - 누르는 동안: 현실 모드 (realityObjects 활성). 심리 게이지를 100 으로 올린다 — 보이는 필터는 게이지다(C-3-2).
+///   누르고 있어도 탐험 중에는 <see cref="realityHoldDecaySeconds"/> 에 걸쳐 회색을 거쳐 원래 값으로 풀린다(C-4-2). 전투 중엔 유지.
+/// - 떼면: 환상 모드 복귀 — 게이지를 누르기 전 값으로 되돌린다
 /// - 인형화 80% 이상: 현실 전환 후 0.5초만 유지 후 강제 환상 복귀
 /// - 대화·이벤트(입력 잠금)·일시정지·타이틀 씬: 입력 무시
 /// </summary>
@@ -23,6 +24,10 @@ public class DaggerFilterController : MonoBehaviour
 
     [Tooltip("인형화 80%+ 시 강제 현실 유지 시간 (초)")]
     public float forcedRealityDuration = 0.5f;
+
+    [Tooltip("누르고 있어도 현실이 풀리는 데 걸리는 시간(초). 100 에서 누르기 전 값까지 고르게 내려간다(C-4-2 · F-3-1). " +
+             "정본에 수치가 없어 2026-10-01 사용자 결정 30초.")]
+    public float realityHoldDecaySeconds = 30f;
 
     public bool IsReality { get; private set; } = false;
 
@@ -57,6 +62,9 @@ public class DaggerFilterController : MonoBehaviour
     private Coroutine _fadeCoroutine;
     private Coroutine _forcedReturnCoroutine;
     private WaitForSeconds _forcedReturnWait;
+    private Coroutine _holdDecayCoroutine;
+    private float     _gaugeBeforeHold;
+    private bool      _holdingGauge;   // F키로 게이지를 올려 둔 상태인가 — 이때만 떼면서 되돌린다
 
     void Awake()
     {
@@ -94,6 +102,7 @@ public class DaggerFilterController : MonoBehaviour
             IsReality = false;
             if (realityOverlay != null) realityOverlay.alpha = 0f;
             ApplyFilter(false);
+            ReleaseGauge();
         }
     }
 
@@ -159,6 +168,8 @@ public class DaggerFilterController : MonoBehaviour
     {
         if (_forcedReturnCoroutine != null) { StopCoroutine(_forcedReturnCoroutine); _forcedReturnCoroutine = null; }
         if (_fadeCoroutine != null)         { StopCoroutine(_fadeCoroutine);         _fadeCoroutine = null; }
+        StopHoldDecay();   // 게이지는 부르는 쪽이 맡는다(S#12 · CutGauge)
+        _holdingGauge = false;
         IsReality = true;
         if (realityOverlay != null) realityOverlay.alpha = 1f;
         ApplyFilter(true);
@@ -169,6 +180,8 @@ public class DaggerFilterController : MonoBehaviour
     {
         if (_forcedReturnCoroutine != null) { StopCoroutine(_forcedReturnCoroutine); _forcedReturnCoroutine = null; }
         if (_fadeCoroutine != null)         { StopCoroutine(_fadeCoroutine);         _fadeCoroutine = null; }
+        StopHoldDecay();
+        _holdingGauge = false;
         IsReality = false;
         if (realityOverlay != null) realityOverlay.alpha = 0f;
         ApplyFilter(false);
@@ -185,6 +198,7 @@ public class DaggerFilterController : MonoBehaviour
 
         StartFade(1f);
         ApplyFilter(true);
+        GrabGauge();
 
         if (GetCorruptionRatio() >= 0.8f)
         {
@@ -213,6 +227,50 @@ public class DaggerFilterController : MonoBehaviour
 
         StartFade(0f);
         ApplyFilter(false);
+        ReleaseGauge();
+    }
+
+    // ── 심리 게이지 ─────────────────────────────────────────────────────
+    // 화면 색은 게이지가 정한다 — IsReality 만 바꾸면 화면은 그대로다(2026-10-01 실측).
+    // 전환은 위의 글리치(짧은 노이즈, D 406) 아래에서 CutGauge 로 그 프레임에 바꾼다.
+
+    void GrabGauge()
+    {
+        var g = GaugeManager.Instance;
+        if (g == null) return;
+        StopHoldDecay();
+        if (!_holdingGauge) _gaugeBeforeHold = g.fantasyRealityGauge;
+        _holdingGauge = true;
+        g.CutGauge(100f);
+        _holdDecayCoroutine = StartCoroutine(HoldDecayRoutine(_gaugeBeforeHold));
+    }
+
+    void ReleaseGauge()
+    {
+        StopHoldDecay();
+        if (!_holdingGauge) return;   // 강제 전환(S#12 · MentalBreakStage)으로 켜진 현실은 그쪽이 게이지를 맡는다
+        _holdingGauge = false;
+        GaugeManager.Instance?.CutGauge(_gaugeBeforeHold);
+    }
+
+    void StopHoldDecay()
+    {
+        if (_holdDecayCoroutine != null) { StopCoroutine(_holdDecayCoroutine); _holdDecayCoroutine = null; }
+    }
+
+    /// <summary>붙잡고 있어도 풀린다(C-4-2) — 100 에서 누르기 전 값까지 고르게. 전투 중에는 멈춘다(C-4-2 문단 437).</summary>
+    IEnumerator HoldDecayRoutine(float target)
+    {
+        float duration = Mathf.Max(0.01f, realityHoldDecaySeconds);
+        float t = 0f;
+        while (t < duration)
+        {
+            yield return null;
+            if (BattleSystem.IsActive || HackSlashCombatManager.IsActive) continue;
+            t += Time.deltaTime;
+            GaugeManager.Instance?.DriftGauge(Mathf.Lerp(100f, target, t / duration));
+        }
+        _holdDecayCoroutine = null;
     }
 
     float GetCorruptionRatio()
