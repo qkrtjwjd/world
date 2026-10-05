@@ -34,9 +34,9 @@ v3 은 **화이트리스트**다. 통과시킬 4종만 정의하고 나머지는
    ```
    python .claude/skills/muchaesaek-scenario-to-yarn/scripts/scenario_parser.py
    ```
-   기본 정본은 `scenario_parser.py` 의 `DEFAULT_DOCX` 다:
-   `D:\낙원\file\D_무채색_낙원_시나리오_정본.docx`
-   (저장소 밖 `D:\낙원ile` 에 있다. 다른 문서를 쓸 때만 `.docx` 경로를 인자로 준다.)
+   기본 정본은 `D:\낙원\file` 의 `D_*시나리오_정본*.docx` 하나다 — `scenario_parser.py` 의 `find_default_docx()` 가 찾는다.
+   (이름은 개정 때 바뀐다. 2026-10-05 현재 `D_무채색_낙원_시나리오_정본_CAM개정.docx`. 후보가 둘 이상이면 오류로 멈춘다.)
+   (저장소 밖 `D:\낙원\file` 에 있다. 다른 문서를 쓸 때만 `.docx` 경로를 인자로 준다.)
    출력 기본값은 `Scenario/output_v3/`.
    (v2 산출물이 있던 `Scenario/output/` 은 2026-08-14 정리로 삭제됐다. 다시 만들지 말 것.)
 4. **게이트를 확인한다.** `gate_report.txt` 가 FAIL 이면 종료 코드 1이다. 산출물을 쓰지 말 것.

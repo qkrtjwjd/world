@@ -30,7 +30,7 @@ docx 에만 있고 중간 .txt 에는 없다. word/document.xml 을 직접 읽�
 사용법:
     python scenario_parser.py [정본.docx] [출력디렉토리] [--node-map 경로]
 
-정본 경로를 생략하면 DEFAULT_DOCX 를 쓴다. 시나리오 정본은 항상 같은 파일이다.
+정본 경로를 생략하면 CANON_DIR 의 D 시나리오 정본 하나를 찾아 쓴다(find_default_docx — 이름은 개정 때 바뀐다).
 """
 
 import io
@@ -51,8 +51,18 @@ for _stream in (sys.stdout, sys.stderr):
         pass
 
 # ---------------------------------------------------------------------------
-# 정본은 항상 이 문서다. 인자를 생략하면 이 경로를 쓴다.
-DEFAULT_DOCX = r"D:\낙원\file\D_무채색_낙원_시나리오_정본.docx"
+# 정본은 항상 이 폴더의 `D_` 시나리오 정본 하나다. 인자를 생략하면 이것을 찾아 쓴다.
+# 파일 이름은 개정 때마다 바뀐다(예: ..._정본_CAM개정.docx) — 이름을 박아 두면 개정 전 파일을 가리킨 채 남는다(2026-10-05).
+CANON_DIR = r"D:\낙원\file"
+CANON_GLOB = "D_*시나리오_정본*.docx"
+
+
+def find_default_docx():
+    """CANON_DIR 에서 D 시나리오 정본을 찾는다. 정확히 하나일 때만 경로를, 아니면 None 을 돌려준다(후보 목록과 함께)."""
+    import glob
+    hits = sorted(h for h in glob.glob(os.path.join(CANON_DIR, CANON_GLOB))
+                  if not os.path.basename(h).startswith("~$"))
+    return (hits[0] if len(hits) == 1 else None), hits
 
 # ---------------------------------------------------------------------------
 # 허용 화자 — 이 8종 외에는 대사로 통과하지 않는다.
@@ -641,6 +651,7 @@ class Converter:
 
     # ------------------------------------------------------------------
     def run(self, docx_path: str, out_dir: str) -> int:
+        self.source_name = os.path.basename(docx_path)
         paras = read_docx(docx_path)
         cls = Classifier()
 
@@ -845,7 +856,7 @@ class Converter:
             out = [
                 "// ─────────────────────────────────────────────────────────────",
                 "// 무채색 낙원 — %s (화이트리스트 변환 v3 자동 생성)" % stem,
-                "// 정본: D_무채색_낙원_시나리오_정본.docx",
+                "// 정본: %s" % getattr(self, "source_name", "D 시나리오 정본"),
                 "// 매핑: Scenario/node_map.json",
                 "//",
                 "// ⚠ 이 파일은 '표시 텍스트 레이어'만 담는다.",
@@ -1239,8 +1250,13 @@ def main() -> int:
     if args and args[0].lower().endswith(".docx"):
         docx_path = args.pop(0)
     else:
-        docx_path = DEFAULT_DOCX
-        print("[정보] 정본 경로 생략 — 기본 정본을 사용합니다:\n       %s" % DEFAULT_DOCX)
+        docx_path, hits = find_default_docx()
+        if docx_path is None:
+            print("[오류] 정본을 하나로 정할 수 없습니다(%s 의 %s · %d개): %s — 경로를 인자로 주세요."
+                  % (CANON_DIR, CANON_GLOB, len(hits),
+                     ", ".join(os.path.basename(h) for h in hits) or "없음"), file=sys.stderr)
+            return 1
+        print("[정보] 정본 경로 생략 — 기본 정본을 사용합니다:\n       %s" % docx_path)
     if not os.path.exists(docx_path):
         print("[오류] 파일 없음: %s" % docx_path, file=sys.stderr)
         return 1
