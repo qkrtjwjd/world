@@ -76,8 +76,10 @@ public class SaveRabbit : MonoBehaviour
     /// <summary>InteractionTrigger.onInteract 에 연결한다.</summary>
     public void Save()
     {
+        // 지금 화면의 HUD 것을 쓴다 — PauseSystem 은 GameManager · 씬마다의 HUD 에 여럿 있어 아무거나 잡으면 숨은 HUD 의 패널을 연다.
         var ps = pauseSystem != null
             ? pauseSystem
+            : HudCanvas.CurrentPause != null ? HudCanvas.CurrentPause
             : FindAnyObjectByType<PauseSystem>(FindObjectsInactive.Include);
 
         if (ps == null)

@@ -2715,6 +2715,7 @@ GameObject:
   - component: {fileID: 5168755641192801340}
   - component: {fileID: 2201906483653555508}
   - component: {fileID: 3163357850257169576}
+  - component: {fileID: 2427392884213923146}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -2888,6 +2889,18 @@ MonoBehaviour:
   glowMaterial: {fileID: 0}
   gaugeRootGroup: {fileID: 2265946470508188207}
   sliderCanvasGroup: {fileID: 1462331979808900900}
+--- !u!114 &2427392884213923146
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 944835863621318438}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 119ea1938d5623443ace4e644ed05b5f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HudCanvas
 --- !u!1 &965970609803416885
 GameObject:
   m_ObjectHideFlags: 0

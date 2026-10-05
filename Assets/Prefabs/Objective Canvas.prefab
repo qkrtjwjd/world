@@ -1216,6 +1216,7 @@ GameObject:
   - component: {fileID: 3756904860497815977}
   - component: {fileID: 1529728822790235426}
   - component: {fileID: 4661390703636339707}
+  - component: {fileID: 4994706487897883618}
   m_Layer: 5
   m_Name: Objective Canvas
   m_TagString: Untagged
@@ -1311,6 +1312,19 @@ MonoBehaviour:
   m_BlockingMask:
     serializedVersion: 2
     m_Bits: 4294967295
+--- !u!114 &4994706487897883618
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6686286101185723401}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3763a5ff02f621c4990dd3c990340847, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PersistentRoot
+  key: ObjectiveCanvas
 --- !u!1 &6788691977626338762
 GameObject:
   m_ObjectHideFlags: 0

@@ -158,7 +158,7 @@ public class ObjectiveManager : MonoBehaviour
     {
         _hudSuppressCount++;
         if (hudPanel != null) hudPanel.SetActive(false);
-        if (PlayerStatusUI.Instance != null) PlayerStatusUI.Instance.gameObject.SetActive(false);
+        HudCanvas.SetSuppressed(true);   // HUD 루트를 끄지 않는다 — 거기 붙은 GaugeManager 가 멈춘다(HudCanvas)
         if (InteractionTextUI.Instance != null) InteractionTextUI.Instance.gameObject.SetActive(false);
     }
 
@@ -170,7 +170,7 @@ public class ObjectiveManager : MonoBehaviour
 
         if (!string.IsNullOrEmpty(_currentBody) && hudPanel != null)
             hudPanel.SetActive(true);
-        if (PlayerStatusUI.Instance != null) PlayerStatusUI.Instance.gameObject.SetActive(true);
+        HudCanvas.SetSuppressed(false);
         if (InteractionTextUI.Instance != null) InteractionTextUI.Instance.gameObject.SetActive(true);
     }
 
@@ -182,7 +182,7 @@ public class ObjectiveManager : MonoBehaviour
         if (hudPanel != null) hudPanel.SetActive(false);
         _currentBody = string.Empty;
         _hudSuppressCount = 0;
-        if (PlayerStatusUI.Instance != null) PlayerStatusUI.Instance.gameObject.SetActive(true);
+        HudCanvas.SetSuppressed(false);
         if (InteractionTextUI.Instance != null) InteractionTextUI.Instance.gameObject.SetActive(true);
     }
 

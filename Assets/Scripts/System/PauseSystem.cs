@@ -35,6 +35,10 @@ public class PauseSystem : MonoBehaviour
 
     void Update()
     {
+        // 입력은 지금 화면을 맡은 HUD 의 PauseSystem 하나만 받는다(HudCanvas). GameManager 에도 PauseSystem 이 있고
+        // 씬마다 HUD 가 겹쳐 남아, 여럿이 같은 인벤토리 패널을 한 프레임에 열었다 닫았다(2026-10-05 실측 — I 키가 듣지 않음).
+        if (HudCanvas.CurrentPause != this) return;
+
         // 키 리바인딩 중(또는 직후 프레임)에는 취소용 ESC·새로 바인딩된 키를 여기서 처리하지 않음
         if (SettingsPanelUI.IsRebinding) return;
 
@@ -50,7 +54,7 @@ public class PauseSystem : MonoBehaviour
 
         if (Input.GetKeyDown(inventoryKey))
         {
-            if (!YarnDialogue.IsRunning)
+            if (!YarnDialogue.IsRunning && HudCanvas.CurrentShown)   // 컷신으로 HUD 가 숨은 동안에는 열지 않는다(예전엔 HUD 루트가 꺼져 있었다)
                 if (!IsActive(pauseMenuPanel) && !DialogueLogUI.IsOpen)
                     ToggleInventory();
             return;
