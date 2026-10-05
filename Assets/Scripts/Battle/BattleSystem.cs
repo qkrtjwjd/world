@@ -1725,7 +1725,8 @@ public class BattleSystem : MonoBehaviour
         if (!string.IsNullOrEmpty(enemyAppearTrigger))
         {
             Animator anim = _enemyUnit.GetComponent<Animator>();
-            if (anim != null) anim.SetTrigger(enemyAppearTrigger);
+            // 적 애니메이션이 아직 없으면(컨트롤러 빈 자리) 건너뛴다 — 비어 있는 Animator 에 트리거를 걸면 경고만 난다(2026-10-05 숲 전투 실측)
+            if (anim != null && anim.runtimeAnimatorController != null) anim.SetTrigger(enemyAppearTrigger);
         }
     }
 
