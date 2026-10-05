@@ -158,7 +158,7 @@ public class ForestEntranceDirector : MonoBehaviour
             // 루에게 돌아올 때도 스크롤로 — 바로 추적으로 넘기면 2유닛을 한순간에 건너뛰어 컷처럼 보였다(실측).
             if (_inForest && lu != null)
                 yield return cd.ScrollTo((Vector2)lu.position + forwardOffset, leadScrollSpeed * 0.5f);
-            if (_inForest) cd.Track(forwardOffset);
+            if (_inForest) cd.Track(forwardOffset, rejoin: true);   // 스크롤 동안 루가 걸어간 만큼 튀지 않게 따라잡고 넘긴다
         }
 
         PlayIfNamed(distantStepsName);

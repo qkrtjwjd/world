@@ -38,6 +38,12 @@ public class CameraDirector : MonoBehaviour
     [Tooltip("스크롤 속도를 주지 않았을 때 쓰는 값(월드 유닛/초).")]
     public float defaultScrollSpeed = 6f;
 
+    [Header("추적 전환")]
+    [Tooltip("추적 치우침(오프셋)을 바꿀 때 걸리는 시간(초). 한 프레임에 바꾸면 컷처럼 튄다(2026-10-05 숲 입구 실측 1.5~1.8유닛).")]
+    public float offsetBlendSeconds = 0.5f;
+    [Tooltip("고정·스크롤에서 추적으로 돌아갈 때 앵커가 루를 따라잡는 감쇠 시간(초). 바로 넘기면 그사이 루가 걸어간 만큼 튄다.")]
+    public float rejoinSmoothTime = 0.25f;
+
     public Mode CurrentMode { get; private set; } = Mode.Track;
 
     private readonly Dictionary<string, CinemachineCamera> _shots = new();
@@ -45,6 +51,7 @@ public class CameraDirector : MonoBehaviour
     private Coroutine  _scrollRoutine;
     private Coroutine  _shakeRoutine;
     private float      _trackSmoothTime = -1f;
+    private Coroutine  _offsetRoutine;
 
     void Awake()
     {
@@ -63,7 +70,7 @@ public class CameraDirector : MonoBehaviour
     void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
     {
         if (this != Instance || mode != UnityEngine.SceneManagement.LoadSceneMode.Single) return;
-        if (CurrentMode == Mode.Track) return;
+        if (CurrentMode == Mode.Track && _anchor == null) return;   // 추적 복귀(앵커가 루를 따라잡는 중)도 정리한다
         StopScroll();
         if (_anchor != null) { Destroy(_anchor); _anchor = null; }
         CurrentMode = Mode.Track;
@@ -93,20 +100,84 @@ public class CameraDirector : MonoBehaviour
     // ─── 1. 추적 ─────────────────────────────────────────────────────
 
     /// <summary>루를 따라간다. offset 은 진행 방향 치우침 등(D-S#16A). 기본 (0,0).</summary>
-    public void Track(Vector2 offset = default)
+    /// <param name="rejoin">
+    /// true 면 고정·스크롤 앵커가 루를 따라잡은 뒤에 넘긴다(숲 입구 앞질러 스크롤 → 복귀).
+    /// false(기본)는 예전처럼 그 프레임에 루로 넘긴다 — 암전 속에서 루를 옮기고 추적으로 돌리는 컷신이 이쪽을 쓴다.
+    /// </param>
+    public void Track(Vector2 offset = default, bool rejoin = false)
     {
         var cam = CameraFollow.Instance;
         if (cam == null) return;
         StopScroll();
 
         var player = PlayerTransform();
-        if (player != null) cam.SetTarget(player);
-        cam.charLookAheadOffset = offset.x;
-        cam.charHeightOffset    = offset.y;
+        BlendOffset(offset);
         if (_trackSmoothTime >= 0f) { cam.smoothTime = _trackSmoothTime; _trackSmoothTime = -1f; }
 
-        if (_anchor != null) { Destroy(_anchor); _anchor = null; }
+        // 고정·스크롤 앵커에서 돌아오는 길이면 앵커가 루를 따라잡은 뒤에 넘긴다.
+        if (rejoin && _anchor != null && player != null) _scrollRoutine = StartCoroutine(RejoinPlayer(player));
+        else
+        {
+            if (player != null) cam.SetTarget(player);
+            if (_anchor != null) { Destroy(_anchor); _anchor = null; }
+        }
         CurrentMode = Mode.Track;
+    }
+
+    /// <summary>앵커를 루 쪽으로 감쇠 이동시키다가 겹치면 추적 대상을 루로 바꾼다. 루가 걸어도 따라간다.</summary>
+    IEnumerator RejoinPlayer(Transform player)
+    {
+        Vector2 vel = Vector2.zero;
+        while (_anchor != null && player != null)
+        {
+            Vector2 a = _anchor.transform.position, t = player.position;
+            if ((a - t).sqrMagnitude < 0.0004f) break;
+            a = Vector2.SmoothDamp(a, t, ref vel, rejoinSmoothTime, Mathf.Infinity, Time.deltaTime);
+            _anchor.transform.position = new Vector3(a.x, a.y, _anchor.transform.position.z);
+            yield return null;
+        }
+        _scrollRoutine = null;
+        var cam = CameraFollow.Instance;
+        if (cam != null && player != null) cam.SetTarget(player);
+        if (_anchor != null) { Destroy(_anchor); _anchor = null; }
+    }
+
+    /// <summary>추적 치우침을 <see cref="offsetBlendSeconds"/> 에 걸쳐 바꾼다.</summary>
+    void BlendOffset(Vector2 to)
+    {
+        StopOffsetBlend();
+        var cam = CameraFollow.Instance;
+        if (cam == null) return;
+        Vector2 from = new Vector2(cam.charLookAheadOffset, cam.charHeightOffset);
+        if ((from - to).sqrMagnitude < 1e-6f || offsetBlendSeconds <= 0f)
+        {
+            cam.charLookAheadOffset = to.x;
+            cam.charHeightOffset    = to.y;
+            return;
+        }
+        _offsetRoutine = StartCoroutine(DoBlendOffset(from, to));
+    }
+
+    IEnumerator DoBlendOffset(Vector2 from, Vector2 to)
+    {
+        for (float t = 0f; t < offsetBlendSeconds; t += Time.deltaTime)
+        {
+            var cam = CameraFollow.Instance;
+            if (cam == null) break;
+            Vector2 o = Vector2.Lerp(from, to, Mathf.SmoothStep(0f, 1f, t / offsetBlendSeconds));
+            cam.charLookAheadOffset = o.x;
+            cam.charHeightOffset    = o.y;
+            yield return null;
+        }
+        var c = CameraFollow.Instance;
+        if (c != null) { c.charLookAheadOffset = to.x; c.charHeightOffset = to.y; }
+        _offsetRoutine = null;
+    }
+
+    /// <summary>고정·스크롤은 앵커 = 카메라 중심 − 치우침이라, 치우침이 움직이면 멈춘 카메라가 흘러간다. 그 자리 값에서 멈춘다.</summary>
+    void StopOffsetBlend()
+    {
+        if (_offsetRoutine != null) { StopCoroutine(_offsetRoutine); _offsetRoutine = null; }
     }
 
     // ─── 2. 고정 ─────────────────────────────────────────────────────
@@ -117,6 +188,7 @@ public class CameraDirector : MonoBehaviour
         var cam = CameraFollow.Instance;
         if (cam == null) return;
         StopScroll();
+        StopOffsetBlend();
         EnsureAnchorAt(cam.transform.position);
         cam.SetTarget(_anchor.transform);
         CurrentMode = Mode.Hold;
@@ -133,6 +205,7 @@ public class CameraDirector : MonoBehaviour
         var cam = CameraFollow.Instance;
         if (cam == null) return null;
         StopScroll();
+        StopOffsetBlend();
         EnsureAnchorAt(cam.transform.position);
         cam.SetTarget(_anchor.transform);
         if (_trackSmoothTime < 0f) _trackSmoothTime = cam.smoothTime;

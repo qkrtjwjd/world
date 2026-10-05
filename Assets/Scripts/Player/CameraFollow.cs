@@ -295,11 +295,18 @@ public class CameraFollow : MonoBehaviour
     /// null 을 "바운드 없음" 으로 처리하면 방을 한 번 드나든 뒤로는 씬 경계가 영영 사라져,
     /// 마을 가장자리에서 담 밖 빈 공간이 화면 절반까지 들어온다.
     /// </remarks>
-    public void SetBound(BoxCollider2D newBound, bool snap = false)
+    /// <param name="blend">
+    /// true 면 즉시 자르지 않고 <see cref="boundBlendSeconds"/> 에 걸쳐 새 경계 안으로 미끄러져 들어간다.
+    /// 걸어서 넘는 경계(마을 ↔ 숲 — <see cref="CameraBoundZone"/>)용이다. 옛 경계 밖에 있던 카메라가
+    /// 한 프레임에 몇 유닛씩 튀면 컷처럼 보인다(2026-10-05 · 보호 구역 §2 사용자 승인).
+    /// </param>
+    public void SetBound(BoxCollider2D newBound, bool snap = false, bool blend = false)
     {
+        var prev = _bound;
         _bound = newBound != null ? newBound : defaultBound;
         DisableCinemachineConfiner();
-        if (snap) SnapToTarget();
+        if (snap) { SnapToTarget(); _boundBlend = 1f; }
+        else if (blend && _bound != prev && _hasLastClamped) { _blendFrom = _lastClamped; _boundBlend = 0f; }
     }
 
     public void SetTarget(Transform newTarget)
@@ -405,6 +412,15 @@ public class CameraFollow : MonoBehaviour
         confiner.enabled = false;
     }
 
+    // 경계 전환 보간(SetBound 의 blend). 1 이면 보간 없음.
+    [Header("Bound Blend")]
+    [Tooltip("걸어서 넘는 경계가 바뀔 때 새 경계 안으로 미끄러져 들어가는 시간(초).")]
+    public float boundBlendSeconds = 0.6f;
+    float   _boundBlend = 1f;
+    Vector3 _blendFrom;
+    Vector3 _lastClamped;
+    bool    _hasLastClamped;
+
     void ClampToBound()
     {
         if (_cam == null || !TryGetBoundRect(out Rect r)) return;
@@ -413,7 +429,19 @@ public class CameraFollow : MonoBehaviour
         Vector3 p = transform.position;
         p.x = r.width  <= halfW * 2f ? r.center.x : Mathf.Clamp(p.x, r.xMin + halfW, r.xMax - halfW);
         p.y = r.height <= halfH * 2f ? r.center.y : Mathf.Clamp(p.y, r.yMin + halfH, r.yMax - halfH);
+
+        // 경계가 바뀐 직후 — 직전 자리에서 지금 목표로 옮겨 간다. 목표는 매 프레임 다시 계산하므로 루가 걸어도 따라간다.
+        if (_boundBlend < 1f)
+        {
+            _boundBlend = Mathf.Min(1f, _boundBlend + Time.deltaTime / Mathf.Max(0.01f, boundBlendSeconds));
+            float k = Mathf.SmoothStep(0f, 1f, _boundBlend);
+            p.x = Mathf.Lerp(_blendFrom.x, p.x, k);
+            p.y = Mathf.Lerp(_blendFrom.y, p.y, k);
+        }
+
         transform.position = p;
+        _lastClamped    = p;
+        _hasLastClamped = true;
     }
 
     /// <summary>
