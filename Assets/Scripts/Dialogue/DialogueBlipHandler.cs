@@ -59,45 +59,51 @@ public class DialogueBlipHandler : ActionMarkupHandler
     /// <summary>글자 소리가 날 때 (화자 ID, 소리 이름)으로 발행된다. 배치 검증용.</summary>
     public static event System.Action<string, string> OnBlip;
 
-    AudioSource _src;
-    Voice _voice;
-    AudioClip _clip;
-    int _counted;
-
-    void Awake()
+    /// <summary>한 줄의 글자 소리 상태. 다른 타이프라이터(전투 동료 대사)도 <see cref="BeginLine"/> 으로 받아 쓴다.</summary>
+    public sealed class LineState
     {
-        _src = gameObject.AddComponent<AudioSource>();
-        _src.playOnAwake = false;
-        _src.spatialBlend = 0f;
-        AudioManager.RegisterVoice(_src);
+        internal Voice voice;
+        internal AudioClip clip;
+        internal int counted;
     }
 
-    void OnDestroy() => AudioManager.UnregisterVoice(_src);
+    // 소리는 DialoguePanel 이 아니라 따로 둔 상시 오브젝트에서 낸다. 대화가 끝나면 YarnCommandBridge 가 패널을 꺼서,
+    // 패널의 AudioSource 로는 전투 중 대사(필드 대화창이 꺼진 채 도는 줄)에 소리를 낼 수 없다.
+    AudioSource _src;
+    LineState _line;
+
+    AudioSource Source
+    {
+        get
+        {
+            if (_src != null) return _src;
+            var go = new GameObject("DialogueBlipAudio");
+            DontDestroyOnLoad(go);
+            _src = go.AddComponent<AudioSource>();
+            _src.playOnAwake = false;
+            _src.spatialBlend = 0f;
+            AudioManager.RegisterVoice(_src);
+            return _src;
+        }
+    }
+
+    void OnDestroy()
+    {
+        if (_src == null) return;
+        AudioManager.UnregisterVoice(_src);
+        Destroy(_src.gameObject);
+    }
 
     public override void OnPrepareForLine(MarkupParseResult line, TMP_Text text) { }
 
-    public override void OnLineDisplayBegin(MarkupParseResult line, TMP_Text text)
-    {
-        _counted = 0;
-        _voice = null;
-        _clip = null;
-    }
+    public override void OnLineDisplayBegin(MarkupParseResult line, TMP_Text text) => _line = null;
 
     public override YarnTask OnCharacterWillAppear(int currentCharacterIndex, MarkupParseResult line, CancellationToken cancellationToken)
     {
         // 화자는 첫 글자에서 정한다 — 이 시점이면 SpeakerStylePresenter 가 같은 줄을 이미 받았다.
-        if (_voice == null) ResolveVoice();
+        _line ??= BeginLine(SpeakerStylePresenter.CurrentSpeakerId);
         string text = line.Text;
-        if (_clip == null || text == null || currentCharacterIndex >= text.Length) return YarnTask.CompletedTask;
-
-        char c = text[currentCharacterIndex];
-        if (char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c)) return YarnTask.CompletedTask;
-
-        if (_counted++ % everyNthLetter != 0) return YarnTask.CompletedTask;
-
-        _src.pitch = _voice.pitch * (1f + Random.Range(-pitchJitter, pitchJitter));
-        _src.PlayOneShot(_clip, _voice.volume * AudioManager.MuffleFactor);
-        OnBlip?.Invoke(_voice.speakerId, _voice.sound);
+        if (text != null && currentCharacterIndex < text.Length) Letter(_line, text[currentCharacterIndex]);
         return YarnTask.CompletedTask;
     }
 
@@ -105,23 +111,36 @@ public class DialogueBlipHandler : ActionMarkupHandler
 
     public override void OnLineWillDismiss() { }
 
-    void ResolveVoice()
+    /// <summary>화자 ID 로 한 줄을 시작한다. null · 공백 = 나레이션, 표에 없는 화자 = 루.</summary>
+    public LineState BeginLine(string speakerId)
     {
-        string id = SpeakerStylePresenter.CurrentSpeakerId;
-        if (string.IsNullOrWhiteSpace(id)) id = NarrationId;
+        string id = string.IsNullOrWhiteSpace(speakerId) ? NarrationId : speakerId;
 
-        Voice fallback = null;
-        _voice = null;
+        Voice fallback = null, voice = null;
         foreach (var v in voices)
         {
-            if (v.speakerId == id) { _voice = v; break; }
+            if (v.speakerId == id) { voice = v; break; }
             if (v.speakerId == LuId) fallback = v;
         }
         // 표에 없는 화자 = 루({$이름}). 나레이션 등 등록된 무명 ID 는 위에서 이미 잡혔다.
-        if (_voice == null && !SpeakerStylePresenter.IsMappedSpeaker(id)) _voice = fallback;
-        if (_voice == null) { _voice = new Voice(); return; }   // 등록 화자인데 표에 없음 → 무음
+        if (voice == null && !SpeakerStylePresenter.IsMappedSpeaker(id)) voice = fallback;
 
+        var st = new LineState { voice = voice };
         var am = AudioManager.Instance;
-        if (am == null || !am.TryGetSound(_voice.sound, out _clip)) _clip = null;
+        if (voice != null && am != null && am.TryGetSound(voice.sound, out var clip)) st.clip = clip;
+        return st;   // voice 나 clip 이 없으면 무음 줄
+    }
+
+    /// <summary>글자 하나가 화면에 나타날 때 부른다. 공백 · 문장부호는 건너뛰고 N 글자마다 한 번 울린다.</summary>
+    public void Letter(LineState st, char c)
+    {
+        if (st?.clip == null) return;
+        if (char.IsWhiteSpace(c) || char.IsPunctuation(c) || char.IsSymbol(c)) return;
+        if (st.counted++ % everyNthLetter != 0) return;
+
+        var src = Source;
+        src.pitch = st.voice.pitch * (1f + Random.Range(-pitchJitter, pitchJitter));
+        src.PlayOneShot(st.clip, st.voice.volume * AudioManager.MuffleFactor);
+        OnBlip?.Invoke(st.voice.speakerId, st.voice.sound);
     }
 }

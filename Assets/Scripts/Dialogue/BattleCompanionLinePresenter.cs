@@ -33,6 +33,9 @@ public class BattleCompanionLinePresenter : DialoguePresenterBase
     [Tooltip("초당 글자 수. 0 이하면 타이핑 없이 즉시 표시한다.")]
     [SerializeField] float lettersPerSecond = 40f;
 
+    [Tooltip("글자 소리 화자표. 비우면 같은 루트 아래에서 찾는다(Dialogue.prefab ▸ DialoguePanel).")]
+    [SerializeField] DialogueBlipHandler blip;
+
     bool _warnedNoUI;
 
     static BattleCompanionLinePresenter _instance;
@@ -42,6 +45,7 @@ public class BattleCompanionLinePresenter : DialoguePresenterBase
     void Awake()
     {
         if (fieldPresenter == null) fieldPresenter = GetComponent<LinePresenter>();
+        if (blip == null) blip = GetComponentInChildren<DialogueBlipHandler>(true);
         _instance = this;
         Sync();
     }
@@ -112,6 +116,8 @@ public class BattleCompanionLinePresenter : DialoguePresenterBase
             float secondsPerLetter = 1f / lettersPerSecond;
             float accumulated = 0f;
             int   shown = 0;
+            // 글자 소리 — 필드 대화창과 같은 화자표 · 같은 규칙(2026-10-06). 빨리 넘기면 남은 글자에는 소리가 없다.
+            var blipLine = blip != null ? blip.BeginLine(line.CharacterName) : null;
 
             Draw(toPlayerBox, string.Empty);
 
@@ -121,6 +127,7 @@ public class BattleCompanionLinePresenter : DialoguePresenterBase
                 while (accumulated >= secondsPerLetter && shown < body.Length)
                 {
                     accumulated -= secondsPerLetter;
+                    blip?.Letter(blipLine, body[shown]);
                     shown++;
                 }
                 Draw(toPlayerBox, body.Substring(0, shown));
