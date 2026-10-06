@@ -134,6 +134,7 @@ public class ObjectiveManager : MonoBehaviour
     void ShowObjectiveNow(string header, string body)
     {
         _currentBody = body;
+        UISfx.Objective();   // 실제로 패널이 뜨는 순간 — 대사 중이라 미뤄졌으면 대사가 끝난 뒤에 난다
         if (objectiveHeaderText != null) objectiveHeaderText.text = header;
         if (objectiveBodyText   != null) objectiveBodyText.text   = body;
         if (objectivePanel != null) objectivePanel.SetActive(true);

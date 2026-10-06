@@ -114,7 +114,16 @@ public class SpeakerStylePresenter : DialoguePresenterBase
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() => _styles = null;
+    static void Reset() { _styles = null; CurrentSpeakerId = null; }
+
+    /// <summary>
+    /// 지금 표시 중인 줄의 화자 ID(<c>LocalizedLine.CharacterName</c>). 화자 없는 줄은 null.
+    /// 대사 글자 소리(<see cref="DialogueBlipHandler"/>)가 같은 판정을 쓰려고 읽는다.
+    /// </summary>
+    public static string CurrentSpeakerId { get; private set; }
+
+    /// <summary>매핑 표에 있는 화자인지. 표에 없는 화자는 루({$이름})다.</summary>
+    public static bool IsMappedSpeaker(string id) => !string.IsNullOrEmpty(id) && Styles.ContainsKey(id);
 
     // ── Presenter ─────────────────────────────────────────────────────
     void Awake()
@@ -132,6 +141,7 @@ public class SpeakerStylePresenter : DialoguePresenterBase
     public override YarnTask RunLineAsync(LocalizedLine line, LineCancellationToken token)
     {
         // 동기 프롤로그에서만 처리한다. await 를 두면 LinePresenter 의 대입 순서를 놓친다.
+        CurrentSpeakerId = line?.CharacterName;
         if (applyStyles && linePresenter != null) Apply(line);
         return YarnTask.CompletedTask;
     }

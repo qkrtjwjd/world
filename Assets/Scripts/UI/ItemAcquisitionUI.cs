@@ -49,6 +49,7 @@ public class ItemAcquisitionUI : MonoBehaviour
     public void ShowNotifications(List<ItemData> items)
     {
         if (items == null || items.Count == 0 || notificationPanel == null) return;
+        UISfx.Item();
 
         // 종류별 수량 집계
         var counts = new Dictionary<ItemData, int>();

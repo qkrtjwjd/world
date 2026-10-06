@@ -307,6 +307,15 @@ public class AudioManager : PersistentSingleton<AudioManager>
     public bool HasSound(string soundName)
         => !string.IsNullOrEmpty(soundName) && _lookup != null && _lookup.ContainsKey(soundName);
 
+    /// <summary>
+    /// 등록된 클립을 경고 없이 꺼낸다. 자기 AudioSource 로 따로 재생하는 쪽(대사 글자 소리 등)이 쓴다.
+    /// </summary>
+    public bool TryGetSound(string soundName, out AudioClip clip)
+    {
+        clip = null;
+        return !string.IsNullOrEmpty(soundName) && _lookup != null && _lookup.TryGetValue(soundName, out clip);
+    }
+
     bool TryGetClip(string soundName, out AudioClip clip)
     {
         if (_lookup != null && _lookup.TryGetValue(soundName, out clip)) return true;

@@ -148,6 +148,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         PlayerPrefs.Save();
         // 토끼로 저장하면 중단 저장을 지운다 — 복귀 지점이 둘이 되지 않게 (CLAUDE.md §8)
         DeleteSuspend();
+        UISfx.Save();
         Dbg.Log($"[SaveManager] 슬롯 {slot} 저장 완료");
     }
 

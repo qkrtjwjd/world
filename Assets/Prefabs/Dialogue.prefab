@@ -979,6 +979,7 @@ GameObject:
   - component: {fileID: 5247022120648049866}
   - component: {fileID: 1862077877261583731}
   - component: {fileID: 7735182946103275641}
+  - component: {fileID: 1072684833585706849}
   m_Layer: 5
   m_Name: DialoguePanel
   m_TagString: Untagged
@@ -1070,7 +1071,8 @@ MonoBehaviour:
   wordsPerSecond: 10
   customTypewriter:
     targetObject: {fileID: 0}
-  eventHandlers: []
+  eventHandlers:
+  - {fileID: 1072684833585706849}
 --- !u!114 &7735182946103275641
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1086,3 +1088,62 @@ MonoBehaviour:
   linePresenter: {fileID: 1862077877261583731}
   nameBackground: {fileID: 6161928602958899000}
   applyStyles: 1
+--- !u!114 &1072684833585706849
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9035235738118080561}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72b7714c836fcf645bdd1f1e12929a05, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::DialogueBlipHandler
+  voices:
+  - speakerId: "\uB8E8"
+    sound: blip_lu
+    volume: 1
+    pitch: 1
+  - speakerId: "\uB8E8\uB3C5\uBC31"
+    sound: blip_lu
+    volume: 0.45
+    pitch: 0.95
+  - speakerId: "\uC138\uB77C"
+    sound: blip_sera
+    volume: 1
+    pitch: 1
+  - speakerId: "\uC138\uB77C\uBAA9\uC18C\uB9AC"
+    sound: blip_sera
+    volume: 0.8
+    pitch: 0.85
+  - speakerId: "\uCFE0\uB8E8"
+    sound: blip_kuru
+    volume: 1
+    pitch: 1
+  - speakerId: "\uC194"
+    sound: blip_sol
+    volume: 1
+    pitch: 1
+  - speakerId: radio_yu
+    sound: blip_radio
+    volume: 0.9
+    pitch: 1
+  - speakerId: "\uBBF8\uB8E8"
+    sound: blip_default
+    volume: 0.9
+    pitch: 1.18
+  - speakerId: "\uC544\uBAA8"
+    sound: blip_default
+    volume: 0.9
+    pitch: 1.08
+  - speakerId: "\uBD80\uC5C9\uC774"
+    sound: blip_default
+    volume: 0.7
+    pitch: 0.75
+  - speakerId: "\uB098\uB808\uC774\uC158"
+    sound: blip_default
+    volume: 0.5
+    pitch: 1
+  everyNthLetter: 2
+  pitchJitter: 0.03

@@ -348,6 +348,9 @@ public class SolTradeUI : MonoBehaviour
             // 클릭 리스너를 붙이지 않는다. 프리팹에 Button 이 있어도 무반응이어야 한다.
             var btn = go.GetComponent<Button>();
             if (btn != null) btn.onClick.RemoveAllListeners();
+            // 결정음도 내지 않는다 — UISfx 가 Button 에 자동으로 붙이는 것을 무음으로 막아 둔다.
+            if (btn != null && go.GetComponent<UiSubmitSfx>() == null)
+                go.AddComponent<UiSubmitSfx>().mode = UiSubmitSfx.Mode.Mute;
         }
     }
 

@@ -189,6 +189,7 @@ public class InventoryManager : MonoBehaviour, IInventoryService
 
     void ShowInventoryFullNotice()
     {
+        UISfx.Buzzer();
         ItemNotificationUI.Instance?.Show("아이템 창이 가득 찼습니다.");
     }
 
