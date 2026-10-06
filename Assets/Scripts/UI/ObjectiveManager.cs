@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
@@ -45,7 +46,21 @@ public class ObjectiveManager : MonoBehaviour
         DialogueEvents.OnDialogueStarted += OnDialogueStarted;
         DialogueEvents.OnDialogueEnded   += OnDialogueEnded;
         SettingsManager.OnShowObjectiveUIChanged += SetObjectiveUIEnabled;
+        SceneManager.sceneLoaded += OnSceneLoaded;
         _objectiveUIEnabled = SettingsManager.Instance?.showObjectiveUI ?? true;
+    }
+
+    /// <summary>
+    /// 씬을 통째로 바꾸면 HUD 숨김을 처음부터 센다. 컷신 · 대화의 숨김은 씬을 넘어 이어지지 않는다 —
+    /// 넘어가서도 숨겨야 하는 연출(BE#02 집 파트)은 새 씬에서 다시 HideHUD 를 부른다.
+    /// 세지 않으면 S#21 데모 끝이 HUD 를 숨긴 채 타이틀로 가서, 새 게임에서 대화가 끝나도 HUD 가 돌아오지 않았다(2026-10-05).
+    /// </summary>
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if (Instance != this || mode != LoadSceneMode.Single) return;
+        _hudSuppressCount = 0;
+        _dialogueRunning  = false;
+        HudCanvas.SetSuppressed(false);
     }
 
     void OnDestroy()
@@ -53,6 +68,7 @@ public class ObjectiveManager : MonoBehaviour
         DialogueEvents.OnDialogueStarted -= OnDialogueStarted;
         DialogueEvents.OnDialogueEnded   -= OnDialogueEnded;
         SettingsManager.OnShowObjectiveUIChanged -= SetObjectiveUIEnabled;
+        SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
     // ── 대사 시작/종료 ───────────────────────────────────────────────

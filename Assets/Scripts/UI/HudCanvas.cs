@@ -50,6 +50,9 @@ public class HudCanvas : MonoBehaviour
         _all.Remove(this);
         _all.Add(this);
         Current = this;
+        // 새 씬의 HUD 는 숨김 없이 시작한다. 예전에는 숨김이 그 씬 HUD 오브젝트에만 걸려 씬이 바뀌면 저절로 풀렸다 —
+        //   S#21 데모 끝은 HUD 를 숨긴 채 타이틀로 가므로, 풀지 않으면 새 게임 Home 에서 HUD 가 계속 숨는다(2026-10-05).
+        _suppressed = false;
         ApplyAll();
     }
 
