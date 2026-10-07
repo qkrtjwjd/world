@@ -72,8 +72,9 @@ public class AtticBoxInteraction : MonoBehaviour
     // 2026-09-27: 시퀀스 끝의 목표 「아빠를 찾으러 가세요.」를 뺐다(사용자 결정). D 에 없는 문구이고,
     //   S#12 [튜토리얼] 을 즉시 덮어써 보이지 않게 했다. D 는 S#12 뒤 튜토리얼 하나만 둔다(문단 403).
 
-    [Tooltip("아빠의 유품을 발견했을 때의 인형화 변동. 정본 미명시 — 기존 값 유지.")]
-    public float corruptionOnFindingKeepsakes = -3f;
+    // 2026-10-07: 「유품 발견 인형화 −3」(corruptionOnFindingKeepsakes)을 걷어냈다. D S#10 [TRIGGER] 에 인형화 변동이 없고,
+    //   C 의 데모 고정값 목록(마시멜로 +2 · 몰살 +1 · 불살 −1 · 굴복 +2 · 숲 미니 이벤트 B −3 · 자기 결심 −1)에도 없다.
+    //   이 값 때문에 데모 시작 인형화 20 이 집에서 17 로 내려가 C 의 하한·상한 계산(10~32)을 벗어날 수 있었다.
 
     private bool _used;
 
@@ -154,10 +155,6 @@ public class AtticBoxInteraction : MonoBehaviour
         GameState.isFrontDoorKeyFound = true;
 
         yield return WaitForAcquisitionNotice();
-
-        // 아빠의 유품 발견
-        CorruptionManager.Instance?.AddCorruption(corruptionOnFindingKeepsakes);
-        Dbg.Log($"[AtticBoxInteraction] S#10 유품 발견 — 인형화 {corruptionOnFindingKeepsakes}");
 
         if (!string.IsNullOrEmpty(yarnNode_S10_Coat))
             yield return YarnDialogue.PlayAndWait(yarnNode_S10_Coat, false);

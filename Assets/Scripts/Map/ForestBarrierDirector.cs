@@ -254,7 +254,7 @@ public class ForestBarrierDirector : MonoBehaviour
 
     [Tooltip("딱딱. 두 번 — 다시 걷기 시작하는 순간에 맞춘다(C-7-2 숲 후반).\n" +
              "「분노 이후의 당혹감」 곡선과 같은 강도이며 새 강도를 만들지 않는다.")]
-    public string sfxClicking = "";
+    public string sfxClicking = "ceramic_tap";
 
     [Tooltip("딱딱 두 번 사이의 간격(초).")]
     public float clickingGap = 0.22f;

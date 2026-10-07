@@ -222,12 +222,16 @@ public class AudioManager : PersistentSingleton<AudioManager>
     }
 
     // ── 재생 ─────────────────────────────────────────────────────────────
+    /// <summary>등록된 이름의 효과음이 실제로 재생될 때 이름과 함께 발행된다. 배치 검증용(UISfx.OnPlayed 와 같은 방식).</summary>
+    public static event System.Action<string> OnPlayed;
+
     /// <summary>등록된 이름의 효과음을 PlayOneShot으로 재생한다.</summary>
     public void Play(string soundName)
     {
         if (!TryGetClip(soundName, out var clip)) return;
         float vol = (SettingsManager.Instance?.sfxVolume ?? 1f) * MuffleFactor;
         audioSource.PlayOneShot(clip, vol);
+        OnPlayed?.Invoke(soundName);
     }
 
     /// <summary>AudioClip을 직접 전달해 재생한다.</summary>

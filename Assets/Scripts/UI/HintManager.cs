@@ -32,9 +32,20 @@ public class HintManager : MonoBehaviour
     static readonly Color IconCol = new Color(1.00f, 0.85f, 0.40f);
 
     // ── 내부 상태 ────────────────────────────────────────────────────────────
-    CanvasGroup _group;
-    TMP_Text    _bodyText;
-    Coroutine   _activeCoroutine;
+    CanvasGroup   _group;
+    TMP_Text      _bodyText;
+    Coroutine     _activeCoroutine;
+    RectTransform _panelRt;
+    RectTransform _bodyRt;
+    Image         _bg;
+    GameObject    _iconGo;
+
+    // 작은 힌트(ShowSmallHint) — 첫 조작 씬의 이동 안내처럼 「방해가 되지 않는 선에서」 띄우는 것 (D S#01 문단 30).
+    static readonly Vector2 PanelSize      = new Vector2(420f, 64f);
+    static readonly Vector2 SmallPanelSize = new Vector2(132f, 18f);
+    const float BodyFontSize      = 15f;
+    const float SmallBodyFontSize = 9f;
+    const float SmallBgAlpha      = 0.45f;
 
     // ── 자동 생성 ────────────────────────────────────────────────────────────
     static void CreateInstance()
@@ -60,12 +71,14 @@ public class HintManager : MonoBehaviour
         var bg = panel.AddComponent<Image>();
         bg.color = PanelBg;
         bg.raycastTarget = false;
+        _bg = bg;
 
         var rt = panel.GetComponent<RectTransform>();
+        _panelRt = rt;
         rt.anchorMin = rt.anchorMax = new Vector2(0f, 0f);
         rt.pivot     = new Vector2(0f, 0f);
         rt.anchoredPosition = new Vector2(24f, 24f);
-        rt.sizeDelta = new Vector2(420f, 64f);
+        rt.sizeDelta = PanelSize;
 
         _group = panel.AddComponent<CanvasGroup>();
         _group.alpha = 0f;
@@ -73,6 +86,7 @@ public class HintManager : MonoBehaviour
 
         // 💡 아이콘
         var iconGo = new GameObject("Icon");
+        _iconGo = iconGo;
         iconGo.transform.SetParent(panel.transform, false);
         var icon = iconGo.AddComponent<TextMeshProUGUI>();
         icon.text      = "!";
@@ -92,11 +106,12 @@ public class HintManager : MonoBehaviour
         var textGo = new GameObject("Body");
         textGo.transform.SetParent(panel.transform, false);
         _bodyText = textGo.AddComponent<TextMeshProUGUI>();
-        _bodyText.fontSize  = 15f;
+        _bodyText.fontSize  = BodyFontSize;
         _bodyText.color     = Color.white;
         _bodyText.alignment = TextAlignmentOptions.MidlineLeft;
         _bodyText.raycastTarget = false;
         var textRt = textGo.GetComponent<RectTransform>();
+        _bodyRt = textRt;
         textRt.anchorMin = new Vector2(0f, 0f);
         textRt.anchorMax = new Vector2(1f, 1f);
         textRt.offsetMin = new Vector2(48f, 6f);
@@ -129,7 +144,19 @@ public class HintManager : MonoBehaviour
         if (HasShown(id)) return;
 
         PlayerPrefs.SetInt(PrefsPrefix + id, 1);
-        Instance.Play(text, duration);
+        Instance.Play(text, duration, small: false);
+    }
+
+    /// <summary>
+    /// 작은 힌트 — 아이콘 없이 한 줄, 반투명 바탕. 규칙(통산 1회 · 설정 OFF 시 미표시)은 <see cref="ShowHint"/> 와 같다.
+    /// </summary>
+    public static void ShowSmallHint(string id, string text, float duration = 4f)
+    {
+        if (!(SettingsManager.Instance?.showTutorialHints ?? true)) return;
+        if (HasShown(id)) return;
+
+        PlayerPrefs.SetInt(PrefsPrefix + id, 1);
+        Instance.Play(text, duration, small: true);
     }
 
     /// <summary>표시 중인 힌트를 즉시 숨긴다.</summary>
@@ -149,11 +176,26 @@ public class HintManager : MonoBehaviour
         PlayerPrefs.GetInt(PrefsPrefix + id, 0) == 1;
 
     // ── 내부 ────────────────────────────────────────────────────────────────
-    void Play(string text, float duration)
+    void Play(string text, float duration, bool small)
     {
+        ApplySize(small);
         _bodyText.text = text;
         if (_activeCoroutine != null) StopCoroutine(_activeCoroutine);
         _activeCoroutine = StartCoroutine(HintRoutine(duration));
+    }
+
+    void ApplySize(bool small)
+    {
+        _panelRt.sizeDelta = small ? SmallPanelSize : PanelSize;
+        _panelRt.anchoredPosition = small ? new Vector2(12f, 12f) : new Vector2(24f, 24f);
+        _iconGo.SetActive(!small);
+        _bodyText.fontSize = small ? SmallBodyFontSize : BodyFontSize;
+        _bodyText.alignment = small ? TextAlignmentOptions.Center : TextAlignmentOptions.MidlineLeft;
+        _bodyRt.offsetMin = small ? new Vector2(4f, 1f)  : new Vector2(48f, 6f);
+        _bodyRt.offsetMax = small ? new Vector2(-4f, -1f) : new Vector2(-12f, -6f);
+        var c = PanelBg;
+        if (small) c.a = SmallBgAlpha;
+        _bg.color = c;
     }
 
     IEnumerator HintRoutine(float duration)

@@ -9,6 +9,8 @@ using UnityEngine;
 ///     미루가 몸을 돌려 진열대 위에 반죽을 올려둔다(루에게 건네지 않는다) → [아이템 획득: 빵 반죽] (591~598).
 ///   · 그 뒤로 단검을 쥐면 멈추고 바라보기만 한다 — 「한번만 말한다」(595).
 ///   · 단검을 치우면 다시 같은 말을 반복한다(599).
+///   · 환상 필터에서 반복이 길어지면 루가 목 옆을 한 번 긁는다 — 대사 없음, 2초 뒤 대화가 이어진다(592 · 602 · B-루-10).
+///     데모에서 여기 한 번만 쓴다. 동작 그림은 아트 대기 — 루 Animator 에 「NeckScratch」 트리거가 생기면 그대로 재생된다.
 ///
 /// 2026-09-27 정본 대조로 고쳤다(배치 실측 · 코드 대조):
 ///   · 단검 판정이 DaggerSystem.IsEquipped(= 단검을 가졌는가)라 S#12 이후 마을 내내 「단검 상태」였다 → 쥐고 있는가(IsRealityView).
@@ -37,9 +39,23 @@ public class BakeryNPC : MonoBehaviour
     [Header("설정")]
     [SerializeField] private float loopInterval = 4f;
 
+    [Header("목 긁기 (D 592 · 602 — 데모에서 한 번)")]
+    [Tooltip("같은 인사를 이 횟수만큼 들은 뒤에 루가 목을 긁는다. 「대화가 일정 길이를 넘으면」.")]
+    [SerializeField] private int   neckScratchAfterLines = 2;
+    [Tooltip("긁는 동작 동안 대화를 멈추는 시간(초). 정본 「2초 뒤 모션이 끝나면 대화가 이어진다」.")]
+    [SerializeField] private float neckScratchSeconds    = 2f;
+    const string NeckScratchTrigger = "NeckScratch";
+
+    // 데모 통틀어 한 번(602). 세이브에는 남기지 않는다 — 불러온 뒤 한 번 더 나와도 진행에 영향이 없다.
+    static bool _neckScratchDone;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => _neckScratchDone = false;
+
     private bool      _playerNear;
     private Coroutine _loopRoutine;
     private bool      _storyRunning;
+    private bool      _scratching;
+    private ClearSky.SimplePlayerController _scratchLock;   // 목 긁기 중에는 반복을 끊지 않는다 — 끊으면 조작 잠금이 풀리지 않는다
 
     static bool DaggerHeld => DaggerFilterController.IsRealityView;
     static bool StoryDone  => GameState.isBreadDoughAcquired;
@@ -52,7 +68,7 @@ public class BakeryNPC : MonoBehaviour
             npcRenderer.sprite = DaggerHeld && daggerSprite != null ? daggerSprite : normalSprite;
 
         // 단검을 처음 쥔 순간 — 반복을 끊고 한 번만 반응한다.
-        if (DaggerHeld && !StoryDone && !_storyRunning)
+        if (DaggerHeld && !StoryDone && !_storyRunning && !_scratching)
         {
             if (_loopRoutine != null) { StopCoroutine(_loopRoutine); _loopRoutine = null; }
             if (YarnDialogue.IsRunning) YarnDialogue.Runner.Stop();   // 반복 중이던 인사를 끊는다 — 행동을 멈춘다(593)
@@ -72,6 +88,7 @@ public class BakeryNPC : MonoBehaviour
         if (!other.CompareTag("Player") || other.isTrigger) return;
         _playerNear = false;
         if (_loopRoutine != null) { StopCoroutine(_loopRoutine); _loopRoutine = null; }
+        EndScratchIfCut();
         if (npcRenderer != null && normalSprite != null)
             npcRenderer.sprite = normalSprite;
     }
@@ -98,12 +115,64 @@ public class BakeryNPC : MonoBehaviour
     /// <summary>평소의 반복. 단검을 쥐고 있는 동안에는 멈추고 바라보기만 한다 — 말하지 않는다.</summary>
     IEnumerator DialogueLoop()
     {
+        int heard = 0;
         while (_playerNear)
         {
             if (!YarnDialogue.IsRunning && !DaggerHeld && !_storyRunning)
+            {
                 yield return YarnDialogue.PlayAndWait(loopNodeNormal, false);
+                heard++;
+
+                // 환상 필터 상태의 NPC 대화가 길어지면 자동 1회(602). 단검을 쥐었으면 환상이 아니므로 건너뛴다.
+                if (!_neckScratchDone && heard >= neckScratchAfterLines && _playerNear && !DaggerHeld)
+                {
+                    _neckScratchDone = true;
+                    yield return NeckScratch();
+                    continue;   // 동작이 끝나면 대화가 이어진다 — 반복 간격을 기다리지 않는다
+                }
+            }
             yield return new WaitForSeconds(loopInterval);
         }
         _loopRoutine = null;
+    }
+
+    /// <summary>루가 슬쩍 손을 들어 목 옆을 긁는다. 대사 없이, 그동안 조작을 잠근다.</summary>
+    IEnumerator NeckScratch()
+    {
+        _scratching = true;
+        var lu = _scratchLock = YarnDialogue.LockPlayer();
+        var anim = lu != null ? lu.GetComponent<Animator>() : null;
+        // 파라미터가 없는 컨트롤러에 트리거를 걸면 경고가 난다 — 그림이 오기 전에는 멈춤만 남는다.
+        if (anim != null && HasTrigger(anim, NeckScratchTrigger)) anim.SetTrigger(NeckScratchTrigger);
+
+        yield return new WaitForSeconds(neckScratchSeconds);
+
+        if (anim != null && HasTrigger(anim, NeckScratchTrigger)) anim.ResetTrigger(NeckScratchTrigger);
+        YarnDialogue.UnlockPlayer(lu);
+        _scratchLock = null;
+        _scratching = false;
+    }
+
+    /// <summary>목 긁기 도중 반복이 끊기면(순찰 발각 연출로 루가 옮겨지는 등) 걸어 둔 조작 잠금을 돌려준다.</summary>
+    void EndScratchIfCut()
+    {
+        if (!_scratching) return;
+        YarnDialogue.UnlockPlayer(_scratchLock);
+        _scratchLock = null;
+        _scratching = false;
+    }
+
+    void OnDisable()
+    {
+        if (_loopRoutine != null) { StopCoroutine(_loopRoutine); _loopRoutine = null; }
+        EndScratchIfCut();
+    }
+
+    static bool HasTrigger(Animator anim, string name)
+    {
+        if (anim.runtimeAnimatorController == null) return false;
+        foreach (var p in anim.parameters)
+            if (p.type == AnimatorControllerParameterType.Trigger && p.name == name) return true;
+        return false;
     }
 }

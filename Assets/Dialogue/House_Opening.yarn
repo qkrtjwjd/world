@@ -213,7 +213,8 @@ title: House_Doorbell_Ring
 
 title: House_Doorbell_Tap
 ---
-<<play_sfx "ceramic_tap">>
+// 2026-10-07: 여기 있던 <<play_sfx "ceramic_tap">> 을 뺐다. 딱 1회는 바로 앞 KitchenTriggerCutscene.ShowCeramicHand(1)
+//   (도자기 손 오버레이 + 소리)이 낸다 — 둘 다 울려 S#04B 가 2회로 들렸다(D 114 「딱. — 한 번.」).
 
 // [지문 제거] {$이름}의 도자기 손가락이 저절로 딱, 소리를 낸다.
 
@@ -312,8 +313,8 @@ title: House_Eavesdrop_Tea
 
 // [지문 제거] 이어지는 차 마시는 소리. 후, 하고 식히는 숨. 오독, 각설탕 씹히는 소리.
 
-<<play_sfx "ceramic_tap">>
-<<play_sfx "ceramic_tap">>
+// 2026-10-07: 여기 있던 <<play_sfx "ceramic_tap">> 두 줄을 뺐다. 딱딱 2회는 이 노드 직후
+//   KitchenTriggerCutscene.ShowCeramicHand(2) 가 낸다 — 둘 다 울려 S#04C 가 4회로 들렸다(D 152 「딱딱.」).
 
 // [지문 제거] {이름조사("는")} 자신도 모르게 딱딱 소리를 낸다. 부엌의 소리가 멈춘다.
 ===
@@ -495,6 +496,8 @@ title: House_Yard_Sugar
 // [지문 제거] 그리고 창문의 잠금장치 — 누가 만진 적도 없는데 — 풀려 있다.
 
 <<play_sfx "ceramic_tap">>
+// 2026-10-07: 같은 프레임에 두 번 부르면 한 소리로 겹친다 — ShowCeramicHand 와 같은 0.3초 간격을 둔다.
+<<wait 0.3>>
 <<play_sfx "ceramic_tap">>
 
 // [지문 제거] {$이름}의 손가락이 저절로 딱. 딱. 소리를 낸다. 다행히 물소리에 묻힌다.
@@ -586,9 +589,11 @@ title: House_Window_Plea
 
 // [지문 제거] 잠금장치는 다시 걸려 있다. 창유리에 이마를 대고 아주 작게 중얼거린다.
 
-// UI 수동 — 아래 한 줄은 자막 크기를 평소보다 작게 표시한다. 소리 내어 말할 자신이 없는 상태다.
+// 아래 한 줄은 자막 크기를 평소보다 작게 표시한다(D 281). 소리 내어 말할 자신이 없는 상태다.
+//   2026-10-07: <<small_line>>(SpeakerStylePresenter)이 다음 한 줄만 0.8배로 띄운다. 전에는 주석뿐이었다.
 
 <<showSprite "루" "neutral" "right" "fixed">>
+<<small_line>>
 {$이름}: …부엉이가 당신 거였다면요. …한번만 더 와요.
 
 <<hideSprite "both">>

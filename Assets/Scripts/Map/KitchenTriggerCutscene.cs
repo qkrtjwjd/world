@@ -254,8 +254,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
         yield return YarnDialogue.PlayAndWait(yarnNode_S4B_Sugar, false);
 
-        // 문이 열린다. 딱. 딱. 딱.
-        yield return StartCoroutine(ShowCeramicHand(3));
+        // 2026-10-07: 여기 있던 「문이 열린다. 딱. 딱. 딱.」(ShowCeramicHand(3))을 걷어냈다.
+        //   D 2026-08-08 개정이 삭제한 부분이다 — S#04B 의 딱은 초인종 뒤 1회뿐(E v5.1 · C-7-2 「1 → 2 → 2 → 1」).
     }
 
     // ─── S#04C — 문틈 엿듣기 ──────────────────────

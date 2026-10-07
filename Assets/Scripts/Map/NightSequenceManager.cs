@@ -226,6 +226,10 @@ public class NightSequenceManager : MonoBehaviour
 
         UnlockPlayer();
 
+        // D S#01 문단 30 — 첫 조작 씬이므로 이동 튜토리얼 UI 를 아주 작게. 방해가 되지 않는 선에서.
+        //   목표가 아니라 조작 안내다(목표 표시 없음 · 문단 20 은 그대로). 이동 키는 런타임에 바꿀 수 없어 고정 문구.
+        HintManager.ShowSmallHint("move_key", "WASD · 방향키  이동");
+
         // 부엉이가 일정 간격으로 울며 창문 방향으로 유도한다.
         _owlCallLoop = StartCoroutine(OwlCallLoop());
 

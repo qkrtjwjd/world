@@ -402,6 +402,11 @@ tags: ingame
 쿠루: 무기. 칼이든 뭐든.
 
 // ※ 딱. 딱. 도자기 마디가 부딪히는 소리 — 인형화 간접 지표(CLAUDE.md §7)
+// 2026-10-07: D S#19A [SFX] 「딱. 딱.」(문단 940 · 951)이 주석으로만 있어 울리지 않았다. 「무기. 칼이든 뭐든.」 직후다.
+//   간격은 S#21 의 딱딱(ForestBarrierDirector.clickingGap 0.22초)에 맞춘다.
+<<play_sfx "ceramic_tap">>
+<<wait 0.22>>
+<<play_sfx "ceramic_tap">>
 <<showSprite "루" "flustered" "right">>
 {$이름}: 이거… 있는데.
 {$이름}: 근데 저 이런 거 써 본 적 없어요. 엄마도 위험하다고 —

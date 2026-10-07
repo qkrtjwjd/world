@@ -114,7 +114,46 @@ public class SpeakerStylePresenter : DialoguePresenterBase
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset() { _styles = null; CurrentSpeakerId = null; }
+    static void Reset() { _styles = null; CurrentSpeakerId = null; _nextLineScale = 1f; }
+
+    // ── 한 줄만 작게 ──────────────────────────────────────────────────
+    // D S#04H 문단 281 「이 대사는 자막 크기를 평소보다 작게 표시한다」. 대사 문구에 태그를 붙이지 않고
+    // 바로 앞 커맨드로 건다 — 문구가 바뀌면 정본 대조(diff_vs_current)에 걸린다.
+    // 글자 크기 설정(YarnCommandBridge.ApplyTextSize)이 정한 크기에 배율만 곱하고, 다음 줄에서 되돌린다.
+    const float SmallLineScale = 0.8f;
+    static float _nextLineScale = 1f;
+
+    bool  _sizeScaled;
+    float _sizeBefore;
+    float _sizeScaledTo;
+
+    // <<small_line>> — 바로 다음 대사 한 줄만 글자를 작게 띄운다.
+    [YarnCommand("small_line")]
+    public static void SmallNextLine() => _nextLineScale = SmallLineScale;
+
+    void ApplyLineScale()
+    {
+        RestoreLineScale();
+        float scale = _nextLineScale;
+        _nextLineScale = 1f;
+        var body = linePresenter != null ? linePresenter.lineText : null;
+        if (body == null || Mathf.Approximately(scale, 1f)) return;
+
+        _sizeBefore   = body.fontSize;
+        _sizeScaledTo = _sizeBefore * scale;
+        body.fontSize = _sizeScaledTo;
+        _sizeScaled   = true;
+    }
+
+    void RestoreLineScale()
+    {
+        if (!_sizeScaled) return;
+        _sizeScaled = false;
+        var body = linePresenter != null ? linePresenter.lineText : null;
+        // 그 사이 글자 크기 설정이 바뀌어 다시 쓰였으면 그 값을 존중한다.
+        if (body != null && Mathf.Approximately(body.fontSize, _sizeScaledTo))
+            body.fontSize = _sizeBefore;
+    }
 
     /// <summary>
     /// 지금 표시 중인 줄의 화자 ID(<c>LocalizedLine.CharacterName</c>). 화자 없는 줄은 null.
@@ -143,12 +182,15 @@ public class SpeakerStylePresenter : DialoguePresenterBase
         // 동기 프롤로그에서만 처리한다. await 를 두면 LinePresenter 의 대입 순서를 놓친다.
         CurrentSpeakerId = line?.CharacterName;
         if (applyStyles && linePresenter != null) Apply(line);
+        ApplyLineScale();
         return YarnTask.CompletedTask;
     }
 
     public override YarnTask OnDialogueCompleteAsync()
     {
         RestoreBaseline();
+        RestoreLineScale();
+        _nextLineScale = 1f;
         return YarnTask.CompletedTask;
     }
 
