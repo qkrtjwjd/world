@@ -1,6 +1,6 @@
 // ─────────────────────────────────────────────────────────────
 // 무채색 낙원 — House_Opening (화이트리스트 변환 v3 자동 생성)
-// 정본: D_무채색_낙원_시나리오_정본.docx
+// 정본: D_무채색_낙원_시나리오_정본_CAM개정.docx
 // 매핑: Scenario/node_map.json
 //
 // ⚠ 이 파일은 '표시 텍스트 레이어'만 담는다.
@@ -151,9 +151,9 @@ title: House_Window_Plea
 ===
 
 // ── 판정 실패 (UNCLASSIFIED) — 사람이 확인할 것 ──
-// UNCLASSIFIED [문단70 S#03] 4. 신규 필요 에셋
-// UNCLASSIFIED [문단77 S#03] 부엌 씬 교체안 — 초인종
-// UNCLASSIFIED [문단194 S#04D] 2. 신규 필요 에셋
-// UNCLASSIFIED [문단202 S#04D] 아침 후반부 — 마당의 각설탕
-// UNCLASSIFIED [문단277 S#04H] 1. 신규 필요 에셋
-// UNCLASSIFIED [문단285 S#04H] 구간 후반 — 다락방과 정문
+// UNCLASSIFIED [문단81 S#03] 4. 신규 필요 에셋
+// UNCLASSIFIED [문단89 S#03] 부엌 씬 교체안 — 초인종
+// UNCLASSIFIED [문단206 S#04D] 2. 신규 필요 에셋
+// UNCLASSIFIED [문단214 S#04D] 아침 후반부 — 마당의 각설탕
+// UNCLASSIFIED [문단289 S#04H] 1. 신규 필요 에셋
+// UNCLASSIFIED [문단297 S#04H] 구간 후반 — 다락방과 정문

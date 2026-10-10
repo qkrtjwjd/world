@@ -3,7 +3,7 @@
 결과: PASS
 
 대사 233 (화자대사 229 + 루독백 4) / 나레이션 1  →  총 234
-UNCLASSIFIED 80 건 (실패 조건 아님 — unclassified.txt 확인)
+UNCLASSIFIED 89 건 (실패 조건 아님 — unclassified.txt 확인)
 D-4 오브젝트 0 건 (씬 카운트와 별개 — objects.json 확인)
 
 --- 씬별 (합계 / 화자별 배분) ---
