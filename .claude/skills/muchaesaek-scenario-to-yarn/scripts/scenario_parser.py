@@ -135,10 +135,11 @@ STAGING_TAGS = ("[FILTER]", "[BGM]", "[SFX]", "[UI]", "[CAM]", "[TRIGGER]",
 
 SCENE_ID = re.compile(r"S#\d+[A-Z]?")
 
-# 씬 ID 는 두 계열이다 — 본편 S#xx 와 배드 엔딩 BE#01-a (2026-08-22 정본에 추가).
+# 씬 ID 는 세 계열이다 — 본편 S#xx · 배드 엔딩 BE#01-a (2026-08-22 정본에 추가) ·
+#   숲 전투 사망 화면 DS (D-7 「【 DS 】」 — 2026-10-11 추가. 없으면 D-4 뒤라 「(씬 이전)」으로 묶였다).
 # ⚠ 하이픈은 BE 쪽에만 연다. S# 패턴에 하이픈을 허용하면 S#19C-2 가 별도 씬으로 쪼개지고,
 #   node_map 이 그것을 S#19C 에 합산해 둔 기대값(expected_totals 주석)이 깨진다.
-SCENE_KEY = r"(?:S#\d+[A-Z]?|BE#\d+-[a-z])"
+SCENE_KEY = r"(?:S#\d+[A-Z]?|BE#\d+-[a-z]|DS)"
 SCENE_HEADER_BRACKET = re.compile(r"^【\s*(" + SCENE_KEY + r")\s*】")
 SCENE_HEADER_PLAIN = re.compile(r"^(" + SCENE_KEY + r")(?:\s|$)")
 
