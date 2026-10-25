@@ -51,6 +51,14 @@ public class ForestEntranceDirector : MonoBehaviour
 
     bool _passed;
     bool _inForest;
+
+    /// <summary>루가 담벼락 남쪽(숲)에 있는가. 마시멜로 섭취 제한의 구간 판정에 쓴다(C-17-3 · <see cref="MarshmallowRules"/>).</summary>
+    public static bool IsLuInForest { get; private set; }
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics() => IsLuInForest = false;
+
+    void OnDestroy() => IsLuInForest = false;
     bool _droneStopped;
     BoxCollider2D _block;
 
@@ -130,12 +138,14 @@ public class ForestEntranceDirector : MonoBehaviour
         if (south && !_inForest)
         {
             _inForest = true;
+            IsLuInForest = true;
             CameraDirector.Instance?.Track(forwardOffset);
             if (!_passed) { _passed = true; StartCoroutine(PassRoutine(other.transform)); }
         }
         else if (!south && _inForest)
         {
             _inForest = false;
+            IsLuInForest = false;
             CameraDirector.Instance?.Track();   // 마을로 돌아가면 치우침을 푼다
         }
     }

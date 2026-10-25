@@ -145,6 +145,27 @@ public class InspectableObjectManager : MonoBehaviour
         InteractionManager.InstanceIfExists?.SetCooldown(0.5f);
     }
 
+    /// <summary>
+    /// 라디오 키(Q)가 반응할 물건 — 조사 범위 안의 라디오 대상 중 가장 가까운 것. 없으면 null(잡음).
+    /// 매니저가 없으면(조사 물건이 없는 곳) 언제나 null 이다. 여기서 매니저를 만들지 않는다.
+    /// </summary>
+    public static InspectableObject FindRadioTarget(Vector2 from)
+    {
+        var m = InstanceIfExists;
+        if (m == null) return null;
+        InspectableObject best = null;
+        float bestD = float.MaxValue;
+        foreach (var o in m._objects)
+        {
+            if (o == null || !o.isActiveAndEnabled || !o.IsRadioTarget) continue;
+            float d = Vector2.Distance(o.transform.position, from);
+            if (d > o.Range || d >= bestD) continue;
+            bestD = d;
+            best = o;
+        }
+        return best;
+    }
+
     private void TryFindPlayer()
     {
         if (PlayerStats.Instance != null)
@@ -166,6 +187,7 @@ public class InspectableObjectManager : MonoBehaviour
             var o = _objects[i];
             if (o == null) { _objects.RemoveAt(i); continue; }
 
+            if (!o.isActiveAndEnabled || !o.CanInspect) continue;   // 세라 외출 전 잠금 · 조사 진행 중
             float d = Vector2.Distance(o.transform.position, _playerTransform.position);
             if (d > o.Range || d >= best) continue;
             best = d;

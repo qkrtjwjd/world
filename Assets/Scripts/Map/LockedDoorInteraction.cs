@@ -13,7 +13,17 @@ public class LockedDoorInteraction : MonoBehaviour
     public string requiredItemName = "다락방 열쇠";
 
     [Header("잠겨있을 때 Yarn 노드 이름")]
-    public string yarnNode_locked;
+    [Tooltip("D-4-1 집_복도_다락방문 — 「잠겨있네. 열쇠가 필요해」. 변환기 Objects.yarn 의 노드다.")]
+    public string yarnNode_locked = "house_hallway_attic_door";
+
+    [Header("잠긴 문고리 소리 (D-4-1 · E-74-2)")]
+    [Tooltip("문고리를 돌려 보지만 잠겨서 돌아가지 않는 소리. 대사 앞에 낸다. 제한 시간 뒤에는 이 소리만 낸다.\n" +
+             "세라 방 문과 같은 1종이며 S#06 현관 손잡이 소리와 섞지 않는다. AudioManager 등록 이름. 비우면 무음.")]
+    public string sfxLockedKnobName = "locked_knob";
+
+    [Header("문을 열 때 (S#09)")]
+    [Tooltip("다락방 문을 열 때 인형화 변동. 데모 고정값 -1(C-2-2 · F-2-6 · E-71-2). 열쇠는 이때 인벤토리에서 사라진다.")]
+    public float openCorruption = -1f;
 
     [Header("문 열릴 때 활성화할 오브젝트 (다락방 RoomTransfer 등)")]
     public GameObject[] objectsToEnable;
@@ -127,25 +137,53 @@ public class LockedDoorInteraction : MonoBehaviour
     /// <summary>InteractionTrigger.onInteract 에 연결.</summary>
     public void OnAtticDoorInteract()
     {
-        // 압박 중에는 아무 일도 일어나지 않는다. 대사도 없다 (C-14-2-3).
-        if (_sealedByPressure) return;
-
+        // 압박 중에는 열리지 않는다. 잠긴 문고리 소리만 내고 대사를 붙이지 않는다 (C-14-2-3 · D-4-1).
+        if (_sealedByPressure)
+        {
+            PlayLockedKnob();
+            return;
+        }
         if (_unlocked) return;
 
         var inv = InventoryManager.Instance
                   ?? Object.FindAnyObjectByType<InventoryManager>();
-
         if (inv == null) return;
 
         if (inv.HasItem(requiredItemName))
             UnlockAttic();
         else
-            StartCoroutine(YarnDialogue.PlayAndWait(yarnNode_locked, lockPlayer: true));
+        {
+            // 소리가 먼저, 그 뒤에 대사(E-74-2). 반복 조사해도 같다.
+            PlayLockedKnob();
+            StartCoroutine(YarnDialogue.PlayIfExists(yarnNode_locked, lockPlayer: true));
+        }
+    }
+
+    void PlayLockedKnob()
+    {
+        if (!string.IsNullOrEmpty(sfxLockedKnobName))
+            AudioManager.Instance?.Play(sfxLockedKnobName);
+    }
+
+    /// <summary>다락방 열쇠를 쓴다 — 인벤토리에서 사라지고 인형화 -1. 별도 연출은 없다(D-S#09 · E-71-2).</summary>
+    void ConsumeKey()
+    {
+        var inv = InventoryManager.Instance;
+        if (inv != null)
+        {
+            ItemData key = null;
+            foreach (var it in inv.inventoryItems)
+                if (it != null && it.itemName == requiredItemName) { key = it; break; }
+            if (key != null) inv.RemoveItem(key);
+        }
+        CorruptionManager.Instance?.AddCorruption(openCorruption);
+        HouseClock.NoteAtticOpened();   // 1시간 판정 정지(C-14-2-4)
     }
 
     void UnlockAttic()
     {
         _unlocked = true;
+        ConsumeKey();
 
         foreach (var obj in objectsToEnable)
             if (obj != null) obj.SetActive(true);

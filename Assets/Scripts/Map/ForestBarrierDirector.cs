@@ -351,6 +351,12 @@ public class ForestBarrierDirector : MonoBehaviour
 
         if (d > triggerDistance) return;
 
+        // S#20(솔 재조우)이 끝나야 연다. S#20 은 2차 전투 뒤에만 열리므로 이 한 줄이
+        // 쿠루 재회 · S#17 · S#19 · S#20 전부를 S#21 의 조건으로 묶는다.
+        // 숲은 지형으로 막혀 있지 않아 쿠루 반경을 비켜 결계까지 걸어올 수 있다(2026-10-19 격자 경로 실측) —
+        // 그러면 쿠루 없이 데모 끝이 재생됐다. 디버그용 ForcePlay 는 이 조건을 보지 않는다.
+        if (!GameState.isForestSolMet) return;
+
         _fired = true;
         StartCoroutine(PlayDemoEnding());
     }
@@ -651,12 +657,12 @@ public class ForestBarrierDirector : MonoBehaviour
         yield return FadeGlow(glowImage, revealAlpha, surgePeakAlpha, 0.18f,
                               Color.Lerp(glowColor, Color.white, 0.75f));
 
-        // 빛이 가장 밝은 순간에 필터가 넘어간다. 미는 주체는 세라다 — 마시멜로가 게이지를 환상 극값으로
-        // 옮기는 것과 같은 계통이며(C-3-2 · S#04E) 새 규칙이 아니라 기존 강제 전환의 세 번째 발생원이다.
-        // 루가 단검을 파지한 상태여도 덮인다.
+        // 빛이 가장 밝은 순간에 색이 빠진다 — 심리 게이지 50(무채색) · 토글 입력 차단 · 자연 증감 정지(F-6 v1.37 · E-59 · C-14-5).
+        //   환상으로 미는 것은 그 뒤 「금방 갈게」가 표시되는 순간이다(<see cref="YarnForceFantasy"/>). 두 단계 모두 번지는 형태다.
+        //   50 은 기존 게이지 값이라 컬러 그레이드가 그대로 무채색을 낸다 — 새 상태를 만들지 않는다.
         // ⚠ 보이는 필터는 게이지다. DaggerFilterController · FilterManager 만 바꾸면 화면이 현실 그대로
         //   남는다(2026-09-30 실측 — S#19 뒤 현실로 온 플레이어가 끝까지 현실 화면으로 데모를 마쳤다).
-        StartCoroutine(SpreadFantasy());
+        StartCoroutine(SpreadGray());
         ScreenEdgeEffectController.SetSustainedLevel(glowColor, afterglowEdgeAlpha, afterglowEdgeRatio);
         yield return FadeGlow(glowImage, surgePeakAlpha, afterglowAlpha, surgeDuration, glowColor);
         if (_fx != null) _fx.StartCoroutine(_fx.Settle(1.4f));          // 잔광으로 내려앉아 끝까지 반짝인다
@@ -739,10 +745,34 @@ public class ForestBarrierDirector : MonoBehaviour
     /// <para>⚠ 환상으로 덮은 <b>뒤에</b> 토글을 봉인한다. 봉인이 먼저면 전환 자체가 막힌다.
     /// 잠겼다는 UI 표시를 두지 않는다(정본 1288).</para>
     /// </summary>
+    /// <summary>
+    /// 첫 단계 — 결계 강화 순간 색이 빠진다(F-6 v1.37). 게이지 50 · 토글 봉인 · 자연 증감 정지. 번지는 형태.
+    /// 단검을 파지한 상태여도 파지를 풀지 않는다 — 필터만 덮인다(F-6 주석). 세라가 민 것이지 루가 놓은 것이 아니다.
+    /// </summary>
+    IEnumerator SpreadGray()
+    {
+        var driver = FindAnyObjectByType<RealityGaugeDriver>();
+        float outer = driver != null ? driver.CurrentNormalized
+                    : (GaugeManager.Instance != null ? GaugeManager.Instance.fantasyRealityGauge / 100f : 1f);
+        DaggerFilterController.SealToggle();
+        GaugeManager.NaturalChangeFrozen = true;
+        GaugeManager.Instance?.CutGauge(50f);
+        yield return SpreadWave(driver, outer);
+    }
+
+    /// <summary>
+    /// &lt;&lt;barrier_force_fantasy&gt;&gt; — 「금방 갈게」가 표시되는 순간(Forest_Sera_Voice 의 그 줄 바로 앞).
+    /// 마시멜로와 같은 경로로 환상 극값으로 민다. 기다리지 않는다 — 대사와 같이 번진다.
+    /// </summary>
+    [Yarn.Unity.YarnCommand("barrier_force_fantasy")]
+    public static void YarnForceFantasy()
+    {
+        if (Instance != null) Instance.StartCoroutine(Instance.SpreadFantasy());
+    }
+
     IEnumerator SpreadFantasy()
     {
         var driver  = FindAnyObjectByType<RealityGaugeDriver>();
-        var feature = RealityGradeRenderFeature.Instance;
         float outer = driver != null ? driver.CurrentNormalized
                     : (GaugeManager.Instance != null ? GaugeManager.Instance.fantasyRealityGauge / 100f : 1f);
 
@@ -752,6 +782,14 @@ public class ForestBarrierDirector : MonoBehaviour
         // 설명이 된다(사용자 결정 2026-09-30). 강화음은 sfxReinforce 슬롯이 맡는다.
         GaugeManager.Instance?.ForceFantasyMax(playSfx: false);
         DaggerFilterController.SealToggle();
+        GaugeManager.NaturalChangeFrozen = false;       // 자연 증감 정지는 이 대사 표시까지다(F-6 v1.37)
+        yield return SpreadWave(driver, outer);
+    }
+
+    /// <summary>게이지는 이미 옮겼다 — 화면만 결계 접촉 자리에서 물결로 번지게 그린다. 바깥은 전환 전 색(outer) 그대로.</summary>
+    IEnumerator SpreadWave(RealityGaugeDriver driver, float outer)
+    {
+        var feature = RealityGradeRenderFeature.Instance;
         driver?.SnapToGauge();                          // 화면 전체가 같이 서서히 바뀌면 물결이 안 보인다
 
         var cam = Camera.main;

@@ -84,9 +84,13 @@
     //   구 대사 18건 전문은 무채색_낙원_D이관대기자료.docx 3절에 보존돼 있다.
 
     // 솔 거래 (SolTradeUI / SolTradeRules)
-    // ⚠ 아래 노드들은 아직 .yarn 파일에 작성되지 않았다.
-    //   YarnDialogue.PlayIfExists 로 호출하므로 노드가 없으면 경고만 나고 거래창은 정상 동작한다.
-    //   거절 사유 텍스트는 전부 이 노드들 안에 있고 C# 에는 이름만 둔다.
+    // ⚠ 아래는 품목에 거절 노드가 지정되지 않았을 때 쓰는 기본값이다.
+    //   D 의 거절 대사는 전부 품목별 지정(TradeItem.rejectNodeVillage / rejectNodeForest)으로
+    //   이미 연결돼 있다 — 각설탕(마을 15-E-1 · 숲 S#20-B) · 빵 반죽 · 시든 아네모네(15-E-2) ·
+    //   마시멜로(15-E-3 침묵). 검은 구슬(S#20-C)만 지정 없이 기본값 Sol_Trade_Reject_Contaminated 를 쓴다.
+    //   나머지 넷(Village · GradeMismatch · Empty · PlayerWithdraws)은 D 에 해당 대사가 없어서
+    //   .yarn 노드를 만들지 않았다(D 1321 — 데모 거절 대사는 위가 전부다). 지어내지 말 것.
+    //   YarnDialogue.PlayIfExists 로 호출하므로 노드가 없으면 대사 없이 넘어가고 거래창은 정상 동작한다.
     // ⚠ Sol_Trade_Success 는 2026-08-30 삭제했다. 다시 만들지 말 것.
     //   정본에 거래 성립 대사가 없다 — D-3 S#20 은 A 조우 · B 각설탕 거절 · C 검은 구슬 ·
     //   D 상시 대화 넷뿐이고 수취 순간에 대사를 두지 않았다. F-7-1 의 조작 흐름도 성립 시

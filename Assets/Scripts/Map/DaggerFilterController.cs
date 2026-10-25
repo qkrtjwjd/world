@@ -3,10 +3,12 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// F키 홀드로 환상/현실 필터를 전환합니다.
-/// - 누르는 동안: 현실 모드 (realityObjects 활성). 심리 게이지를 100 으로 올린다 — 보이는 필터는 게이지다(C-3-2).
-///   누르고 있어도 탐험 중에는 <see cref="realityHoldDecaySeconds"/> 에 걸쳐 회색을 거쳐 원래 값으로 풀린다(C-4-2). 전투 중엔 유지.
-/// - 떼면: 환상 모드 복귀 — 게이지를 누르기 전 값으로 되돌린다
+/// F키(단검 파지)로 환상/현실 필터를 전환합니다. 심리 게이지를 100 으로 올린다 — 보이는 필터는 게이지다(C-3-2).
+/// - 탐험: 누르면 현실에 30초 고정(C-17-2 · <see cref="FilterLock"/>). 키를 떼도 풀리지 않는다.
+///   고정이 끝나면 <see cref="realityHoldDecaySeconds"/> 에 걸쳐 회색을 거쳐 누르기 전 값으로 서서히 풀린다(C-4-2).
+///   마시멜로 환상 고정(60초) 중에는 키가 듣지 않는다. 잠금 표시는 없다.
+///   (2026-10-25 사용자 결정으로 C-17-2 를 따른다. 그 전 10-01 결정은 「누르는 동안 현실 · 누른 채 30초에 풀림 · 떼면 복귀」였다.)
+/// - 전투: 누르는 동안 현실 · 떼면 전투가 끝난 뒤 누르기 전 값으로(C-4-2 · 전투 중엔 고정을 걸지 않는다 — C-17-2).
 /// - 인형화 80% 이상: 현실 전환 후 0.5초만 유지 후 강제 환상 복귀
 /// - 대화·이벤트(입력 잠금)·일시정지·타이틀 씬: 입력 무시
 /// </summary>
@@ -25,8 +27,8 @@ public class DaggerFilterController : MonoBehaviour
     [Tooltip("인형화 80%+ 시 강제 현실 유지 시간 (초)")]
     public float forcedRealityDuration = 0.5f;
 
-    [Tooltip("누르고 있어도 현실이 풀리는 데 걸리는 시간(초). 100 에서 누르기 전 값까지 고르게 내려간다(C-4-2 · F-3-1). " +
-             "정본에 수치가 없어 2026-10-01 사용자 결정 30초.")]
+    [Tooltip("현실 고정(30초)이 끝난 뒤 풀리는 데 걸리는 시간(초). 100 에서 누르기 전 값까지 고르게 내려간다(C-4-2 · F-3-1). " +
+             "정본에 수치가 없어 2026-10-01 사용자 결정 30초를 그대로 쓴다.")]
     public float realityHoldDecaySeconds = 30f;
 
     public bool IsReality { get; private set; } = false;
@@ -53,7 +55,13 @@ public class DaggerFilterController : MonoBehaviour
     public static bool IsToggleSealed { get; private set; }
 
     /// <summary>토글을 봉인한다. 환상으로 덮은 뒤에 부르는 것이 순서다 — 봉인이 먼저면 전환이 막힌다.</summary>
-    public static void SealToggle() => IsToggleSealed = true;
+    public static void SealToggle()
+    {
+        IsToggleSealed = true;
+        // 봉인 뒤에는 단검 고정 · 풀림이 게이지를 건드리면 안 된다 — 강제 전환(S#21C)이 게이지를 맡는다(F-6 v1.37).
+        FilterLock.Clear();
+        if (Instance != null) { Instance.StopHoldDecay(); Instance._holdingGauge = false; }
+    }
 
     /// <summary>봉인을 푼다. 데모에는 푸는 자리가 없고, 씬 재시작·되감기 복구용이다.</summary>
     public static void UnsealToggle() => IsToggleSealed = false;
@@ -130,6 +138,18 @@ public class DaggerFilterController : MonoBehaviour
         // 여기서 return 하면 아래 고착 방지 로직도 타지 않지만, 개방 전에는 IsReality 가 될 수 없으므로 무해하다.
         if (!GameState.isDaggerToggleUnlocked) return;
 
+        // 탐험 — 뽑으면 30초 고정, 그 뒤 서서히 풀린다(C-17-2). 키를 떼는 것과 무관하므로 고착 방지가 필요 없다.
+        if (!InBattle)
+        {
+            TickExplorationRelease();
+            if (ExplorationInputBlocked()) return;
+            if (Input.GetKeyDown(daggerKey) && !FilterLock.FantasyLocked)
+                DrawDaggerInExploration();
+            return;
+        }
+
+        // ── 이하 전투 — 누르는 동안 현실(기존). 전투 중에는 고정을 걸지 않는다(C-17-2).
+
         // 이벤트/컷신(입력 잠금) · 일시정지 · 타이틀 씬에서는 필터 전환 차단
         if (PlayerInputLock.Instance.IsLocked
             || Time.timeScale == 0f
@@ -187,7 +207,62 @@ public class DaggerFilterController : MonoBehaviour
         ApplyFilter(false);
     }
 
-    void SwitchToReality()
+    /// <summary>탐험 중 입력을 받지 않는 상태 — 입력 잠금 · 일시정지 · 타이틀 · 대화 · 근접 상호작용(거울 등).</summary>
+    bool ExplorationInputBlocked()
+    {
+        return PlayerInputLock.Instance.IsLocked
+            || Time.timeScale == 0f
+            || SceneManager.GetActiveScene().name == SceneNames.Title
+            || YarnDialogue.IsRunning
+            || DaggerKeyRegistry.HasNearby;
+    }
+
+    /// <summary>
+    /// 탐험 중 단검을 뽑는다 — 현실 100 · 30초 고정(C-17-2). 이미 현실이 풀리는 중이면 다시 잡는다(C-4-2 「다시 잡으면 그만이다」).
+    /// </summary>
+    void DrawDaggerInExploration()
+    {
+        if (!IsReality)
+            SwitchToReality(startDecay: false);
+        else if (_holdingGauge)
+        {
+            StopHoldDecay();
+            GaugeManager.Instance?.CutGauge(100f);
+        }
+        StopRelease();
+        FilterLock.LockReality();
+    }
+
+    /// <summary>고정이 끝나면 누르기 전 값으로 서서히 풀고, 다 풀리면 환상 모드로 돌아온다.</summary>
+    void TickExplorationRelease()
+    {
+        // 강제 전환(S#12 · MentalBreakStage)으로 켜진 현실은 부르는 쪽이 게이지를 맡는다.
+        if (!IsReality || !_holdingGauge) return;
+        if (FilterLock.RealityLocked) return;
+        if (_releaseCoroutine == null)
+        {
+            StopHoldDecay();
+            _releaseCoroutine = StartCoroutine(ReleaseAfterLockRoutine(_gaugeBeforeHold));
+        }
+    }
+
+    Coroutine _releaseCoroutine;   // 탐험 고정이 끝난 뒤의 풀림. 전투 쪽 HoldDecay 핸들과 섞지 않는다
+
+    void StopRelease()
+    {
+        if (_releaseCoroutine != null) { StopCoroutine(_releaseCoroutine); _releaseCoroutine = null; }
+    }
+
+    IEnumerator ReleaseAfterLockRoutine(float target)
+    {
+        yield return HoldDecayRoutine(target);
+        _releaseCoroutine = null;
+        if (!IsReality || !_holdingGauge) yield break;
+        _holdingGauge = false;   // 게이지는 이미 누르기 전 값이다 — ReleaseGauge 가 다시 자르지 않게
+        DoSwitchToFantasy();
+    }
+
+    void SwitchToReality(bool startDecay = true)
     {
         if (IsReality) return;
 
@@ -198,7 +273,7 @@ public class DaggerFilterController : MonoBehaviour
 
         StartFade(1f);
         ApplyFilter(true);
-        GrabGauge();
+        GrabGauge(startDecay);
 
         if (GetCorruptionRatio() >= 0.8f)
         {
@@ -244,7 +319,7 @@ public class DaggerFilterController : MonoBehaviour
         return GaugeManager.Instance != null ? GaugeManager.Instance.fantasyRealityGauge : GaugeManager.DEFAULT_GAUGE;
     }
 
-    void GrabGauge()
+    void GrabGauge(bool startDecay = true)
     {
         var g = GaugeManager.Instance;
         if (g == null) return;
@@ -252,7 +327,9 @@ public class DaggerFilterController : MonoBehaviour
         if (!_holdingGauge) _gaugeBeforeHold = g.fantasyRealityGauge;
         _holdingGauge = true;
         g.CutGauge(100f);
-        _holdDecayCoroutine = StartCoroutine(HoldDecayRoutine(_gaugeBeforeHold));
+        // 탐험에서는 고정(30초)이 끝난 뒤에 풀기 시작한다 — TickExplorationRelease
+        if (startDecay)
+            _holdDecayCoroutine = StartCoroutine(HoldDecayRoutine(_gaugeBeforeHold));
     }
 
     void ReleaseGauge()
@@ -286,6 +363,7 @@ public class DaggerFilterController : MonoBehaviour
     void StopHoldDecay()
     {
         if (_holdDecayCoroutine != null) { StopCoroutine(_holdDecayCoroutine); _holdDecayCoroutine = null; }
+        StopRelease();
     }
 
     /// <summary>붙잡고 있어도 풀린다(C-4-2) — 100 에서 누르기 전 값까지 고르게. 전투 중에는 멈춘다(C-4-2 문단 437).</summary>
@@ -300,7 +378,7 @@ public class DaggerFilterController : MonoBehaviour
             t += Time.deltaTime;
             GaugeManager.Instance?.DriftGauge(Mathf.Lerp(100f, target, t / duration));
         }
-        _holdDecayCoroutine = null;
+        _holdDecayCoroutine = null;   // 단독으로 돈 경우(전투). 풀림 안에서 돌 때는 원래 null 이다
     }
 
     float GetCorruptionRatio()

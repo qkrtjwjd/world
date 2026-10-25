@@ -134,6 +134,15 @@ public class InventoryManager : MonoBehaviour, IInventoryService
         UpdateSlotUI();
     }
 
+    /// <summary>같은 아이템을 몇 개 지녔는가.</summary>
+    public int CountOf(ItemData item)
+    {
+        int n = 0;
+        foreach (var it in inventoryItems)
+            if (it == item) n++;
+        return n;
+    }
+
     public bool HasItem(string itemName)
     {
         foreach (var item in inventoryItems)
@@ -196,6 +205,7 @@ public class InventoryManager : MonoBehaviour, IInventoryService
     public void Open()
     {
         if (inventoryPanel != null) inventoryPanel.SetActive(true);
+        UpdateSlotUI();   // 마시멜로 잠금(C-17-3)은 구간 · 순찰 회차 · 전투에 따라 바뀐다 — 열 때마다 다시 그린다
     }
 
     public void Close()

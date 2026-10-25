@@ -151,7 +151,7 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 9e19a77a62b5bfa478209175cee28691, type: 3}
     loop: 0
     category: 3
-  - name: 콰직
+  - name: "\uCF70\uC9C1"
     clip: {fileID: 8300000, guid: b877836319a2b7b429c32023254e3bf6, type: 3}
     loop: 0
     category: 0
@@ -221,6 +221,22 @@ MonoBehaviour:
     category: 0
   - name: ui_objective
     clip: {fileID: 8300000, guid: 4b26f5f2800241979d17df54e717c279, type: 3}
+    loop: 0
+    category: 0
+  - name: locked_knob
+    clip: {fileID: 8300000, guid: 736c41f0fc3b02747ae82afd73ac9082, type: 3}
+    loop: 0
+    category: 0
+  - name: pressure_wall_bump
+    clip: {fileID: 8300000, guid: fd829e275a5edf2438cf0a52e9fec9a9, type: 3}
+    loop: 0
+    category: 0
+  - name: fence_gate_open
+    clip: {fileID: 8300000, guid: edcd4d4d1689a694bac0a924f070688d, type: 3}
+    loop: 0
+    category: 0
+  - name: radio_noise_short
+    clip: {fileID: 8300000, guid: 969538817eed49c418e6985502d331cc, type: 3}
     loop: 0
     category: 0
   audioSource: {fileID: 0}

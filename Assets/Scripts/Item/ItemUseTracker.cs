@@ -74,6 +74,10 @@ public class ItemUseTracker : MonoBehaviour
     {
         if (item == null) return true;
 
+        // 나눠 먹는 음식(물 · 핫코코 가루 …)과 마시멜로는 1회 제한을 받지 않는다 —
+        // 마시멜로는 섭취 제한(C-17-3 · MarshmallowRules)이 따로 있다.
+        if (item.allowRepeatUse || item.countsAsMarshmallow) return true;
+
         string key = item.itemName;
         int count  = _useCounts.ContainsKey(key) ? _useCounts[key] : 0;
 

@@ -32,7 +32,6 @@
 //   S#15 Village_Sera_Spotted      1차 발각 ("…루?")
 //        Village_Bakery            미루 · 빵집
 //        Village_FlowerShop        아모 · 꽃집
-//        Village_Square_Children   광장 아이들 (대사 없음)
 //        Village_Sol_Trade_Sugar   각설탕 — 루가 스스로 거둔다
 //        Sol_BreadDoughReject      거래 거절 — 빵 반죽
 //   BE#02-a Village_Sera_Captured   순찰 2회차 발각 → 감금 엔딩
@@ -212,13 +211,7 @@ tags: ingame
 <<set $꽃집_탐색 = true>>
 ===
 
-title: Village_Square_Children
-tags: ingame
----
-// S#15 15-D 광장 아이들 — 정본상 대사가 없다. 연출·상호작용만.
-// [CAM] 루의 시선이 아이들이 아니라 아이들의 그림자로 간다.
-// 호출은 YarnDialogue.PlayIfExists 로 한다. 대사가 없어도 카메라 지시는 살아 있어야 한다.
-===
+// ※ Village_Square_Children(15-D 광장 아이들)은 E-70-6 이 씬째 삭제해 2026-10-25 지웠다. 되살리지 말 것.
 
 title: Village_Sol_Trade_Sugar
 tags: ingame

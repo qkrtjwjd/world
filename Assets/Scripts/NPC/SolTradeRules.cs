@@ -148,7 +148,9 @@ public static class SolTradeRules
         "radio",         // 라디오(유)
         "dagger",        // 단검
         "AtticKey",      // 다락방 열쇠
-        "FrontDoorKey",  // 현관문 열쇠
+        "FrontDoorKey",  // 현관문 열쇠 — S#13 에서 쓰면 사라지므로 마을 · 숲에서는 원래 없다(F-7-1)
+        "Coat",          // 유의 코트 — 아빠의 유품이라 팔지 않으며 거래창에 표시하지 않는다(C-15-4 · E-71-5)
+        "KuruNote",      // 쿠루의 쪽지 — 아이템 창이 아니라 수집품이라 거래창에 나오지 않는다(C-15-4 · E-71-5)
     };
 
     /// <summary>씬 재진입·도메인 리로드 시 캐시를 버린다.</summary>

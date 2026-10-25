@@ -190,8 +190,18 @@ public class GaugeManager : PersistentSingleton<GaugeManager>
     // ──────────────────────────────────────────
     //  게이지 변경
     // ──────────────────────────────────────────
+    /// <summary>
+    /// 게이지 자연 증감을 멈춘다 — 데모 종료의 결계 강화부터 「금방 갈게」 표시까지(F-6 v1.37 · E-59).
+    /// 증감 트리거 · 인형화 연동처럼 <see cref="ChangeGauge"/> 로 들어오는 변화만 막는다. 강제 전환(Cut · ForceFantasyMax)은 그대로다.
+    /// </summary>
+    public static bool NaturalChangeFrozen;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetFrozen() => NaturalChangeFrozen = false;
+
     public void ChangeGauge(float amount)
     {
+        if (NaturalChangeFrozen) return;
         SetGauge(fantasyRealityGauge + amount);
     }
 

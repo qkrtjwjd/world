@@ -164,6 +164,18 @@ public class FrontDoorInteraction : MonoBehaviour
         }
     }
 
+    void ConsumeFrontDoorKey()
+    {
+        var inv = InventoryManager.Instance;
+        if (inv == null) return;
+        foreach (var it in inv.inventoryItems)
+        {
+            if (it == null || it.itemName != requiredItemName) continue;
+            inv.RemoveItem(it);
+            return;
+        }
+    }
+
     // ─── S#06 ────────────────────────────────────────────────────────────
     IEnumerator RefusedRoutine()
     {
@@ -380,6 +392,9 @@ public class FrontDoorInteraction : MonoBehaviour
         //    핵심」(D-S#13)인데 가장자리가 아직 어두우면 그 빛이 죽는다(F-6 문단 790).
         GameState.isFrontDoorPassed = true;
         HouseEscapePressureController.NotifyEscaped();
+
+        // 문이 열리면 현관문 열쇠는 인벤토리에서 사라진다. 별도 연출 · 인형화 변동은 없다(D-S#13 주석 · E-75-4 · F-7-1).
+        ConsumeFrontDoorKey();
 
         // 집 안 목표(「나갈 방법을 찾으세요」 등)를 내린다. 마당에는 목표를 띄우지 않는다 —
         // 「이동 중 이벤트는 넣지 않는다」(D 425). 2026-09-27 사용자 결정으로 「정문으로 걸어가세요」 삭제.

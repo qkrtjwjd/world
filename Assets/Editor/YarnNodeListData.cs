@@ -61,7 +61,7 @@ public class YarnNodeListData : ScriptableObject
         "House_BadEnd_Sealed_Door", "House_BadEnd_Sera_Return", "House_BadEnd_ThreePlates",
         // D-2 정본 신규 노드 (Scenario/node_map.json 의 S#14·S#15) — 아직 .yarn 미작성
         "Village_Sol_Talk_Purity", "Village_Sol_Talk_Since", "Village_Sol_Talk_Money",
-        "Village_Sera_Spotted", "Village_Square_Children",
+        "Village_Sera_Spotted",   // Village_Square_Children 은 E-70-6(광장 아이들 삭제)으로 지웠다 — 2026-10-25
         "Village_Sol_Trade_Sugar",
         // Forest_Demo — D-3 정본 (S#16~S#17)
         "Forest_Entrance", "Forest_Kuru_Greet", "Forest_Kuru_Radio", "Forest_Kuru_SugarCube",

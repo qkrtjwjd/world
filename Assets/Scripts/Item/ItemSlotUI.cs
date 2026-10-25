@@ -13,6 +13,8 @@ public class ItemSlotUI : MonoBehaviour, ISubmitHandler
 
     private ItemData _item;
 
+    static readonly Color LockedTint = new Color(0.45f, 0.45f, 0.45f, 0.55f);
+
     public void Setup(ItemData newItem, int count = 1)
     {
         _item = newItem;
@@ -29,6 +31,8 @@ public class ItemSlotUI : MonoBehaviour, ISubmitHandler
         {
             iconImage.sprite  = _item.CurrentIcon;
             iconImage.enabled = _item.CurrentIcon != null;
+            // 섭취 제한에 걸린 마시멜로는 잠금 상태로 보인다(C-17-3). 필터 고정(C-17-2)과 달리 표시를 둔다.
+            iconImage.color = MarshmallowRules.IsLockedForUse(_item) ? LockedTint : Color.white;
         }
 
         if (countText != null)

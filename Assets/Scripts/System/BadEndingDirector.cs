@@ -226,6 +226,43 @@ public class BadEndingDirector : MonoBehaviour
     }
 
     /// <summary>
+    /// BE#01 의 두 번째 경로 — 세라가 나간 뒤 다락방에 가지 않은 채 1시간이 지났다(C-14-2-4 · E-72-4).
+    /// BE#01-a 를 건너뛰고 즉시 암전한 뒤 BE#01-b(소파)부터 연다. 루에게 현관문 열쇠가 없어 a 가 성립하지 않는다.
+    /// 이 경로의 루는 코트를 입지 않았다 — 코트 미착용 소파 스프라이트(🔴 · 아직 없음)로 연다. 세라 대사는 그대로다.
+    /// 끝나면 BE#01 과 같이 엔딩 화면 → 되감기 지점(세라 외출 직후, <see cref="HouseClock.BeginOuting"/>)으로 돌아간다.
+    /// </summary>
+    public static IEnumerator PlayHouseOvertime()
+    {
+        var d = Instance;
+        if (d == null)
+        {
+            Debug.LogWarning("[BadEndingDirector] Home 씬에 배치돼 있지 않습니다. BE#01(1시간) 컷씬을 건너뜁니다.");
+            EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
+            yield break;
+        }
+        yield return d.StartCoroutine(d.HouseOvertimeRoutine());
+    }
+
+    IEnumerator HouseOvertimeRoutine()
+    {
+        BeginPlayback();
+
+        // 즉시 암전(F-6 「암전 후 BE#01-b 부터 재생한다」). 조임이 없으므로 걷을 것도 없다.
+        yield return FadeOut(instantBlackout);
+        DaggerFilterController.Instance?.SwitchToFantasyForced();
+        FilterManager.Instance?.SetFilter(FilterType.Fantasy);
+
+        Dbg.Log("[배드엔딩] BE#01(1시간) — b 부터");
+        yield return RunBE01b_LivingWait();
+        yield return RunBE01c_SeraReturn();
+        yield return RunBE01d_ThreePlates();
+
+        yield return FadeOut();
+        EndPlayback();
+        EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
+    }
+
+    /// <summary>
     /// BE#02 의 집 파트를 예약합니다. 마을(MapScene)에서 발각 컷을 재생한 뒤 호출하고,
     /// 이어서 Home 씬으로 전환하면 <see cref="Start"/> 가 BE#02-b 부터 이어 재생합니다.
     /// </summary>

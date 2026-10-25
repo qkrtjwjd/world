@@ -21,13 +21,14 @@
 //
 // 진행 순서
 //   S#06 House_Doorknob_Refused   현관 손잡이 4회 → 집 안 탐색 개방
-//   S#07 House_Search_Drawer      헛수고 (자유 순서 · 대사는 서랍장 1곳)
+//   S#07                          헛수고 — 조사 대사는 D-4-1 오브젝트 원고(Objects.yarn). 거실 서랍장은 삭제(E-72-1)
 //   S#08 House_Kitchen_Drawer     부엌 서랍 → 다락방 열쇠. KitchenDrawerCutscene
 //   S#09 House_Attic_Box          상자 — 코트·라디오·단검
 //   S#10 House_Coat_Key           코트 주머니 → 현관문 열쇠
 //   S#11 House_Radio_Yu_First     라디오 (스스로 재생되는 유일한 지점)
 //   S#12 House_Dagger_Flash       단검 → 0.5초 현실 → 필터 토글 개방
-//   S#13 House_FrontDoor_Depart   현관문 열쇠로 개방 → 마당 → 정문
+//   S#13 House_FrontDoor_Depart   현관문 열쇠로 개방 → 마당
+//        House_FenceGate          울타리문 — 열리는 소리 뒤 루 1줄(E-73-2). FenceGateInteraction
 // ─────────────────────────────────────────────────────────────
 
 title: House_Doorknob_Refused
@@ -54,15 +55,8 @@ title: House_Doorknob_Refused
 
 ===
 
-title: House_Search_Drawer
----
-// 정본 D 문단 323(S#07 에셋 목록)에 올렸다(2026-10-01 사용자 결정) —
-//   「· 거실 서랍장 — 비어 있음. 상호작용하면 루가 「비어 있다.」라고 말한다」.
-//   '·' 에셋 목록 줄이라 파서는 차단한다 → node_map S#07 기대값은 0 그대로. 이 줄은 수동 보정 레이어다.
-//   ※ 서식 태그 <i>는 제거했다 — 이탤릭은 SpeakerStylePresenter 가 화자 ID 로 붙인다.
-<<showSprite "루" "neutral" "right">>
-{$이름}: 비어 있다.
-===
+// ※ House_Search_Drawer(거실 서랍장 「비어 있다.」)는 E-72-1 이 거실 서랍장을 삭제해 2026-10-25 지웠다.
+//   거실 장식장은 TV 받침대 같은 것이며 상호작용을 두지 않는다. S#07 의 조사 물건은 D-4-1(Objects.yarn)이 가진다.
 
 // ※ 세라의 방 문(「잠겨 있다. 손잡이는… 뜨겁지 않네.」)은 2026-10-01 사용자 결정으로 지웠다.
 //   D 325 는 에셋 설명만 두고 대사를 두지 않는다. 문은 상호작용해도 대사 없이 보여주기만 한다.
@@ -75,6 +69,11 @@ title: House_Kitchen_Drawer
 ---
 // [SFX] 서랍이 끝까지 열리는 소리 / 금속이 나무에 부딪히는 작은 소리  ← AudioManager 등록 필요
 // <<play_sfx "???">>
+
+// 2026-10-25 D 개정(E-71-2): 루 대사 1줄이 들어왔다. 열쇠 획득 · 인형화 -1 은 KitchenDrawerCutscene 이 이 노드 뒤에 한다.
+<<showSprite "루" "neutral" "right">>
+{$이름}: 다락방 열쇠다. … 여기 있네
+<<hideSprite "both">>
 
 // [지문 제거] "부엌 서랍 안에 작고 낡은 열쇠가 나온다. 다락방 열쇠."
 // ※ 「녹슨 열쇠」는 루가 8살 때 만든 쉼터 열쇠 전용 명칭이며 이것과 다른 물건이다
@@ -240,4 +239,14 @@ title: House_FrontDoor_Depart
 // ※ 결계가 열쇠를 알아본다 — 거주자 등록이 아니라 설계자 권한이다(D 432 · A-13-0). 세라는 지울 수 없다. 설명하지 않는다.
 // ※ 「담장」의 쿠루 원칙이 여기서 완성된다 — 끌고 나온 애는 결계가 회수해가고,
 //   자기 발로 나온 애는 못 회수한다. {이름조사("는")} 쿠루의 손을 잡은 적이 없다. 풀린 잠금장치만 있었다.
+===
+
+title: House_FenceGate
+---
+// S#13 울타리문 — 2026-10-25 D 개정(E-73-2). 조사 → 열리는 소리 → 울타리문 스프라이트가 사라져 열림 → 이 대사.
+//   소리 · 스프라이트는 FenceGateInteraction 이 이 노드 앞에서 한다. 1회만 반응한다.
+// ※ 울타리문은 잠겨 있지 않다. 루가 나오기만 하면 되는 상태를 쿠루가 만들어 두었다(S#04F 와 결이 같다). 설명하지 않는다.
+<<showSprite "루" "neutral" "right">>
+{$이름}: 안 잠겨있네. 다행이다.
+<<hideSprite "both">>
 ===

@@ -29,6 +29,10 @@ title: _Declarations
 // YarnCommandBridge.OnDialogueStart 에서 인벤토리를 읽어 매 대화마다 주입한다.
 <<declare $라디오소지 = false>>
 
+// 라디오 키(Q)로 연 대화인가(E-75-5 · F-8-4). 대비 노드 맨 위의 <<if $라디오키>> 가 유의 줄만 내고 멈춘다.
+// YarnCommandBridge.OnDialogueStart 가 매 대화마다 주입한다 — 조사 키로 연 대화에서는 언제나 false.
+<<declare $라디오키 = false>>
+
 <<declare $상인_광장_만남 = false>>
 <<declare $꽃집_탐색 = false>>
 <<declare $빵반죽_획득 = false>>

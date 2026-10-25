@@ -61,14 +61,18 @@ public class AtticRadioCutscene : MonoBehaviour
     /// 시퀀스 안에서 순서를 지켜 기다려야 할 때 쓴다 (AtticBoxInteraction 의 S#11).
     /// 이미 재생됐으면 즉시 끝난다.
     /// </summary>
-    public IEnumerator PlayRoutine()
+    public IEnumerator PlayRoutine(System.Action wearCoat = null)
     {
         if (GameState.isAtticRadioPlayed) yield break;
         GameState.isAtticRadioPlayed = true;
-        yield return StartCoroutine(PlayCutscene());
+        yield return StartCoroutine(PlayCutscene(wearCoat));
     }
 
-    IEnumerator PlayCutscene()
+    [Header("S#11 끝 — 채광창 햇살 아래 코트를 입는 루 (E-75-3)")]
+    [Tooltip("오버레이를 띄워 두는 시간(초). 스크립트가 닫는다. 정본에 수치가 없어 S#04F 각설탕 컷(1.2초)보다 조금 길게 잡았다 — 대사가 없는 컷이다.")]
+    public float skylightSeconds = 2.5f;
+
+    IEnumerator PlayCutscene(System.Action wearCoat)
     {
         var ctrl = YarnDialogue.LockPlayer();
 
@@ -105,7 +109,18 @@ public class AtticRadioCutscene : MonoBehaviour
         // 플래그는 저널·엔딩 판정 등이 참조하므로 계속 세운다.
         GameState.isResolved = true;
 
-        // 결계가 뒤늦게 조이기 시작하는 지점이다(A-13-3 의 시차). 탈출 압박은 여기서 발동한다.
+        // 루가 코트를 입는다 — 채광창으로 햇살이 드는 오버레이 컷 1장, 대사 없음(E-75-3 · D-S#11).
+        // 빛은 S#13 현관문의 「바깥의 빛」과 같은 계열이다. 코트는 이 순간부터 착용 상태다(E-75-4).
+        OverlayCut.Instance.Show(OverlayIds.HouseAtticSkylight);
+        wearCoat?.Invoke();
+        if (OverlayCut.IsOpen)
+        {
+            yield return new WaitForSeconds(skylightSeconds);
+            OverlayCut.Instance.Hide();
+        }
+
+        // 결계가 뒤늦게 조이기 시작하는 지점이다(A-13-3 의 시차). 탈출 압박은 이 컷이 닫히는 순간 발동한다 —
+        // 컷을 보는 동안 시간이 흐르지 않게(C-14-2 · C-14-2-1 0초 · F-6 · E-75-3).
         OnResolved?.Invoke();
 
         // 목표는 시퀀스 전체가 끝난 뒤 AtticBoxInteraction 이 한 번만 띄운다.

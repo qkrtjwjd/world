@@ -25,18 +25,18 @@ public static class OverlayIds
     public const string HouseLuPorcelainHand   = "house_overlay_lu_porcelain_hand";
     public const string HouseKuruDoorFace      = "house_overlay_kuru_door_face";      // 집_현관_쿠루문틈얼굴 · S#04B
     public const string HouseSugarcubePalm     = "house_overlay_sugarcube_palm";      // 집_현관_손바닥각설탕 · S#04B
-    public const string HouseYardSugarcube     = "house_overlay_yard_sugarcube";      // 집_마당_각설탕 · S#04F (S#04G 재사용)
-    public const string HouseWindowLockOpen    = "house_overlay_window_lock_open";    // 집_부엌_풀린잠금장치 · S#04F
+    public const string HouseYardSugarcube     = "house_overlay_yard_sugarcube";      // 집_마당_각설탕 · S#04F (S#04G · 녹기 전 거실 창문 재사용)
+    public const string HouseYardSugarcubeMelted = "house_overlay_yard_sugarcube_melted"; // 집_마당_녹은각설탕 · 거실 창문 녹은 뒤 첫 조사 (E-72-3 · F v1.39)
+    public const string HouseWindowLockOpen    = "house_overlay_window_lock_open";    // 집_거실_풀린잠금장치 · S#04F (E-72-2 에서 원고 ID 만 부엌 → 거실)
     public const string HouseKitchenDrawer     = "house_overlay_kitchen_drawer";      // 집_부엌_서랍안 · S#08
     public const string HouseAtticBox          = "house_overlay_attic_box";           // 집_다락방_열린상자 · S#09
     public const string HouseFrontDoorKey      = "house_overlay_front_door_key";      // 집_다락방_현관문열쇠 · S#10
     public const string HouseRadioDial         = "house_overlay_radio_dial";          // 집_다락방_라디오다이얼 · S#11
+    public const string HouseAtticSkylight     = "house_overlay_attic_skylight";      // 집_다락방_채광창햇살 · S#11 코트를 입는 순간 (E-75-3 · F v1.42)
     public const string HouseDaggerGrip        = "house_overlay_dagger_grip";         // 집_다락방_단검쥔손 · S#12
 
     // ── 마을 ────────────────────────────────────────────────────────────
     public const string TownSeraTakeHand       = "town_overlay_sera_take_hand";       // 마을_전역_세라가잡는손 · BE#02-a
-    /// <summary>마을_광장_아이들그림자 · 15-D. ⚠ 넣을지 미정(수동작업 1-2) — ID 만 잡아 둔다. 부르는 곳을 만들지 말 것.</summary>
-    public const string TownSquareChildren     = "town_overlay_square_children";
 
     // ── 숲 ──────────────────────────────────────────────────────────────
     public const string ForestSleeveFingertip  = "forest_overlay_sleeve_fingertip";   // 숲_입구_소매끝손끝 · S#16B (도자기 손 변형)
@@ -51,9 +51,9 @@ public static class OverlayIds
     public static readonly string[] All =
     {
         HouseSeraDoorEye, HouseSeraTuckHand, HouseLuPorcelainHand, HouseKuruDoorFace,
-        HouseSugarcubePalm, HouseYardSugarcube, HouseWindowLockOpen, HouseKitchenDrawer,
-        HouseAtticBox, HouseFrontDoorKey, HouseRadioDial, HouseDaggerGrip,
-        TownSeraTakeHand, TownSquareChildren,
+        HouseSugarcubePalm, HouseYardSugarcube, HouseYardSugarcubeMelted, HouseWindowLockOpen, HouseKitchenDrawer,
+        HouseAtticBox, HouseFrontDoorKey, HouseRadioDial, HouseAtticSkylight, HouseDaggerGrip,
+        TownSeraTakeHand,
         ForestSleeveFingertip, ForestSugarcubeFingers, ForestBarrierDome,
     };
 }

@@ -214,14 +214,18 @@ public class InteractionTrigger : MonoBehaviour
 
     // ── 콜라이더/거리 감지 ────────────────────────────────────────────────
 
+    // ⚠ 물리 트리거 메시지는 꺼진(enabled=false) 컴포넌트에도 온다. 진행이 끝나 꺼 둔 트리거(다락방 상자 등)가
+    //   여기서 다시 등록되면 옆의 조사 물건이 가려진다(InspectableObjectManager 가 진행 오브젝트를 우선한다) — 2026-10-25.
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (!enabled) return;
         if (useDistanceDetection || !other.CompareTag("Player") || other.isTrigger) return;
         StartCoroutine(EnableNextFrame());
     }
 
     private void OnTriggerStay2D(Collider2D other)
     {
+        if (!enabled) return;
         if (useDistanceDetection || _canInteract || !other.CompareTag("Player") || other.isTrigger) return;
         StartCoroutine(EnableNextFrame());
     }

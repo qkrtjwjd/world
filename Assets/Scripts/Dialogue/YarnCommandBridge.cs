@@ -79,6 +79,13 @@ public class YarnCommandBridge : MonoBehaviour
     private const string VAR_RESOLVE    = "$결심";
     private const string VAR_NAME       = "$이름";
     private const string VAR_HAS_RADIO  = "$라디오소지";
+    private const string VAR_RADIO_KEY  = "$라디오키";
+
+    /// <summary>
+    /// 다음 대화를 라디오 키(Q)로 연다 — 대비 노드 맨 위의 <c>&lt;&lt;if $라디오키&gt;&gt;</c> 가 유의 줄만 내고 멈춘다(F-8-4 · E-75-5).
+    /// 대화가 시작될 때 한 번 주입하고 곧바로 내린다. 조사 키로 연 대화에서는 언제나 false 다.
+    /// </summary>
+    public static bool RadioKeyPending;
 
     // 라디오의 ItemData.itemName. Resources/Items/radio.asset 의 값이다.
     private const string ITEM_RADIO = "라디오";
@@ -270,6 +277,9 @@ public class YarnCommandBridge : MonoBehaviour
         // 대비 오브젝트의 유 반응은 소지 여부만 본다 (F-8-4).
         variableStorage.SetValue(VAR_HAS_RADIO,
             InventoryManager.Instance != null && InventoryManager.Instance.HasItem(ITEM_RADIO));
+
+        variableStorage.SetValue(VAR_RADIO_KEY, RadioKeyPending);
+        RadioKeyPending = false;
 
         if (FlagManager.Instance != null)
         {

@@ -151,7 +151,7 @@ public class InteractionManager : MonoBehaviour
         {
             var t = _triggers[i];
             if (t == null) { _triggers.RemoveAt(i); continue; }
-            if (!t.gameObject.activeInHierarchy) continue;
+            if (!t.isActiveAndEnabled) continue;   // 꺼 둔 진행 트리거는 대상이 아니다(2026-10-25 — 예전에는 GameObject 만 봤다)
 
             float d = (t.transform.position - playerPos).sqrMagnitude;
             if (d < minSqDist) { minSqDist = d; closest = t; }

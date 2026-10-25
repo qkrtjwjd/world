@@ -130,12 +130,17 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public AudioClip sfxMarshmallowChew;
     [Tooltip("전체 화면 흰 반투명 오버레이 Image (Canvas, 초기 alpha=0 비활성)")]
     public Image     fullScreenBlurImage;
-    [Tooltip("마시멜로 섭취로 오르는 인형화 수치. ⚠ 정본에 수치 명시 없음 — " +
-             "Resources/Items/Marshmallow.asset 의 fantasyEffect.puppetizationChange(+10)를 그대로 가져왔다.")]
-    public float marshmallowCorruption = 10f;
+    [Tooltip("마시멜로 섭취로 오르는 인형화 수치. 데모 고정값 +2(C-2-2 · F-2-6 · E-71-3 — 「시작 20 + S#04E +2」).\n" +
+             "Home 씬에는 2 로 직렬화돼 있다. 기본값도 같게 둔다.")]
+    public float marshmallowCorruption = 2f;
+
+    [Header("S#04F — 이동 범위 (E-72-2)")]
+    [Tooltip("아침 장면 동안 루의 이동을 부엌 · 거실로 묶는 벽(복도로 가는 통로를 막는다). 평소에는 꺼 둔다.\n" +
+             "S#04H 「방으로 돌아가세요」에서 걷는다 — 자유 탐색은 S#04H 이후에 열린다(D-S#04F).")]
+    public GameObject breakfastAreaBlocker;
 
     [Header("S#04F — 마당의 각설탕")]
-    [Tooltip("부엌 창문 트리거. 플레이어가 다가가면 창밖을 본 것으로 처리한다. 비우면 대기 없이 진행.")]
+    [Tooltip("거실 창문의 WindowTrigger(E-72-2 — 부엌 창문에서 옮겼다). 창문을 조사하면 창밖을 본 것으로 처리한다. 비우면 대기 없이 진행.")]
     public WindowTrigger kitchenWindowTrigger;
     [Tooltip("창밖 보기를 기다리는 최대 시간(초). 지나면 자동 진행해 소프트락을 막는다.")]
     public float yardLookTimeout = 25f;
@@ -175,6 +180,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         // 세라가 이미 외출한 뒤의 세이브를 불러오면 세라는 집에 없다(S#04H 이후).
         if (GameState.isSeraOut && seraAnimator != null)
             seraAnimator.gameObject.SetActive(false);
+        if (breakfastAreaBlocker != null) breakfastAreaBlocker.SetActive(false);
     }
 
     /// <summary>NightSequenceManager 종료 후 자동 호출.</summary>
@@ -197,6 +203,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
         TeleportToDiningTable();
         ObjectiveManager.Instance?.HideHUD();
         var ctrl = YarnDialogue.LockPlayer();
+        if (breakfastAreaBlocker != null) breakfastAreaBlocker.SetActive(true);
 
         yield return StartCoroutine(RunS4A_ThreePlates());
         yield return StartCoroutine(RunS4B_Doorbell());
@@ -213,6 +220,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
         GameState.isSeraOut = true;
         ObjectiveManager.Instance?.ResetCutscene();
+
+        // 집 시계 시작 — 각설탕 녹음 · 다락방 미진입 1시간. 이 순간이 1시간 경로의 복귀 지점이다(C-14-2-4 · F-6).
+        HouseClock.BeginOuting();
 
         // 조작권이 넘어오는 순간 첫 목표를 띄운다 — D S#06 문단 291 「[UI][목표] 마당으로 나가세요」.
         //   마당의 각설탕을 본 직후라 현관이 가장 강한 유인이지만 강제하지 않는다(문단 293).
@@ -397,7 +407,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
         float originalSpeed = player != null ? player.walkSpeed : 0f;
         if (player != null) player.walkSpeed = originalSpeed * tremblingSpeedMultiplier;
 
-        // 이 구간은 플레이어가 직접 방으로 걸어간다.
+        // 이 구간은 플레이어가 직접 방으로 걸어간다. 부엌 · 거실에 묶어 두던 벽을 걷는다.
+        if (breakfastAreaBlocker != null) breakfastAreaBlocker.SetActive(false);
         // ⚠ 잠금 카운트 균형: 여기서 Unlock 한 만큼 이 코루틴 끝에서 다시 Lock 한다.
         //   PlayCutscene 이 마지막에 UnlockPlayer(ctrl) 로 0을 만든다. RunS4C_Eavesdrop 과 같은 패턴.
         PlayerInputLock.Instance?.Unlock();
@@ -639,6 +650,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
         if (!kitchenWindowTrigger.HasReached)
             Dbg.Log("[KitchenTriggerCutscene] S#04F 창밖 보기 타임아웃 — 자동 진행");
+        kitchenWindowTrigger.Disarm();
     }
 
     IEnumerator FadeInImage(Image image, float targetAlpha, float duration)

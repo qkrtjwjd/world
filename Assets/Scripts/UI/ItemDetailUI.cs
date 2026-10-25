@@ -86,7 +86,8 @@ public class ItemDetailUI : MonoBehaviour
         }
 
         // 첫 번째 선택 아이템이 있고 두 아이템 모두 canFeed → 결합 확인
-        if (_selected != null && _selected != item && _selected.canFeed && item.canFeed)
+        // 합성은 탐험 중에만 한다(C-17-1). 전투 중 아이템 사용은 턴을 쓰므로 합성까지 넣지 않는다.
+        if (_selected != null && _selected != item && _selected.canFeed && item.canFeed && !InBattle)
         {
             var recipe = CombineRecipeDatabase.Find(_selected, item);
             if (recipe != null)
@@ -118,7 +119,7 @@ public class ItemDetailUI : MonoBehaviour
     void DisplayItemInfo(ItemData item)
     {
         SetIcon(item.CurrentIcon);
-        if (nameText != null)        nameText.text        = item.DisplayName;
+        if (nameText != null)        nameText.text        = IsWorn(item) ? $"{item.DisplayName}  (착용 중)" : item.DisplayName;
         if (descriptionText != null) descriptionText.text = BuildDescription(item);
 
         if (gradeText != null)
@@ -178,6 +179,7 @@ public class ItemDetailUI : MonoBehaviour
     void ConfirmCombine()
     {
         if (_pendingRecipe == null || InventoryManager.Instance == null) return;
+        if (InBattle) { Hide(); return; }   // 미리보기 뒤 전투가 시작된 경우(C-17-1)
 
         InventoryManager.Instance.RemoveItem(_pendingRecipe.ingredientA);
         InventoryManager.Instance.RemoveItem(_pendingRecipe.ingredientB);
@@ -188,12 +190,28 @@ public class ItemDetailUI : MonoBehaviour
         Hide();
     }
 
+    static bool InBattle => BattleSystem.IsActive || HackSlashCombatManager.IsActive;
+
+    /// <summary>입고 있는 물건인가 — 유의 코트는 S#11 채광창 컷에서 입은 뒤로 「착용 중」이다(E-75-4).</summary>
+    static bool IsWorn(ItemData item) => item != null && item.wornFixed && GameState.isResolved;
+
     void UseSelectedItem()
     {
         if (_selected == null) return;
 
+        // 착용 중인 물건(유의 코트)은 벗을 수도 쓸 수도 없다(E-75-4).
+        if (_selected.wornFixed) return;
+
         // 비전투 상황: 이미 사용한 아이템이면 차단 (차단 메시지는 TryUseOutsideBattle 내부에서 처리)
-        bool isInBattle = BattleSystem.IsActive || HackSlashCombatManager.IsActive;
+        bool isInBattle = InBattle;
+
+        // 탐험 중 마시멜로 — 데모 규칙(C-17)을 탄다. 인형화 +2 · 환상 100 · 환상 고정 60초 · 섭취 제한.
+        //   단검 현실 고정 중이거나 제한에 걸리면 먹히지 않고 아이템도 그대로다.
+        if (!isInBattle && _selected.countsAsMarshmallow)
+        {
+            UseMarshmallowInExploration(_selected);
+            return;
+        }
         if (!isInBattle && ItemUseTracker.Instance != null)
         {
             if (!ItemUseTracker.Instance.TryUseOutsideBattle(_selected))
@@ -233,6 +251,26 @@ public class ItemDetailUI : MonoBehaviour
         }
 
         InventoryManager.Instance?.RemoveItem(_selected);
+        Hide();
+    }
+
+    void UseMarshmallowInExploration(ItemData item)
+    {
+        if (!MarshmallowRules.TryEat(item)) return;
+
+        string dialogue = item.LocalizedUseDialogue;
+        if (!string.IsNullOrEmpty(dialogue))
+            ItemNotificationUI.Instance?.ShowDialogue(dialogue);
+
+        // 체력만 에셋 값을 쓴다. 인형화는 TryEat 이 데모 고정값으로 올렸다.
+        var effect = item.fantasyEffect;
+        if (PlayerStats.Instance != null && effect.healthChange > 0)
+            PlayerStats.Instance.RecoverHealth(effect.healthChange);
+
+        // 먹을 때 화면 가장자리가 파스텔빛으로 번진다(아이템 정리 4-1).
+        ScreenEdgeEffectController.ShowMarshmallow(0.8f);
+
+        InventoryManager.Instance?.RemoveItem(item);
         Hide();
     }
 
@@ -285,10 +323,12 @@ public class ItemDetailUI : MonoBehaviour
         if (!string.IsNullOrEmpty(autoStats))
             sb.Append(autoStats);
 
-        if (!string.IsNullOrEmpty(item.CurrentDescription))
+        int count = InventoryManager.Instance != null ? InventoryManager.Instance.CountOf(item) : 1;
+        string desc = item.DescriptionFor(Mathf.Max(1, count));
+        if (!string.IsNullOrEmpty(desc))
         {
             if (sb.Length > 0) sb.Append("\n");
-            sb.Append(item.CurrentDescription);
+            sb.Append(desc);
         }
 
         return sb.ToString();

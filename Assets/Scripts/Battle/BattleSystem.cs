@@ -951,6 +951,14 @@ public class BattleSystem : MonoBehaviour
     void OnItemSelected(ItemData item)
     {
         if (InputBlocked || State != BattleState.PLAYERTURN || _isPlayerActionInProgress) return;
+
+        // 숲의 마시멜로는 전투 1회당 1회(C-17-3). 같은 전투에서 두 번째는 받지 않는다 — 아이템도 그대로다.
+        if (item != null && item.countsAsMarshmallow && MarshmallowRules.UsedThisBattle)
+        {
+            UISfx.Buzzer();
+            return;
+        }
+
         _isPlayerActionInProgress = true;
         HideBattleItemDesc();
         SetPanelsActive(false, false, false);

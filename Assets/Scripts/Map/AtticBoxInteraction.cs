@@ -181,10 +181,11 @@ public class AtticBoxInteraction : MonoBehaviour
             Debug.LogWarning("[AtticBoxInteraction] AtticRadioCutscene 이 씬에 없어 S#11을 건너뜁니다. " +
                              "Home 씬에 배치해야 합니다 (Assets/Docs/유니티_수동작업.md).");
         else
-            yield return StartCoroutine(cutscene.PlayRoutine());
+            yield return StartCoroutine(cutscene.PlayRoutine(WearCoat));
 
-        // 코트는 S#11 다락방에서 입는다(D 467 · 2026-09-27 사용자 결정 — D 420 「현관 앞 코트를 입은 루」와의 모순을 이쪽으로 정했다).
-        // 「데리러 갈게요」 직후다. 그래서 S#12 부터 발동하는 BE#01 에서 루는 언제나 코트 차림이다(D 465·467).
+        // 코트는 S#11 다락방에서 입는다 — 채광창 오버레이 컷 아래에서 갈아입는다(E-75-3 · 컷신이 WearCoat 를 부른다).
+        // 「데리러 갈게요」 직후다. 그래서 S#12 부터 발동하는 BE#01(90초 경로)에서 루는 언제나 코트 차림이다.
+        // 컷신이 없거나 이미 재생된 경우를 위해 한 번 더 부른다(같은 컨트롤러를 다시 넣을 뿐이다).
         WearCoat();
 
         // [아이템 획득: 라디오] 는 씬 끝(D 문단 385). 먼저 띄우면 다이얼이 「저 혼자」 떨리기 전에 알림이 앞선다.

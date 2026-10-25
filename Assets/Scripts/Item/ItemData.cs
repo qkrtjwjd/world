@@ -56,6 +56,22 @@ public class ItemData : ScriptableObject
     [Tooltip("장착 슬롯 종류. None 이면 장착할 수 없습니다. 카테고리와는 별개 축입니다.")]
     public EquipSlotType equipSlot;
 
+    [Header("■ 데모 규칙 (C-17)")]
+    [Tooltip("마시멜로 섭취로 친다 — 아이템 창에서 먹으면 인형화 +2 · 환상 100 · 환상 고정 60초 · 섭취 제한(C-17 · MarshmallowRules).\n" +
+             "마시멜로 · 마시멜로를 띄운 핫코코. 이 경로에서는 아래 fantasyEffect/realityEffect 의 인형화 값을 쓰지 않는다.")]
+    public bool countsAsMarshmallow;
+
+    [Tooltip("탐험 중에 여러 번 쓸 수 있다(물 · 핫코코 가루처럼 나눠 먹는 음식 — 아이템 정리 4-1).\n" +
+             "끄면 ItemUseTracker 의 「비전투 1회」 제한을 받는다.")]
+    public bool allowRepeatUse;
+
+    [Tooltip("남은 횟수가 들어가는 설명. {n} 자리에 소지 수가 들어간다(「3번에 나누어 먹을 수 있을거 같다」 → 쓴 만큼 줄어든다).\n" +
+             "비우면 description 을 그대로 쓴다. 환상/현실 구분 없이 같은 문장이다.")]
+    [TextArea(2, 4)] public string countedDescription;
+
+    [Tooltip("착용 중인 물건 — 아이템 창에 「착용 중」으로 표시한다. 벗을 수 없다(유의 코트 · E-75-4).")]
+    public bool wornFixed;
+
     [Header("■ 버리기 제한")]
     [Tooltip("체크하면 이 아이템은 버릴 수 없습니다.")]
     public bool isUndroppable;
@@ -99,6 +115,13 @@ public class ItemData : ScriptableObject
                 return realityDescription;
             return description;
         }
+    }
+
+    /// <summary>소지 수 <paramref name="count"/> 를 넣은 설명. <see cref="countedDescription"/> 이 비어 있으면 <see cref="CurrentDescription"/>.</summary>
+    public string DescriptionFor(int count)
+    {
+        if (string.IsNullOrEmpty(countedDescription)) return CurrentDescription;
+        return countedDescription.Replace("{n}", count.ToString());
     }
 
     /// <summary>현재 씬에 맞는 아이콘을 반환합니다. 환상 씬이고 fantasyIcon이 있으면 fantasyIcon, 아니면 itemIcon.</summary>

@@ -97,6 +97,15 @@ public class SaveData
     /// </summary>
     public int lastRabbitSlot = -1;
 
+    /// <summary>
+    /// 세라 외출(S#04H) 뒤 흐른 시간(초) — 각설탕 녹음 · 다락방 미진입 1시간(C-14-2-4 · F-5-5 · F-6).
+    /// 중단 저장에도 들어간다 — 불러올 때 0부터 다시 세면 저장 · 불러오기로 1시간 엔딩을 피할 수 있다.
+    /// 예전 세이브에는 없어 0 이 된다(외출 직후와 같다).
+    /// </summary>
+    public float houseClock;
+    /// <summary>다락방 열쇠를 집은 시각(외출 기준 초). 없으면 -1. 각설탕이 녹는 시점 = 30초와 이 값 중 늦은 쪽(F-6).</summary>
+    public float houseAtticKeyAt = -1f;
+
     // 처치된 적 ID (HashSet은 JSON 직렬화 불가 → List 사용)
     public List<string> defeatedEnemyIDs   = new List<string>();
 

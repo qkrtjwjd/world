@@ -56,6 +56,9 @@ public class KitchenDrawerCutscene : MonoBehaviour
     [Header("획득 아이템")]
     public ItemData atticKeyItem;
 
+    [Tooltip("다락방 열쇠를 집을 때 인형화 변동. 데모 고정값 -1(C-2-2 · F-2-6 · E-71-2).")]
+    public float keyPickupCorruption = -1f;
+
     [Header("목표 갱신")]
     public string objectiveHeader = "목표 갱신";
     public string objectiveBody   = "다락방 열쇠를 사용하세요.";
@@ -89,6 +92,11 @@ public class KitchenDrawerCutscene : MonoBehaviour
 
         if (atticKeyItem != null)
             InventoryManager.Instance?.AddItem(atticKeyItem);
+
+        // [TRIGGER] 인형화 -1 (D-S#08 · C-2-2 · E-71-2). 다락방 문을 열 때 -1 이 한 번 더 붙는다.
+        CorruptionManager.Instance?.AddCorruption(keyPickupCorruption);
+        // 마당 각설탕이 녹는 시점 = 외출 후 30초와 이 순간 중 늦은 쪽(F-6).
+        HouseClock.NoteAtticKey();
 
         // 조사로 연 오버레이 — 플레이어가 확인 키로 닫는다.
         yield return OverlayCut.Instance.WaitForClose();
