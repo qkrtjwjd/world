@@ -44,7 +44,7 @@ title: House_Unheard_Close
 
 title: House_Kitchen_ThreePlates
 ---
-세라: {$이름}, 아가. 내려와. 다 됐어.
+세라: {$이름}, 아가. 나와. 다 됐어.
 세라: 잘 잤니?
 ===
 
@@ -108,9 +108,9 @@ title: House_Eavesdrop_Light
 
 title: House_Note
 ---
-세라: {$이름}? 내려와서 밥 먹어. 식겠네.
+세라: {$이름}? 나와서 밥 먹어. 식겠네.
 못 본 척해야 한다. 언제나처럼. 창밖에 던지거나 삼키거나.
-세라: {$이름}? 안 내려와?
+세라: {$이름}? 안 나와?
 {$이름}: 지금 가요.
 ===
 
@@ -155,5 +155,5 @@ title: House_Window_Plea
 // UNCLASSIFIED [문단89 S#03] 부엌 씬 교체안 — 초인종
 // UNCLASSIFIED [문단206 S#04D] 2. 신규 필요 에셋
 // UNCLASSIFIED [문단214 S#04D] 아침 후반부 — 마당의 각설탕
-// UNCLASSIFIED [문단289 S#04H] 1. 신규 필요 에셋
-// UNCLASSIFIED [문단297 S#04H] 구간 후반 — 다락방과 정문
+// UNCLASSIFIED [문단292 S#04H] 1. 신규 필요 에셋
+// UNCLASSIFIED [문단301 S#04H] 구간 후반 — 다락방과 울타리문

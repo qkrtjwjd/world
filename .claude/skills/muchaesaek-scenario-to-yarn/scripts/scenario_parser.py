@@ -106,8 +106,8 @@ VOICE_DIALOGUE_SCENE = "S#21C"
 
 # 루 독백의 원고 표기는 두 가지다.
 #   ① (루): '...'        — 문단 전체 이탤릭     (집 구간)
-#   ② 루 (속으로) "..."  — 첫 run 볼드          (마을 구간. 정본 [UI] "독백 처리. 대사창 이탤릭")
-# ②는 볼드라서 화자 대사 판정으로 들어오므로 _try_speaker 안에서 가로챈다.
+#   ② 루 (속으로) "..."  — 화자 칸 표기         (마을 구간. 정본 [UI] "독백 처리. 대사창 이탤릭")
+# ②는 화자 칸 형태라서 화자 대사 판정으로 들어오므로 _try_speaker 안에서 가로챈다.
 MONOLOGUE_BOLD_LABEL = "루(속으로)"      # 공백 제거 후 비교
 
 # 문단 시작 기호로 차단하는 것들
@@ -166,12 +166,28 @@ OBJECT_SUBSECTION = re.compile(r"^D-4-\d+\.\s*(.+?)\s*구간\s*$")
 # 구간 → 코드 ID 접두 (F-8-3). 매핑표 검증에만 쓴다. 코드 ID 자체는 표에서만 온다.
 OBJECT_PREFIX = {"집": "house_", "마을": "town_", "숲": "forest_"}
 
-OBJECT_LAYERS = ("밀도", "대비", "선택")
+# D-4 의 볼드 표제 (2026-10-25 D 문단 1331 · 1345 · 1378). [읽기] · [자막] 규약 줄도 표제로 읽힌다.
+OBJECT_HEADINGS = ("표기 규약", "표기 예시", "미작성 사유")
+
+OBJECT_LAYERS = ("밀도", "대비", "선택")                  # 배치 수량을 세는 층 (C-16-3)
+# 헤더에 올 수 있는 층 전부 (F-8-9 v1.42). 수량을 세지 않는 층 — 획득 · 획득 확인 · 진행 · 저장 —
+# 은 진행 · 아이템 물건이라 C-16-3 의 밀도 · 대비 · 선택 배치 수와 별개다.
+OBJECT_HEADER_LAYERS = OBJECT_LAYERS + ("획득", "획득 확인", "진행", "저장", "앉기")
 OBJECT_FORMS = ("방법", "태도", "대상", "침묵", "반복")     # C-16-6. 5건에 5형태
 OBJECT_SILENT = "무대사"
+OBJECT_ONCE = "1회"          # 첫 조사에만 대사 (C-16-11)
+OBJECT_SIT = "앉기"          # 조사하면 앉는다 (C-16-11)
 
 OBJ_HEADER = re.compile(r"^\[OBJ\]\s*(.+)$")
 OBJ_VERSION = re.compile(r"^([FNR])\s+루\s*(.*)$")
+# 「F 두 번째 조사부터 → 루 “…”」 — 같은 필터에서 두 번째 조사부터의 줄 (F-8-9 v1.42)
+OBJ_VERSION_AGAIN = re.compile(r"^([FNR])\s*두\s*번째\s*조사부터\s*→\s*루\s*(.*)$")
+# 「재조사 → 루 “…”」 · 「S#12 이후 재조사 → 루 “…”」 · 「재조사 → 가져갔으면 루 “…”」.
+# 조건 글자는 게임 코드가 맡는다 — 대사만 꺼낸다.
+OBJ_RECHECK = re.compile(r"^(.*?)재조사\s*→\s*(.*)$")
+OBJ_RECHECK_LINE = re.compile(r"루\s*([" + "\"“”" + r"].*)$")
+# 「→ [아이템 획득: 물]」 · 「→ 반응 없이 종료」 — 대사 없는 선택 결과 (획득 확인 · C-16-11)
+OBJ_RESULT = re.compile(r"^→\s*(.+)$")
 OBJ_DENSITY = re.compile(r"^루\s*(.*)$")
 OBJ_CHOICE = re.compile(r"^\[선택\]\s*(.+)$")
 OBJ_REACTION = re.compile(r"^→\s*루\s*(.*)$")
@@ -205,6 +221,7 @@ class Para:
     first_bold: bool         # 첫 번째 비어 있지 않은 run 이 볼드인가
     first_text: str          # 그 run 의 텍스트
     all_italic: bool         # 비어 있지 않은 run 이 전부 이탤릭인가
+    style: str = ""          # 단락 스타일(Heading1 …). 볼드가 빠져도 남는다 — read_canon 제목 판정용
 
     @property
     def stripped(self) -> str:
@@ -215,6 +232,7 @@ _P = re.compile(r"(?s)<w:p[ >].*?</w:p>")
 _R = re.compile(r"(?s)<w:r[ >].*?</w:r>")
 _T = re.compile(r"(?s)<w:t[^>]*>(.*?)</w:t>")
 _RPR = re.compile(r"(?s)<w:rPr>.*?</w:rPr>")
+_PSTYLE = re.compile(r'<w:pStyle w:val="([^"]*)"')
 _TAB = re.compile(r"<w:tab\s*/>")
 _BR = re.compile(r"<w:br\s*/>")
 
@@ -261,8 +279,10 @@ def read_docx(path: str) -> list[Para]:
             pieces.append((t, _toggle_on(rpr, "b"), _toggle_on(rpr, "i")))
 
         text = "".join(p[0] for p in pieces)
+        sm = _PSTYLE.search(pm.group(0))
+        style = sm.group(1) if sm else ""
         if not pieces:
-            paras.append(Para(i, text, False, "", False))
+            paras.append(Para(i, text, False, "", False, style))
             continue
         paras.append(Para(
             idx=i,
@@ -270,6 +290,7 @@ def read_docx(path: str) -> list[Para]:
             first_bold=pieces[0][1],
             first_text=pieces[0][0],
             all_italic=all(p[2] for p in pieces),
+            style=style,
         ))
     return paras
 
@@ -306,6 +327,7 @@ class ObjectChoice:
     text: str
     drop_at_31: bool = False     # (31-) 표기. 인형화 31 이상에서 빠진다
     reaction: str = ""
+    result: str = ""             # 대사 없는 결과 (「[아이템 획득: 물]」 · 「반응 없이 종료」)
 
 
 @dataclass
@@ -322,6 +344,12 @@ class ObjectSpec:
     choices: list[ObjectChoice] = field(default_factory=list)
     radio: str = ""                                      # 유의 한 줄 (화자 ID radio_yu)
     kuru: str = ""                                       # 숲 지정 오브젝트 한정
+    once: bool = False                                   # · 1회 — 첫 조사에만 대사
+    sit: bool = False                                    # · 앉기
+    again: str = ""                                      # 「재조사 →」 줄
+    again_cond: str = ""                                 # 재조사 앞의 조건 글자 (원문 그대로)
+    staging: list[str] = field(default_factory=list)     # [TRIGGER] · [SFX] 원문
+    notes: list[str] = field(default_factory=list)       # 처리 지시 (대사 아님 · 게임 코드가 맡는다)
 
 
 @dataclass
@@ -338,6 +366,7 @@ class Classifier:
 
     def __init__(self) -> None:
         self.scene: Optional[str] = None
+        self.italic_lost = False                 # 문서에 이탤릭 문단이 하나도 없다 (8b)
         self.in_reading = False                  # [읽기] 블록 안인가 (F-8-9)
         # D-4 전용 상태
         self.section: Optional[str] = None       # 현재 구간 표제 (D-1 … D-4)
@@ -351,7 +380,10 @@ class Classifier:
             return None
 
         # 1. 씬 헤더 — 【 S#xx 】 및 S#xx 줄
-        m = SCENE_HEADER_BRACKET.match(s) or SCENE_HEADER_PLAIN.match(s)
+        #    D-4 안에서는 「S#12 이후 재조사 →」 · 「S#04F 이전 →」처럼 씬 번호로 시작하는 처리 줄이
+        #    온다(2026-10-25). 그것은 씬 헤더가 아니므로 D-4 에서는 괄호 헤더 【 】 만 받는다.
+        m = SCENE_HEADER_BRACKET.match(s) or (
+            SCENE_HEADER_PLAIN.match(s) if self.section != OBJECT_SECTION else None)
         if m:
             self.scene = m.group(1)
             self.in_reading = False
@@ -419,12 +451,13 @@ class Classifier:
                 body = s[len(tag):].strip()
                 return Item(KIND_STAGING, p.idx, self.scene, body, tag=tag)
 
-        # 6. 화이트리스트 ② — 루 독백 (이탤릭이므로 10번보다 반드시 위)
-        if p.all_italic:
-            m = MONOLOGUE.match(s)
-            if m:
-                return Item(KIND_MONOLOGUE, p.idx, self.scene, m.group(1).strip(),
-                            speaker_id=MONOLOGUE_SPEAKER_ID, display="", side=None)
+        # 6. 화이트리스트 ② — 루 독백 (원고에서 이탤릭이므로 8번 차단보다 반드시 위)
+        #    이탤릭은 보지 않는다. 볼드가 드라이브 이관 때 통째로 빠진 적이 있어(2026-10-25)
+        #    서식을 판정 조건으로 두지 않는다 — `(루): '...'` 글자 형태가 독백 표기 자체다.
+        m = MONOLOGUE.match(s)
+        if m:
+            return Item(KIND_MONOLOGUE, p.idx, self.scene, m.group(1).strip(),
+                        speaker_id=MONOLOGUE_SPEAKER_ID, display="", side=None)
 
         # 7. 화이트리스트 ① — 화자 대사
         item = self._try_speaker(p, s)
@@ -442,8 +475,9 @@ class Classifier:
         #     아무 무서식 따옴표 줄이나 통과하는 길이 영구히 남는다.
         #     ①보다 아래인 것은 화자 칸이 있는 줄을 가로채지 않기 위해서고,
         #     이탤릭 차단보다 위인 것은 ②-A 와 같은 이유다.
+        #     서식(볼드·이탤릭 아님)은 보지 않는다 — 대신 따옴표로 열고 닫는 한 줄만 받는다.
         if (self.scene == VOICE_DIALOGUE_SCENE
-                and not p.first_bold and not p.all_italic and s[0] in DQUOTE):
+                and len(s) > 1 and s[0] in DQUOTE and s[-1] in DQUOTE):
             body = s[1:]
             if body and body[-1] in DQUOTE:
                 body = body[:-1]
@@ -453,6 +487,13 @@ class Classifier:
         # 8. 이탤릭 지문 → 차단. [자막]이 붙지 않은 지문은 전부 여기서 멈춘다
         if p.all_italic:
             return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="이탤릭 지문")
+        # 8b. 문서에서 이탤릭이 통째로 빠졌을 때 — 지문을 글자로 가린다.
+        #     따옴표가 하나도 없는 줄은 대사일 수 없으므로 지문으로 차단한다. 이렇게 하지 않으면
+        #     지문 500여 줄이 UNCLASSIFIED 로 쏟아져 진짜 판정 실패가 묻힌다.
+        #     따옴표가 있는 줄은 그대로 9번으로 보내 드러낸다. 출력(대사)에는 영향이 없다 —
+        #     여기까지 온 줄은 어느 쪽이든 화면에 뜨지 않는다.
+        if self.italic_lost and not any(q in s for q in DQUOTE + SQUOTE):
+            return Item(KIND_BLOCKED, p.idx, self.scene, s, reason="지문(이탤릭 없음)")
 
         # 9. 판정 실패 — 버리지 않고 남긴다
         return Item(KIND_UNCLASSIFIED, p.idx, self.scene, s)
@@ -472,7 +513,10 @@ class Classifier:
 
         # 「표기 규약」「표기 예시」「미작성 사유」 같은 볼드 표제.
         # 구간 밖으로 나가므로 그 아래 줄은 오브젝트로 읽지 않는다.
-        if p.first_bold:
+        # 볼드가 빠져도 알아보도록 지금 있는 표제는 글자로도 받는다. 목록에 없는 새 표제가
+        # 볼드 없이 오면 UNCLASSIFIED 로 드러난다 — 짧은 줄을 표제로 추정하면 그 아래
+        # 오브젝트가 「표기 규약」으로 조용히 차단되므로 추정하지 않는다.
+        if p.first_bold or s in OBJECT_HEADINGS or s.startswith((READING_TAG, SUBTITLE_TAG)):
             self.obj_sub = None
             self._obj = None
             return blocked("D-4 표제")
@@ -490,6 +534,33 @@ class Classifier:
             return Item(KIND_UNCLASSIFIED, p.idx, None, s)
 
         obj = self._obj
+
+        # 연출 태그 — [TRIGGER] · [SFX]. 대사가 아니므로 원문을 objects.json 에 남긴다
+        for tag in STAGING_TAGS:
+            if s.startswith(tag):
+                obj.staging.append(s)
+                return Item(KIND_STAGING, p.idx, None, s[len(tag):].strip(), tag=tag)
+
+        # 두 번째 조사부터의 필터 버전 — 「F 두 번째 조사부터 →」. 대비 버전보다 위다
+        m = OBJ_VERSION_AGAIN.match(s)
+        if m:
+            body = self._quoted(m.group(2))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.versions[m.group(1) + "2"] = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        # 재조사 — 대사가 있으면 그것만 꺼낸다. 「가져가지 않았으면 같은 대사와 선택지 /
+        # 가져갔으면 루 “…”」처럼 조건이 섞여도 루 줄은 하나다
+        m = OBJ_RECHECK.match(s)
+        if m:
+            lm = OBJ_RECHECK_LINE.search(m.group(2))
+            body = self._quoted(lm.group(1)) if lm else None
+            if body is None or obj.again:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.again = body
+            obj.again_cond = (m.group(1) + " " + m.group(2)[:lm.start()]).strip(" /")
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
 
         # 대비 버전 — F · N · R. 밀도 판정(^루)보다 반드시 위다.
         m = OBJ_VERSION.match(s)
@@ -517,6 +588,12 @@ class Classifier:
             obj.choices[-1].reaction = body
             return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
 
+        # 대사 없는 선택 결과 — 바로 앞 선택지에 붙는다
+        m = OBJ_RESULT.match(s)
+        if m and obj.choices and not any(q in s for q in DQUOTE):
+            obj.choices[-1].result = m.group(1).strip()
+            return Item(KIND_OBJECT, p.idx, None, m.group(1).strip())
+
         # 라디오 — 화자 ID 는 4-4 의 기존 매핑을 그대로 쓴다 (F-8-4)
         m = OBJ_RADIO.match(s)
         if m:
@@ -539,10 +616,17 @@ class Classifier:
         m = OBJ_DENSITY.match(s)
         if m:
             body = self._quoted(m.group(1))
-            if body is None:
+            if body is None or obj.density:
                 return Item(KIND_UNCLASSIFIED, p.idx, None, s)
             obj.density = body
             return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        # 처리 지시 — 「조사하면 루가 소파에 앉는다」 · 「2회째부터 → 루가 몸을 돌리는 모션」.
+        # 대사가 아니라 게임 코드가 맡을 동작이다. 따옴표가 없는 줄만 받는다 —
+        # 따옴표가 있는데 위 규칙에 안 걸린 줄은 대사 표기 오류일 수 있으므로 판정 실패로 드러낸다.
+        if not any(q in s for q in DQUOTE):
+            obj.notes.append(s)
+            return Item(KIND_BLOCKED, p.idx, None, s, reason="D-4 처리 지시")
 
         # 판정 실패 — 버리지 않고 남긴다 (F-8-9)
         return Item(KIND_UNCLASSIFIED, p.idx, None, s)
@@ -554,7 +638,7 @@ class Classifier:
             return Item(KIND_UNCLASSIFIED, p.idx, None, s)
 
         manuscript_id, layer, rest = parts[0], parts[1], parts[2:]
-        if layer not in OBJECT_LAYERS:
+        if layer not in OBJECT_HEADER_LAYERS:
             self._obj = None
             return Item(KIND_UNCLASSIFIED, p.idx, None, s)
 
@@ -563,6 +647,10 @@ class Classifier:
         for token in rest:
             if token == OBJECT_SILENT:
                 obj.silent = True
+            elif token == OBJECT_ONCE:
+                obj.once = True
+            elif token == OBJECT_SIT:
+                obj.sit = True
             elif token in OBJECT_FORMS:
                 obj.form = token
             else:
@@ -588,9 +676,13 @@ class Classifier:
     # ------------------------------------------------------------------
     @staticmethod
     def _try_speaker(p: Para, s: str) -> Optional[Item]:
-        if not p.first_bold:
+        # 화자 칸은 원고에서 볼드지만 볼드로 판정하지 않는다. 드라이브로 옮기며 볼드가
+        # 통째로 빠진 적이 있다(2026-10-25 D 볼드 문단 780 → 0). 첫 따옴표 앞 글자가
+        # 등록 화자일 때만 받으므로 서식 없이도 화이트리스트가 그대로 유지된다.
+        k = min((s.find(q) for q in DQUOTE if s.find(q) > 0), default=-1)
+        if k < 0:
             return None
-        name = p.first_text.strip()
+        name = s[:k].strip()
         mono = re.sub(r"\s+", "", name) == MONOLOGUE_BOLD_LABEL
         condition = ""
         if not mono and name not in SPEAKERS:
@@ -600,12 +692,9 @@ class Classifier:
                 return None
             name, condition = m.group(1).strip(), m.group(2).strip()
 
-        rest = s[len(p.first_text.rstrip()):].lstrip()
         # 정본 42문단은 닫는 따옴표가 없고, 252문단은 여는 " 에 닫는 ” 이다.
         # 여는 따옴표만 요구하고, 닫는 쪽은 있으면 떼어낸다.
-        if not rest or rest[0] not in DQUOTE:
-            return None
-        body = rest[1:]
+        body = s[k + 1:]
         if body and body[-1] in DQUOTE:
             body = body[:-1]
 
@@ -649,12 +738,17 @@ class Converter:
         self.failures: list[str] = []
         self.objects: list[ObjectSpec] = []
         self.object_failures: list[str] = []
+        self.object_warnings: list[str] = []     # 게이트를 막지 않는 D-4 보고 (미작성분 수량)
 
     # ------------------------------------------------------------------
     def run(self, docx_path: str, out_dir: str) -> int:
         self.source_name = os.path.basename(docx_path)
         paras = read_docx(docx_path)
         cls = Classifier()
+        cls.italic_lost = not any(p.all_italic for p in paras if p.stripped)
+        if cls.italic_lost:
+            print("[경고] 정본에 이탤릭 문단이 하나도 없습니다 — 서식이 빠진 것으로 보고 "
+                  "따옴표 없는 줄을 지문으로 차단합니다(판정 8b). 대사 판정은 서식과 무관합니다.")
 
         for p in paras:
             item = cls.classify(p)
@@ -1044,24 +1138,29 @@ class Converter:
                 fail("D-4 코드 ID 접두 불일치: %s → %s (구간 %s 는 %s)"
                      % (o.manuscript_id, code, o.section, want))
 
-        # ② 층별 배치 수량 — C-16-3
+        # ② 층별 배치 수량 — C-16-3. 경고로만 보고한다(2026-10-25 사용자 결정).
+        #    D-4 는 구간별 · 물건별로 나눠 써 들어오고(D-4-1 「…작성했고 나머지는 미작성이다」),
+        #    원고가 덜 들어온 것은 파서가 막을 일이 아니다. 원고가 한 건도 없는 구간은 세지도 않는다.
+        warn = self.object_warnings.append
         for section, want in layout.items():
+            if not any(o.section == section for o in self.objects):
+                continue
             got = {layer: 0 for layer in OBJECT_LAYERS}
             for o in self.objects:
-                if o.section == section:
-                    got[o.layer] = got.get(o.layer, 0) + 1
+                if o.section == section and o.layer in got:
+                    got[o.layer] += 1
             for layer, rng in want.items():
                 lo, hi = (rng if isinstance(rng, list) else [rng, rng])
                 if not (lo <= got.get(layer, 0) <= hi):
-                    fail("D-4 %s 구간 %s 오브젝트 %d 건 — 기대 %d~%d (C-16-3)"
+                    warn("D-4 %s 구간 %s 오브젝트 %d 건 — 기대 %d~%d (C-16-3)"
                          % (section, layer, got.get(layer, 0), lo, hi))
 
-        # ③ 대비 버전 수 — 집·마을은 F·R / 숲은 F·N·R (C-16-2)
+        # ③ 대비 버전 수 — 집·마을은 F·R / 숲은 F·N·R (C-16-2). 「두 번째 조사부터」(F2) 는 세지 않는다
         for o in self.objects:
             if o.layer != "대비":
                 continue
             want = {"F", "N", "R"} if o.section == "숲" else {"F", "R"}
-            got = set(o.versions)
+            got = {v for v in o.versions if len(v) == 1}
             if got != want:
                 fail("D-4 %s 대비 버전 %s — %s 구간은 %s (C-16-2)"
                      % (o.manuscript_id, sorted(got) or "없음", o.section, sorted(want)))
@@ -1104,30 +1203,52 @@ class Converter:
         if obj.silent:
             return []
 
-        def radio_tail() -> list[str]:
+        # 씬 대사와 같은 이름 치환을 건다 — 화자 「루」 → {$이름}, 본문의 「루」도 (_fmt_line)
+        conv = self.convert_name or (lambda t: t)
+        lu = "{$이름}" if self.convert_name else "루"
+
+        def L(text: str) -> str:
+            return "%s: %s" % (lu, conv(text))
+
+        def radio_head() -> list[str]:
             # 별도 노드를 파지 않고 대비 노드 안에서 조건 분기한다 (F-8-4).
+            # 라디오 줄은 라디오 키로만 나온다(v1.42) — 게임이 $라디오키 를 켜고 이 노드를 연다.
             if not obj.radio:
                 return []
-            return ["<<if $라디오소지>>", "radio_yu: " + obj.radio, "<<endif>>"]
+            return ["<<if $라디오키>>", "radio_yu: " + conv(obj.radio), "<<stop>>", "<<endif>>"]
+
+        def again_node() -> list[tuple[str, list[str]]]:
+            # 「재조사 →」 줄 — 같은 물건을 다시 조사했을 때 (F-8-9). 언제 이 노드를 여는지는 게임이 정한다
+            return [(code + "_again", [L(obj.again)])] if obj.again else []
 
         def kuru_tail() -> list[str]:
             # 31 이상 침묵은 빈 노드가 아니라 모션 분기다 (F-8-5).
             if not obj.kuru:
                 return []
-            return ["<<if $인형화 < 31>>", "쿠루: " + obj.kuru,
+            return ["<<if $인형화 < 31>>", "쿠루: " + conv(obj.kuru),
                     "<<else>>", "<<kuru_silent>>", "<<endif>>"]
 
-        if obj.layer == "밀도":
-            return [(code, ["루: " + obj.density])] if obj.density else []
+        if obj.layer == "획득 확인":
+            # 「가져간다 / 가져가지 않는다」(C-16-11). 결과는 게임이 <<object_choice n>> 으로 받는다 —
+            # 아이템을 주는 일은 이 노드가 아니라 물건 쪽 코드가 한다(결과 글자는 objects.json)
+            body = [L(obj.density)] if obj.density else []
+            for i, c in enumerate(obj.choices, 1):
+                body += ["-> " + conv(c.text), "    <<object_choice %d>>" % i]
+                if c.reaction:
+                    body.append("    " + L(c.reaction))
+            return ([(code, body)] if body else []) + again_node()
+
+        if obj.layer in ("밀도", "획득", "진행", "저장", "앉기"):
+            return ([(code, [L(obj.density)])] if obj.density else []) + again_node()
 
         if obj.layer == "대비":
             out = []
-            for v in ("F", "N", "R"):
+            for v in ("F", "F2", "N", "N2", "R", "R2"):
                 if v not in obj.versions:
                     continue        # 없는 버전은 런타임이 F 로 폴백한다. 빈 노드를 두지 않는다
                 out.append(("%s_%s" % (code, v),
-                            ["루: " + obj.versions[v]] + radio_tail() + kuru_tail()))
-            return out
+                            radio_head() + [L(obj.versions[v])] + kuru_tail()))
+            return out + again_node()
 
         # 선택 — 선택지 노드 1개 + 선택별 반응. 결과 커맨드를 붙이지 않는다 (F-8-1)
         #
@@ -1139,9 +1260,9 @@ class Converter:
         for i, c in enumerate(obj.choices, 1):
             target = "%s_c%d" % (code, i)
             guard = " <<if $인형화 < 31>>" if c.drop_at_31 else ""
-            head.append("-> %s%s" % (c.text, guard))
+            head.append("-> %s%s" % (conv(c.text), guard))
             head.append("    <<jump %s>>" % target)
-            out.append((target, ["루: " + c.reaction] if c.reaction else []))
+            out.append((target, [L(c.reaction)] if c.reaction else []))
         return [(code, head)] + out
 
     def _emit_objects(self, out_dir: str) -> None:
@@ -1167,6 +1288,12 @@ class Converter:
                 "대사노드": [n for n, _ in nodes],
                 "라디오대상": bool(o.radio),
                 "쿠루지정": bool(o.kuru),
+                "1회": o.once,
+                "앉기": o.sit,
+                "재조사조건": o.again_cond,
+                "선택결과": [c.result for c in o.choices],
+                "연출": o.staging,
+                "처리지시": o.notes,
                 "문단": o.para,
             })
             for name, body in nodes:
@@ -1220,6 +1347,10 @@ class Converter:
         if self.failures:
             lines += ["", "--- 실패 ---"]
             lines += ["  " + f for f in self.failures]
+
+        if self.object_warnings:
+            lines += ["", "--- 경고 (게이트를 막지 않음) ---"]
+            lines += ["  " + w for w in self.object_warnings]
 
         self._write(out_dir, "gate_report.txt", "\n".join(lines) + "\n")
 

@@ -88,13 +88,20 @@ _PART     = re.compile(r"^D-\d+\.")
 _PERSON   = re.compile(r"^\S+\s*\([A-Za-z][^)]*\)")
 
 
-def heading_of(p):
-    """제목이면 (kind, level, 번호문자열) 반환, 아니면 None."""
-    if not p.first_bold:
-        return None
+def heading_of(p, styled=False):
+    """제목이면 (kind, level, 번호문자열) 반환, 아니면 None.
+
+    제목은 볼드로 썼지만 드라이브로 옮기며 볼드가 통째로 빠진 적이 있다(2026-10-25).
+    그래서 볼드 말고도 받는다 — 제목 스타일이 있는 문서(styled: A·B·C·E·F)는 Heading 스타일,
+    없는 문서(D)는 씬 헤더 【 · 구간 표제 D-n. 의 글자 형태. D-n. 은 F 본문에도 나오므로
+    글자 형태는 스타일 없는 문서에서만 연다.
+    """
     s = p.stripped
     if not s:
         return None
+    if not (p.first_bold or (styled and p.style.startswith("Heading"))):
+        if styled or not (_SCENE.match(s) or _PART.match(s)):
+            return None
     m = _NUMBERED.match(s)
     if m:
         return ("num", m.group(1).count("-") + 1, m.group(1))
@@ -109,8 +116,9 @@ def heading_of(p):
 
 def headings(paras):
     out = []
+    styled = any(p.style.startswith("Heading") for p in paras)
     for p in paras:
-        h = heading_of(p)
+        h = heading_of(p, styled)
         if h:
             out.append((p, h))
     return out

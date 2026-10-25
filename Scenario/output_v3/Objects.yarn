@@ -2,3 +2,114 @@
 // D-4 오브젝트 대사 — 자동 생성. 손으로 고치지 말 것.
 // 층·수량은 C-16, 표기는 F-8-9, 문안의 단일 출처는 D-4 다.
 // ============================================================
+
+title: house_kitchen_marshmallow
+---
+{$이름}: 엄마가 항상 마시멜로를 들고 다니면서 먹으라고 했었으니까 가지고 가자
+===
+
+title: house_kitchen_marshmallow_again
+---
+{$이름}: 다른건 없다
+===
+
+title: house_kitchen_drawer_1
+---
+{$이름}: 잠겨있네
+===
+
+title: house_kitchen_drawer_2
+---
+{$이름}: 비어있네
+===
+
+title: house_kitchen_yu_chair
+---
+{$이름}: …
+===
+
+title: house_kitchen_fridge
+---
+{$이름}: 먹을건 별로 없네 가져갈까?
+-> 가져간다
+    <<object_choice 1>>
+-> 가져가지 않는다
+    <<object_choice 2>>
+===
+
+title: house_kitchen_fridge_again
+---
+{$이름}: 다른건 없다
+===
+
+title: house_kitchen_bookshelf
+---
+{$이름}: 핫코코네. 어렸을땐 많이 먹었었지.
+===
+
+title: house_kitchen_bookshelf_again
+---
+{$이름}: 다른건 없다
+===
+
+title: house_living_window
+---
+{$이름}: 각설탕이 녹았어.. 밖이 더운건가?
+===
+
+title: house_yard_front_door
+---
+{$이름}: 다시 들어갈순 없어
+===
+
+title: house_yard_grass_sugarcube
+---
+{$이름}: 녹아 버렸네.. 아깝다.
+===
+
+title: house_yard_shadow_rabbit
+---
+{$이름}: 귀엽다. 어디서 왔니? 안아봐도 돼?
+===
+
+title: house_hallway_sera_door
+---
+{$이름}: 잠겨있네
+===
+
+title: house_hallway_attic_door
+---
+{$이름}: 잠겨있네. 열쇠가 필요해
+===
+
+title: house_attic_box_again
+---
+{$이름}: 다른건 없다
+===
+
+title: house_attic_mannequin_F
+---
+<<if $라디오키>>
+radio_yu: 그 옷 아빠가 엄마랑 같이 고른거야. 마음에 들었으면 좋겠네
+<<stop>>
+<<endif>>
+{$이름}: 성인이 된 {$이름}에게 줄 선물? 음... 내 취향은 아닌데
+===
+
+title: house_attic_mannequin_F2
+---
+<<if $라디오키>>
+radio_yu: 그 옷 아빠가 엄마랑 같이 고른거야. 마음에 들었으면 좋겠네
+<<stop>>
+<<endif>>
+{$이름}: 볼수록 괜찮아 보이는거 같기도 하고
+===
+
+title: house_attic_mannequin_R
+---
+<<if $라디오키>>
+radio_yu: 그 옷 아빠가 엄마랑 같이 고른거야. 마음에 들었으면 좋겠네
+<<stop>>
+<<endif>>
+{$이름}: 이거... 오래 된건가?
+===

@@ -42,13 +42,16 @@
 
   "expected_totals": {
     "_about": [
-      "⭐ D 실측 기준이다. 현재 요약 (2026-09-16 · F v1.28 · E v4.7 과 대조 완료):",
-      "  집 구간 D-1 (S#01~S#13)    : 60 = 대사 59(화자대사 57 + 루독백 2) + 나레이션 1",
+      "⭐ D 실측 기준이다. 현재 요약 (2026-10-25 · F v1.42 · E v6.1 과 대조 완료):",
+      "  집 구간 D-1 (S#01~S#13)    : 62 = 대사 61(화자대사 59 + 루독백 2) + 나레이션 1  (F-4-6 게이트 62 와 일치)",
       "  배드 엔딩 BE#01-a~d        :  6 = 세라 3 · 루 3",
       "  마을 구간 D-2 (S#14~S#15)  : 20 = 화자대사 18 + 루독백 2",
       "  배드 엔딩 BE#02-a~c        :  1 = 세라 1",
       "  숲 구간 D-3 (S#16A~S#21)   : 147 = S#16A~S#17E 47 · S#19A~S#19E 36 · S#20 52 · S#21 12",
-      "  데모 총계 234 = 대사 233(화자대사 228 + 루독백 4 + 세라목소리 1) + 나레이션 1. 쪽지는 세지 않는다([읽기], F-8-9).",
+      "  데모 총계 236 = 대사 235(화자대사 230 + 루독백 4 + 세라목소리 1) + 나레이션 1. 쪽지는 세지 않는다([읽기], F-8-9).",
+      "2026-10-25 — D(E v5.7 · v5.9 · v6.0 반영분)를 등재했다. 대사 233→235 · 총계 234→236.",
+      "   D 실측 근거: S#08 루 +1(「다락방 열쇠다. … 여기 있네」 · E-71-2) / S#13 루 +1(「안 잠겨있네. 다행이다.」 · E-73-2)",
+      "   / S#04A · S#04D 「내려와」→「나와」 3곳(E-74-1 · 줄 수 불변 · 앵커 2개 갱신). D-4 오브젝트 대사는 씬 카운트와 별개다.",
       "⚠ F-4-6 「게이트 기준 62」는 집 60 에 S#07 승격 2줄을 미리 계상한 값이다(F 도 「승격 반영 전 실측은 60」).",
       "   F-4-6 단서의 BE 포함 여부 — 이 파일은 BE 를 씬 노드로 따로 잡는다. 집 60 에 BE 7줄이 섞이지 않는다.",
       "⚠ dialogue 카운트에 루독백과 세라목소리가 섞여 들어간다. 화자별 배분(by_speaker) 대조를 함께 걸어 이 혼동을 막는다.",
@@ -108,9 +111,9 @@
       "⚠ 같은 개정본이 파일명에 「_S21개정」 접미를 달고 왔다. 명세서 0-4 「정본은 항상 같은 문서다」에 맞춰",
       "   D_무채색_낙원_시나리오_정본.docx 로 되돌렸다. 개정 이력은 E 문서가 진다."
     ],
-    "dialogue": 233,
+    "dialogue": 235,
     "narration": 1,
-    "all": 234
+    "all": 236
   },
 
   "objects": {
@@ -118,9 +121,9 @@
       "D-4 오브젝트 대사의 매핑표와 배치 기대값. 씬 게이트(expected_totals)와 별개다 —",
       "오브젝트는 씬 순서와 무관하게 조사되므로 씬 카운트에 들어가지 않는다(F-8-9).",
       "",
-      "⚠ 2026-08-30 현재 D-4 는 틀만 있고 대사가 한 줄도 없다(D-4-1~3 전부 '미작성').",
-      "   배경 에셋이 확정돼야 어떤 물건을 놓을지 정해지기 때문이다(D-4 미작성 사유·F-8-7).",
-      "   그래서 id_map 이 비어 있는 것이 정상이며, 지금 파서를 돌리면 오브젝트 0 건이 맞다.",
+      "2026-10-25 — D-4-1 집 구간 16건(부엌 7 · 거실 2 · 마당 3 · 복도 2 · 다락방 2)이 들어와 id_map 을",
+      "   F-8-3 매핑표(F v1.42)에서 옮겼다. 울타리문은 S#13 진행 오브젝트라 D-4 에 [OBJ] 가 없지만 표에 있어 함께 둔다.",
+      "   D-4-2 마을 · D-4-3 숲은 아직 미작성이다. 배치 수량(layout)은 경고로만 보고한다(2026-10-25 사용자 결정).",
       "",
       "⚠ 기대값을 산출 결과에 맞춰 고치지 않는다. D 에 실제로 원고가 들어간 뒤에",
       "   D 실측을 근거로 올린다(SKILL.md 2번 · CLAUDE.md §9-1).",
@@ -133,7 +136,25 @@
       "layout — 구간별 층 배치 수량 [최소, 최대] (C-16-3).",
       "  대사 합은 집 약 20줄 · 마을 약 28줄 · 숲 약 28줄이다."
     ],
-    "id_map": {},
+    "id_map": {
+      "집_부엌_마시멜로":     "house_kitchen_marshmallow",
+      "집_부엌_밑서랍1":      "house_kitchen_drawer_1",
+      "집_부엌_밑서랍2":      "house_kitchen_drawer_2",
+      "집_부엌_밑서랍3":      "house_kitchen_drawer_3",
+      "집_부엌_유의의자":     "house_kitchen_yu_chair",
+      "집_부엌_냉장고":       "house_kitchen_fridge",
+      "집_부엌_책장":         "house_kitchen_bookshelf",
+      "집_거실_소파":         "house_living_sofa",
+      "집_거실_창문":         "house_living_window",
+      "집_마당_현관문":       "house_yard_front_door",
+      "집_마당_풀밭각설탕":   "house_yard_grass_sugarcube",
+      "집_마당_그림자토끼":   "house_yard_shadow_rabbit",
+      "집_마당_울타리문":     "house_yard_fence_gate",
+      "집_복도_세라방문":     "house_hallway_sera_door",
+      "집_복도_다락방문":     "house_hallway_attic_door",
+      "집_다락방_상자":       "house_attic_box",
+      "집_다락방_마네킹":     "house_attic_mannequin"
+    },
     "layout": {
       "집":   { "밀도": [7, 9],   "대비": [3, 3], "선택": [1, 1] },
       "마을": { "밀도": [10, 12], "대비": [4, 4], "선택": [2, 2] },
@@ -171,7 +192,7 @@
       "scene": "S#04A", "expected": 2, "file": "House_Opening",
       "by_speaker": { "세라": 2 },
       "nodes": [
-        { "node": "House_Kitchen_ThreePlates", "count": 2, "anchor": "루, 아가. 내려와. 다 됐어." }
+        { "node": "House_Kitchen_ThreePlates", "count": 2, "anchor": "루, 아가. 나와. 다 됐어." }
       ]
     },
     {
@@ -197,7 +218,7 @@
       "scene": "S#04D", "expected": 3, "file": "House_Opening",
       "by_speaker": { "세라": 2, "루": 1 },
       "nodes": [
-        { "node": "House_Note",       "count": 3, "anchor": "루? 내려와서 밥 먹어. 식겠네." },
+        { "node": "House_Note",       "count": 3, "anchor": "루? 나와서 밥 먹어. 식겠네." },
         { "node": "House_Note_Table", "count": 0, "anchor": null }
       ],
       "_note": "[자막] 나레이션 1줄은 대사 배분과 별도로 집계된다. 쪽지 문구는 [읽기] 블록이라 파싱하지 않는다(이미지 1장, F-8-9)."
@@ -252,10 +273,10 @@
       ]
     },
     {
-      "scene": "S#08", "expected": 0, "file": "House_Attic",
-      "by_speaker": {},
+      "scene": "S#08", "expected": 1, "file": "House_Attic",
+      "by_speaker": { "루": 1 },
       "nodes": [
-        { "node": "House_Kitchen_Drawer", "count": 0, "anchor": null }
+        { "node": "House_Kitchen_Drawer", "count": 1, "anchor": "다락방 열쇠다. … 여기 있네" }
       ]
     },
     {
@@ -287,10 +308,11 @@
       ]
     },
     {
-      "scene": "S#13", "expected": 0, "file": "House_Attic",
-      "by_speaker": {},
+      "scene": "S#13", "expected": 1, "file": "House_Attic",
+      "by_speaker": { "루": 1 },
       "nodes": [
-        { "node": "House_FrontDoor_Depart", "count": 0, "anchor": null }
+        { "node": "House_FrontDoor_Depart", "count": 0, "anchor": null },
+        { "node": "House_FenceGate",        "count": 1, "anchor": "안 잠겨있네. 다행이다." }
       ]
     },
     {
@@ -353,7 +375,6 @@
         { "node": "Village_Sera_Spotted",     "count": 1, "anchor": "…루?" },
         { "node": "Village_Bakery",           "count": 3, "anchor": "어서 오세요! 갓 구운 빵이 있어요" },
         { "node": "Village_FlowerShop",       "count": 1, "anchor": "어서오세요. 오늘도 꽃들이 예쁘게 피었답니다." },
-        { "node": "Village_Square_Children",  "count": 0, "anchor": null },
         { "node": "Village_Sol_Trade_Sugar",  "count": 1, "anchor": "이건… 아직 쓸 수 없어." },
         { "node": "Sol_BreadDoughReject",     "count": 1, "anchor": "비어 있는 건 안 받아." }
       ],
@@ -366,7 +387,8 @@
         "  CLAUDE.md §6 '차단된 대사 처리' 대로 삭제 여부는 사람이 정한다. 사용자 판단 대기 중.",
         "기존 이름 유지(재배선 불필요): Village_Bakery(BakeryNPC.storyNode) ·",
         "  Village_FlowerShop · Sol_BreadDoughReject(SolNPC.breadRejectNode).",
-        "신규 배선 필요: Village_Sera_Spotted · Village_Square_Children(대사 0, 연출 전용) ·",
+        "신규 배선 필요: Village_Sera_Spotted ·",
+        "  ⚠ 2026-10-25 — E-70-6 이 광장 아이들(15-D)을 삭제해 Village_Square_Children 을 이 표 · yarn 에서 뺐다(대사 0 노드였다).",
         "  Village_Sol_Trade_Sugar.",
         "Village_Sol_Trade_Sugar 는 루 (속으로) 독백 1줄이다.",
         "⚠ 현행 Village_Demo.yarn 의 남은 본문은 아직 옛 원고(명세서 v7, S#13~S#18) 기준이다.",
