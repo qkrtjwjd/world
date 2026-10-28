@@ -12,7 +12,7 @@ using UnityEngine.SceneManagement;
 ///
 /// ② 다락방 미진입 1시간 (C-14-2-4 · E-72-4 · F-6).
 ///    다락방 문을 열지 않은 채 3600초가 지나면 세라가 돌아온다 — BE#01-a 를 건너뛰고 BE#01-b(소파)부터.
-///    다락방 문을 여는 순간 멈춘다. 압박이 아니므로 화면에 시간을 표시하지 않고 조임 연출도 쓰지 않는다.
+///    다락방 문을 여는 순간 멈춘다. 루의 방 침대에 누워 있는 동안에도 멈추고 일어나면 남은 시간부터 센다(D-4-1). 압박이 아니므로 화면에 시간을 표시하지 않고 조임 연출도 쓰지 않는다.
 ///    일시정지 메뉴에서는 멈춘다(timeScale 0 → deltaTime 0). 대화창 · 오버레이가 떠 있으면 닫힌 직후 발동한다.
 ///    복귀는 세라 외출 직후 — 외출하는 순간 되감기 지점(SaveManager.SaveRewindPoint)을 찍어 두고
 ///    BE#01 이 끝나면 그 지점으로 돌아간다. 아이템 · 인형화(22) · 녹음 · 1회 상호작용 · 획득 확인 · 시계가
@@ -37,6 +37,15 @@ public class HouseClock : MonoBehaviour
     /// <summary>다락방 열쇠를 집은 시각(외출 기준 초). 없으면 -1.</summary>
     public static float AtticKeyAt { get; private set; } = -1f;
 
+    /// <summary>
+    /// 루의 방 침대에 누워 있던 시간의 합(초). 1시간 판정은 누워 있는 동안 멈추고 일어나면 남은 시간부터 센다
+    /// (C-14-2-4 · D-4-1 · F-6). 각설탕 녹음은 외출 뒤 실제 시간(Elapsed)으로 그대로 센다 — 멈추는 것은 1시간 판정뿐이다.
+    /// </summary>
+    public static float BedPaused { get; private set; }
+
+    /// <summary>1시간 판정이 센 시간 — 외출 뒤 시간에서 누워 있던 시간을 뺀 값.</summary>
+    public static float AtticClock => Elapsed - BedPaused;
+
     public static bool SugarMelted => Flag(FlagSugarMelted);
 
     /// <summary>각설탕이 녹았다. 거실 창 너머 · 마당 맵의 배치물이 듣고 바꿔 낀다.</summary>
@@ -49,15 +58,17 @@ public class HouseClock : MonoBehaviour
     {
         Elapsed = 0f;
         AtticKeyAt = -1f;
+        BedPaused = 0f;
         _overtimeTriggered = false;
         OnSugarMelted = null;
     }
 
     /// <summary>세이브 · 새 게임에서 시계를 되돌린다.</summary>
-    public static void Restore(float elapsed, float atticKeyAt)
+    public static void Restore(float elapsed, float atticKeyAt, float bedPaused = 0f)
     {
         Elapsed = Mathf.Max(0f, elapsed);
         AtticKeyAt = atticKeyAt;
+        BedPaused = Mathf.Clamp(bedPaused, 0f, Elapsed);
         _overtimeTriggered = false;
     }
 
@@ -108,6 +119,7 @@ public class HouseClock : MonoBehaviour
         if (BadEndingDirector.IsPlaying) return;
 
         Elapsed += Time.deltaTime;
+        if (LuRoomBed.IsLying) BedPaused += Time.deltaTime;   // 누워 있는 동안 1시간 판정 정지(C-14-2-4)
 
         // ① 각설탕 — 30초와 열쇠 획득 중 늦은 쪽
         if (!SugarMelted && AtticKeyAt >= 0f && Elapsed >= Mathf.Max(MeltAfterOuting, AtticKeyAt))
@@ -118,7 +130,7 @@ public class HouseClock : MonoBehaviour
         }
 
         // ② 다락방 미진입 1시간
-        if (!_overtimeTriggered && !Flag(FlagAtticOpened) && Elapsed >= AtticDeadline)
+        if (!_overtimeTriggered && !Flag(FlagAtticOpened) && AtticClock >= AtticDeadline)
         {
             _overtimeTriggered = true;
             StartCoroutine(OvertimeRoutine());

@@ -208,7 +208,7 @@ title: House_Doorbell_Ring
 쿠루: 계세요~? 아침부터 죄송한데요. 이 근처에서 유일하게 꽃이 핀 집이 여기라서요. 차 한잔만 부탁드려도 될까요?
 
 <<showSprite "세라" "neutral_cold" "left" "fixed">>
-세라: …{$이름}. 방으로 올라가 있어.
+세라: …{$이름}. 방에 들어가 있어.
 ===
 
 title: House_Doorbell_Tap
@@ -390,6 +390,10 @@ title: House_Note
 ---
 세라: {$이름}? 나와서 밥 먹어. 식겠네.
 
+// [UI] [상호작용] 문틈 아래 종이 → E키. 줍기 전에는 루의 방 문이 열리지 않으며 방의 다른 물건은 반응하지 않는다(D-4-1).
+//   종이를 조사할 때까지 여기서 멈춘다 — KitchenTriggerCutscene.doorNote(집_루의방_문틈쪽지 · house_lu_room_door_note).
+<<door_note_pickup>>
+
 // [지문 제거] {이름조사("는")} 대답하지 않는다. 문틈 아래 종이가 한 장 밀어넣어져 있다. 언제부터인지는 모르겠다. 이쪽으로 온 적은 없었는데.
 
 // camera_closeup — 쪽지. 대상 오브젝트 미존재, 생성 후 이름 지정 필요
@@ -406,7 +410,7 @@ title: House_Note
 //   그림: Assets/Resources/Readables/kuru_note.png (640×360, 종이 밖 투명). 없으면 경고만 남기고 넘어간다.
 <<show_readable "kuru_note">>
 
-// 쪽지 상호작용(E키) 및 아이템 2종 획득은 KitchenTriggerCutscene 이 처리한다.
+// 아이템 2종 획득은 KitchenTriggerCutscene 이 처리한다(쪽지 줍기는 위 <<door_note_pickup>>).
 
 // [자막] — D S#04D 문단 186. 이 데모에서 화면에 뜨는 유일한 지문이다.
 못 본 척해야 한다. 언제나처럼. 창밖에 던지거나 삼키거나.

@@ -23,6 +23,11 @@ title: house_kitchen_drawer_2
 {$이름}: 비어있네
 ===
 
+title: house_kitchen_drawer_3_again
+---
+{$이름}: 다른건 없다
+===
+
 title: house_kitchen_yu_chair
 ---
 {$이름}: …
@@ -112,4 +117,62 @@ radio_yu: 그 옷 아빠가 엄마랑 같이 고른거야. 마음에 들었으�
 <<stop>>
 <<endif>>
 {$이름}: 이거... 오래 된건가?
+===
+
+title: house_lu_room_window
+---
+{$이름}: 기다리고 있어요
+===
+
+title: house_lu_room_toybox_F
+---
+{$이름}: 예전에는 가지고 놀았지만, 지금은 먼지만 쌓였네
+===
+
+title: house_lu_room_toybox_R
+---
+{$이름}: 예전에는 가지고 놀았지만, 지금은 먼지만 쌓였네
+===
+
+title: house_lu_room_glow_stars
+---
+{$이름}: 비가 와서 별을 볼 수 없는 날이면 아빠는 야광별을 붙여 주며 별자리를 알려 주셨었지...
+===
+
+title: house_lu_room_glow_stars_2
+---
+{$이름}: 요즘은 별을 본적이 없네
+{$이름}: 그땐 좋았었지
+===
+
+title: house_lu_room_marshmallow_bowl
+---
+{$이름}: 엄마가 심심할때마다 먹으라고 했는데 가져가야 하나
+-> 가져간다
+    <<object_choice 1>>
+    {$이름}: 그래 가져가는게 좋겠지
+-> 안 가져간다
+    <<object_choice 2>>
+    {$이름}: 엄마한테 혼나진 않겠지...
+===
+
+title: house_lu_room_marshmallow_bowl_choice5
+---
+{$이름}: 엄마가 심심할때마다 먹으라고 했는데 가져가야 하나
+-> 가져간다
+    <<object_choice 1>>
+    {$이름}: 그래 가져가는게 좋겠지
+-> 안 가져간다
+    <<object_choice 2>>
+    {$이름}: 역시 가지고 가자
+===
+
+title: house_lu_room_marshmallow_bowl_again
+---
+{$이름}: 다른건 없다
+===
+
+title: house_lu_room_storybook
+---
+{$이름}: 탑에 갇힌 공주 이야기. 어릴 땐 많이 읽었었지
 ===

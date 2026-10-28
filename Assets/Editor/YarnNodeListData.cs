@@ -50,8 +50,6 @@ public class YarnNodeListData : ScriptableObject
         // 집 안 상호작용 (개별 .yarn)
         "House_attic_door",
         "House_kitchen_marshmallow", "House_kitchen_refrigerator", "House_kitchen_refrigerator1",
-        "House_lu_marshmallow", "House_lu_star", "House_lu_star1",
-        "House_lu_toybox", "House_lu_toybox1",
         "House_sera_bed", "House_sera_closet",
         // Village_Demo.yarn
         "Village_Sol_Square", "Village_FlowerShop", "Village_Bakery",

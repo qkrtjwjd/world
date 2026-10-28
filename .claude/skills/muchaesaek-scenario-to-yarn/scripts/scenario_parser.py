@@ -172,11 +172,12 @@ OBJECT_HEADINGS = ("표기 규약", "표기 예시", "미작성 사유")
 OBJECT_LAYERS = ("밀도", "대비", "선택")                  # 배치 수량을 세는 층 (C-16-3)
 # 헤더에 올 수 있는 층 전부 (F-8-9 v1.42). 수량을 세지 않는 층 — 획득 · 획득 확인 · 진행 · 저장 —
 # 은 진행 · 아이템 물건이라 C-16-3 의 밀도 · 대비 · 선택 배치 수와 별개다.
-OBJECT_HEADER_LAYERS = OBJECT_LAYERS + ("획득", "획득 확인", "진행", "저장", "앉기")
+OBJECT_HEADER_LAYERS = OBJECT_LAYERS + ("획득", "획득 확인", "진행", "저장", "앉기", "눕기")
 OBJECT_FORMS = ("방법", "태도", "대상", "침묵", "반복")     # C-16-6. 5건에 5형태
 OBJECT_SILENT = "무대사"
 OBJECT_ONCE = "1회"          # 첫 조사에만 대사 (C-16-11)
 OBJECT_SIT = "앉기"          # 조사하면 앉는다 (C-16-11)
+OBJECT_LIE = "눕기"          # 조사 · 이동 키로 눕는다 — 침대 「밀도 · 무대사 · 눕기」(D-4-1 · 2026-10-28)
 
 OBJ_HEADER = re.compile(r"^\[OBJ\]\s*(.+)$")
 OBJ_VERSION = re.compile(r"^([FNR])\s+루\s*(.*)$")
@@ -186,6 +187,15 @@ OBJ_VERSION_AGAIN = re.compile(r"^([FNR])\s*두\s*번째\s*조사부터\s*→\s*
 # 조건 글자는 게임 코드가 맡는다 — 대사만 꺼낸다.
 OBJ_RECHECK = re.compile(r"^(.*?)재조사\s*→\s*(.*)$")
 OBJ_RECHECK_LINE = re.compile(r"루\s*([" + "\"“”" + r"].*)$")
+# 루의 방 표기 (D-4-1 · 2026-10-28). 조건 글자는 게임 코드가 맡는다 — 대사만 꺼낸다.
+#   「S#04H 이후 조사 → 루 “…”」 — 진행 반응 뒤의 밀도 1줄(창문)
+OBJ_AFTER_SCENE = re.compile(r"^S#\S+\s*이후\s*조사\s*→\s*루\s*(.*)$")
+#   「민 뒤 F · R → 루 “…”」 — 조건이 붙은 두 필터 공통 줄(장난감 상자). 비어 있는 버전에만 넣는다
+OBJ_BOTH_FILTERS = re.compile(r"^(.+?)\s+F\s*·\s*R\s*→\s*루\s*(.*)$")
+#   「두 번째 조사부터 → 루 “…”」 · 「두 번째 조사부터 (이어서) → 루 “…”」 — 필터 없는 반복 줄(야광별)
+OBJ_REPEAT = re.compile(r"^두\s*번째\s*조사부터\s*(?:\(\s*이어서\s*\))?\s*→\s*루\s*(.*)$")
+#   「안 가져간다 5번째 → 루 “…”」 — 거절 n 번째의 줄(마시멜로 그릇). 뒤따르는 「→ …」 결과가 여기 붙는다
+OBJ_NTH_CHOICE = re.compile(r"^(.+?)\s*(\d+)\s*번째\s*→\s*루\s*(.*)$")
 # 「→ [아이템 획득: 물]」 · 「→ 반응 없이 종료」 — 대사 없는 선택 결과 (획득 확인 · C-16-11)
 OBJ_RESULT = re.compile(r"^→\s*(.+)$")
 OBJ_DENSITY = re.compile(r"^루\s*(.*)$")
@@ -346,8 +356,14 @@ class ObjectSpec:
     kuru: str = ""                                       # 숲 지정 오브젝트 한정
     once: bool = False                                   # · 1회 — 첫 조사에만 대사
     sit: bool = False                                    # · 앉기
+    lie: bool = False                                    # · 눕기
     again: str = ""                                      # 「재조사 →」 줄
     again_cond: str = ""                                 # 재조사 앞의 조건 글자 (원문 그대로)
+    repeat: list[str] = field(default_factory=list)      # 「두 번째 조사부터 →」 줄 (필터 없음)
+    nth_choice: str = ""                                 # 「안 가져간다 5번째」 — 선택지 글자
+    nth: int = 0                                         #   그 번째 수
+    nth_line: str = ""                                   #   그때의 루 줄
+    nth_result: str = ""                                 #   그때의 결과 글자
     staging: list[str] = field(default_factory=list)     # [TRIGGER] · [SFX] 원문
     notes: list[str] = field(default_factory=list)       # 처리 지시 (대사 아님 · 게임 코드가 맡는다)
 
@@ -550,6 +566,43 @@ class Classifier:
             obj.versions[m.group(1) + "2"] = body
             return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
 
+        # 루의 방 표기 (D-4-1 · 2026-10-28) — 재조사 · 대비 판정보다 위다
+        m = OBJ_AFTER_SCENE.match(s)
+        if m:
+            body = self._quoted(m.group(1))
+            if body is None or obj.density:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.density = body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        m = OBJ_REPEAT.match(s)
+        if m:
+            body = self._quoted(m.group(1))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.repeat.append(body)
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        m = OBJ_BOTH_FILTERS.match(s)
+        if m:
+            body = self._quoted(m.group(2))
+            if body is None:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            for v in ("F", "R"):
+                if v in obj.versions and obj.versions[v] != body:
+                    return Item(KIND_UNCLASSIFIED, p.idx, None, s)   # 같은 버전에 다른 줄 — 사람이 볼 것
+                obj.versions[v] = body
+            obj.notes.append(m.group(1).strip() + " F · R 공통 줄")
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
+        m = OBJ_NTH_CHOICE.match(s)
+        if m and obj.choices:
+            body = self._quoted(m.group(3))
+            if body is None or obj.nth_line:
+                return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+            obj.nth_choice, obj.nth, obj.nth_line = m.group(1).strip(), int(m.group(2)), body
+            return Item(KIND_OBJECT, p.idx, None, body, speaker_id="루")
+
         # 재조사 — 대사가 있으면 그것만 꺼낸다. 「가져가지 않았으면 같은 대사와 선택지 /
         # 가져갔으면 루 “…”」처럼 조건이 섞여도 루 줄은 하나다
         m = OBJ_RECHECK.match(s)
@@ -591,6 +644,11 @@ class Classifier:
         # 대사 없는 선택 결과 — 바로 앞 선택지에 붙는다
         m = OBJ_RESULT.match(s)
         if m and obj.choices and not any(q in s for q in DQUOTE):
+            if obj.nth_line:                       # 「안 가져간다 5번째」 줄 뒤의 결과
+                if obj.nth_result:
+                    return Item(KIND_UNCLASSIFIED, p.idx, None, s)
+                obj.nth_result = m.group(1).strip()
+                return Item(KIND_OBJECT, p.idx, None, obj.nth_result)
             obj.choices[-1].result = m.group(1).strip()
             return Item(KIND_OBJECT, p.idx, None, m.group(1).strip())
 
@@ -651,6 +709,8 @@ class Classifier:
                 obj.once = True
             elif token == OBJECT_SIT:
                 obj.sit = True
+            elif token == OBJECT_LIE:
+                obj.lie = True
             elif token in OBJECT_FORMS:
                 obj.form = token
             else:
@@ -1221,6 +1281,23 @@ class Converter:
             # 「재조사 →」 줄 — 같은 물건을 다시 조사했을 때 (F-8-9). 언제 이 노드를 여는지는 게임이 정한다
             return [(code + "_again", [L(obj.again)])] if obj.again else []
 
+        def repeat_node() -> list[tuple[str, list[str]]]:
+            # 「두 번째 조사부터 →」 줄 — 필터와 무관한 반복 대사(D-4-1 야광별). 세 번째부터도 이 노드다
+            return [(code + "_2", [L(t) for t in obj.repeat])] if obj.repeat else []
+
+        def nth_node() -> list[tuple[str, list[str]]]:
+            # 「안 가져간다 5번째 →」 — 그 번째에 쓰는 질문 노드(D-4-1 마시멜로 그릇). 같은 질문 · 선택지이고
+            # 그 선택지의 반응 줄만 n 번째 줄로 바뀐다(대신한다 — 2026-10-28 사용자 확인). 결과는 물건 쪽 코드가 한다
+            if not obj.nth_line:
+                return []
+            body = [L(obj.density)] if obj.density else []
+            for i, c in enumerate(obj.choices, 1):
+                body += ["-> " + conv(c.text), "    <<object_choice %d>>" % i]
+                reaction = obj.nth_line if c.text == obj.nth_choice else c.reaction
+                if reaction:
+                    body.append("    " + L(reaction))
+            return [("%s_choice%d" % (code, obj.nth), body)]
+
         def kuru_tail() -> list[str]:
             # 31 이상 침묵은 빈 노드가 아니라 모션 분기다 (F-8-5).
             if not obj.kuru:
@@ -1236,10 +1313,10 @@ class Converter:
                 body += ["-> " + conv(c.text), "    <<object_choice %d>>" % i]
                 if c.reaction:
                     body.append("    " + L(c.reaction))
-            return ([(code, body)] if body else []) + again_node()
+            return ([(code, body)] if body else []) + nth_node() + again_node()
 
-        if obj.layer in ("밀도", "획득", "진행", "저장", "앉기"):
-            return ([(code, [L(obj.density)])] if obj.density else []) + again_node()
+        if obj.layer in ("밀도", "획득", "진행", "저장", "앉기", "눕기"):
+            return ([(code, [L(obj.density)])] if obj.density else []) + repeat_node() + again_node()
 
         if obj.layer == "대비":
             out = []
@@ -1290,8 +1367,11 @@ class Converter:
                 "쿠루지정": bool(o.kuru),
                 "1회": o.once,
                 "앉기": o.sit,
+                "눕기": o.lie,
                 "재조사조건": o.again_cond,
                 "선택결과": [c.result for c in o.choices],
+                **({"n번째선택": {"선택지": o.nth_choice, "번째": o.nth, "결과": o.nth_result}}
+                   if o.nth_line else {}),
                 "연출": o.staging,
                 "처리지시": o.notes,
                 "문단": o.para,

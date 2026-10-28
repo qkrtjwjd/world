@@ -239,4 +239,8 @@ MonoBehaviour:
     clip: {fileID: 8300000, guid: 969538817eed49c418e6985502d331cc, type: 3}
     loop: 0
     category: 0
+  - name: toybox_drag
+    clip: {fileID: 8300000, guid: e4250faae4654cc5a96f1e4cf69dd78b, type: 3}
+    loop: 0
+    category: 0
   audioSource: {fileID: 0}

@@ -47,6 +47,12 @@ public class BadEndingDirector : MonoBehaviour
     [Tooltip("BE#01-d · BE#02-c. 식탁. ⚠ KitchenTriggerCutscene 의 playerDiningSpawn 과 같은 지점이어야 한다 — 정본이 S#04A 와 같은 구도를 요구한다.")]
     public Transform diningSpawn;
 
+    [Header("BE#01 침대 경로 — 루의 방 (D-4-1 · F-6)")]
+    [Tooltip("이불을 덮고 잠든 루의 자리(침대 위). LuRoomBed.liePoint 와 같은 지점.")]
+    public Transform luBedSpawn;
+    [Tooltip("깨어 일어난 루가 방을 나가며 걷는 목표 — 루의 방 문 앞. 여기서 식탁으로 암전한다.")]
+    public Vector2 luBedLeavePoint = new Vector2(-2.40f, 6.00f);
+
     [Header("BE#02 — 이동 지점")]
     [Tooltip("BE#02-b. 밖에서 잠긴 루의 방.")]
     public Transform luRoomSpawn;
@@ -183,6 +189,7 @@ public class BadEndingDirector : MonoBehaviour
     bool[]          _luColliderWasEnabled;
     SeraStageWalker _seraWalker;
     bool            _diningCutDone;
+    bool            _bedPath;
 
     // ─────────────────────────────────────────────────────────────────────────
     void Awake()
@@ -258,6 +265,63 @@ public class BadEndingDirector : MonoBehaviour
         yield return RunBE01d_ThreePlates();
 
         yield return FadeOut();
+        EndPlayback();
+        EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
+    }
+
+    /// <summary>
+    /// BE#01 의 세 번째 경로 — 루의 방 침대에 누운 채 20분(D-4-1 · F-6 · E-76).
+    /// BE#01-a · b · c 를 건너뛴다. 짧은 암전 뒤 루의 방 · 저녁, 이불을 덮고 잠든 루로 연다 →
+    /// 세라가 부엌에서 「저녁 먹게 나오렴.」 → 루가 눈을 뜨고 일어나 방을 나가 부엌으로 → 이후 BE#01-d 그대로.
+    /// BE#01-d 첫 지문 「루도 일어나서 방으로 향한다」는 이 경로에서 쓰지 않는다(지문은 화면에 뜨지 않는다).
+    /// 엔딩 화면 · 복귀는 1시간 경로와 같다 — 세라 외출 직후 되감기 지점(인형화 22 · 페널티 없음 · 코트 미착용).
+    /// </summary>
+    public static IEnumerator PlayHouseBed()
+    {
+        var d = Instance;
+        if (d == null)
+        {
+            Debug.LogWarning("[BadEndingDirector] Home 씬에 배치돼 있지 않습니다. BE#01(침대) 컷씬을 건너뜁니다.");
+            EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
+            yield break;
+        }
+        yield return d.StartCoroutine(d.HouseBedRoutine());
+    }
+
+    IEnumerator HouseBedRoutine()
+    {
+        LuRoomBed.ReleaseForCutscene();
+        BeginPlayback();
+        _bedPath = true;
+
+        // 짧은 암전 → 루의 방 · 저녁. 저녁 빛은 거실 시간 경과의 마지막 단계와 같게 둔다(BE#01-b 와 같은 하루의 끝).
+        yield return FadeOut(cutFadeDuration);
+        DaggerFilterController.Instance?.SwitchToFantasyForced();
+        FilterManager.Instance?.SetFilter(FilterType.Fantasy);
+        if (ambientLight != null && ambientIntensities != null && ambientIntensities.Length > 0)
+            ambientLight.intensity = ambientIntensities[ambientIntensities.Length - 1];
+
+        HideSera();
+        TeleportPlayer(luBedSpawn != null ? luBedSpawn : luRoomSpawn);
+        BindRoomBound(luRoomSpawn);
+        FaceLu(Vector2.down);                       // 🔴 이불을 덮고 잠든 루 — 그림 대기
+        CameraDirector.Instance?.Hold();
+        Dbg.Log("[배드엔딩] BE#01(침대) — 루의 방 저녁부터");
+        yield return FadeIn();
+
+        // 부엌에서 저녁을 만드는 소리(멀리) → 정적 → 부름. BE#01-d 와 같다.
+        PlayLoopIfNamed(sfxDistantCookingName);
+        yield return new WaitForSecondsRealtime(beatSeconds * 3f);
+        StopLoopIfNamed(sfxDistantCookingName);
+        yield return new WaitForSecondsRealtime(beatSeconds * 1.5f);
+
+        _diningCutDone = false;
+        yield return YarnDialogue.PlayIfExists(yarnNode_BE01d, false);
+        if (!_diningCutDone) yield return CutToDining();
+        yield return WaitBeat();
+
+        yield return FadeOut();
+        _bedPath = false;
         EndPlayback();
         EndingManager.TriggerBadEnding(BadEndingType.HouseSealed);
     }
@@ -464,6 +528,15 @@ public class BadEndingDirector : MonoBehaviour
     IEnumerator CutToDining()
     {
         _diningCutDone = true;
+
+        // 침대 경로 — 부름을 듣고 눈을 뜨고 일어나 방을 나간다(D-4-1 5절). 🔴 깨어 일어나는 동작은 그림 대기.
+        if (_bedPath)
+        {
+            yield return new WaitForSecondsRealtime(0.4f);
+            if (luBedSpawn != null) SetLuPosition((Vector2)luBedSpawn.position + Vector2.down * 0.5f);
+            yield return WalkLu(luBedLeavePoint);
+        }
+
         yield return FadeOut();
 
         CameraFollow.Instance?.SetBound(null);      // 방에서 나온다

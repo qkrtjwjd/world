@@ -51,7 +51,7 @@ title: House_Kitchen_ThreePlates
 title: House_Doorbell_Ring
 ---
 쿠루: 계세요~? 아침부터 죄송한데요. 이 근처에서 유일하게 꽃이 핀 집이 여기라서요. 차 한잔만 부탁드려도 될까요?
-세라: …{$이름}. 방으로 올라가 있어.
+세라: …{$이름}. 방에 들어가 있어.
 ===
 
 title: House_Doorbell_Tap

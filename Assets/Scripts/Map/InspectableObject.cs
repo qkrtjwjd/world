@@ -44,7 +44,7 @@ public class InspectableObject : MonoBehaviour
     [SerializeField] private Layer layer = Layer.Density;
 
     [Tooltip("조사는 되지만 대사창이 뜨지 않는다. 보여주는 것 자체가 내용이다 (C-16-4).\n" +
-             "S#07 의 유의 접시·신발이 그 예다. 앉기와 함께 쓰면 앉는 동작이 반응이다(소파).")]
+             "S#07 의 식탁 유의 접시가 그 예다(E-76 — 신발은 뺐다). 앉기와 함께 쓰면 앉는 동작이 반응이다(소파).")]
     [SerializeField] private bool silent = false;
 
     [Header("1회 · 앉기 (C-16-11)")]
@@ -176,6 +176,21 @@ public class InspectableObject : MonoBehaviour
         onAcquired?.Invoke();
     }
 
+    /// <summary>획득 확인 질문 노드를 연다. 고른 결과는 <see cref="LastChoice"/>. 물건별 처리(마시멜로 그릇)가 쓴다.</summary>
+    public IEnumerator PlayAcquireQuestion(string node = null)
+    {
+        LastChoice = 0;
+        yield return YarnDialogue.PlayIfExists(string.IsNullOrEmpty(node) ? codeId : node);
+    }
+
+    /// <summary>획득 칸의 아이템 · 인형화를 주고 획득 상태로 둔다. 물건별 처리(마시멜로 그릇의 강제 획득)가 쓴다.</summary>
+    public void GiveAcquired()
+    {
+        Give();
+        Done = true;
+        onAcquired?.Invoke();
+    }
+
     void Give()
     {
         if (acquireItem != null && InventoryManager.Instance != null)
@@ -251,8 +266,9 @@ public class InspectableObject : MonoBehaviour
         return wanted;
     }
 
-    /// <summary>심리 게이지 구간. F-2-2 를 그대로 쓴다 — 30 미만 F / 30~69 N / 70 이상 R.</summary>
-    private static string VersionSuffix()
+    /// <summary>심리 게이지 구간. F-2-2 를 그대로 쓴다 — 30 미만 F / 30~69 N / 70 이상 R.
+    /// 물건별 처리(장난감 상자 밀기 · D-4-1)도 같은 기준으로 「현실」을 판정한다.</summary>
+    public static string VersionSuffix()
     {
         float gauge = GaugeManager.Instance != null
             ? GaugeManager.Instance.fantasyRealityGauge

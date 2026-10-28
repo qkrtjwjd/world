@@ -129,6 +129,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         data.isFrontDoorPassed       = GameState.isFrontDoorPassed;
         data.houseClock              = HouseClock.Elapsed;
         data.houseAtticKeyAt         = HouseClock.AtticKeyAt;
+        data.houseBedPaused          = HouseClock.BedPaused;
 
         foreach (string id in GameState.defeatedEnemyIDs)
             data.defeatedEnemyIDs.Add(id);
@@ -504,7 +505,7 @@ public class SaveManager : PersistentSingleton<SaveManager>
         GameState.isFrontDoorKeyFound     = data.isFrontDoorKeyFound;
         GameState.isDaggerToggleUnlocked  = data.isDaggerToggleUnlocked;
         GameState.isFrontDoorPassed       = data.isFrontDoorPassed;
-        HouseClock.Restore(data.houseClock, data.houseAtticKeyAt);
+        HouseClock.Restore(data.houseClock, data.houseAtticKeyAt, data.houseBedPaused);
 
         // ── 단검 장착 상태 복원 (DontDestroyOnLoad 라 세션 상태가 세이브와 어긋날 수 있음) ──
         if (DaggerSystem.Instance != null)

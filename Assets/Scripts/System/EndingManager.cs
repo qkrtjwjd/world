@@ -7,7 +7,7 @@ public enum BadEndingType
     HouseSealed,
     /// <summary>마을 — 순찰 2회차 이후 발각되어 감금된다. 복귀: 마을 진입 지점 (C-14-3-4)</summary>
     Captured,
-    /// <summary>인형화 100 — 자아 소멸. 데모 범위(상한 32)에서는 도달하지 않는다 (C-2-6)</summary>
+    /// <summary>인형화 100 — 자아 소멸. 데모 계산 범위(15~34 · 숲 마시멜로 36 · 상한 · 하한은 고정하지 않는다 — C-2-4 · E-76)에서는 도달하지 않는다 (C-2-6)</summary>
     Doll,
 }
 

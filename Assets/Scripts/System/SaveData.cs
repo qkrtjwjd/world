@@ -105,6 +105,8 @@ public class SaveData
     public float houseClock;
     /// <summary>다락방 열쇠를 집은 시각(외출 기준 초). 없으면 -1. 각설탕이 녹는 시점 = 30초와 이 값 중 늦은 쪽(F-6).</summary>
     public float houseAtticKeyAt = -1f;
+    /// <summary>루의 방 침대에 누워 있던 시간의 합(초). 1시간 판정은 houseClock 에서 이 값을 뺀 것이다(D-4-1 · F-6). 예전 세이브는 0.</summary>
+    public float houseBedPaused;
 
     // 처치된 적 ID (HashSet은 JSON 직렬화 불가 → List 사용)
     public List<string> defeatedEnemyIDs   = new List<string>();

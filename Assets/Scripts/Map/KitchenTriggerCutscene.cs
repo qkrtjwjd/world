@@ -124,6 +124,11 @@ public class KitchenTriggerCutscene : MonoBehaviour
     [Tooltip("획득할 아이템. 비워두면 획득을 건너뛴다.")]
     public ItemData kuruNoteItem;
     public ItemData sugarCubeItem;
+    [Tooltip("집_루의방_문틈쪽지(house_lu_room_door_note) — 진행 오브젝트. 문틈 아래 종이. 평소에는 꺼 두고 S#04D 에만 켠다.\n" +
+             "House_Note 의 <<door_note_pickup>> 이 이것을 조사(E)할 때까지 대사를 멈춘다(D S#04D [UI] · D-4-1).")]
+    public InspectableObject doorNote;
+    [Tooltip("쪽지를 줍기 전에는 루의 방 문이 열리지 않는다 — 기다리는 동안 끌 문 상호작용(소리 · 대사 없음 · D-4-1).")]
+    public InteractionTrigger[] luRoomDoorTriggers;
 
     [Header("S#04E — 마시멜로 씹기")]
     [Tooltip("Assets/Sound/ 에 추가할 마시멜로 씹기 클립을 여기에 드래그")]
@@ -548,6 +553,45 @@ public class KitchenTriggerCutscene : MonoBehaviour
     {
         if (Instance == null) yield break;
         yield return Instance.StartCoroutine(Instance.SeraGo(mark));
+    }
+
+    // <<door_note_pickup>> — S#04D 세라의 첫 부름 뒤. 문틈 아래 종이를 조사(E)할 때까지 대사를 멈춘다.
+    //   그동안 조작을 풀고(루의 방 안을 걸을 수 있다) 루의 방 문은 열리지 않는다. 방의 다른 물건은 세라 외출 전이라 반응하지 않는다.
+    [YarnCommand("door_note_pickup")]
+    public static IEnumerator YarnDoorNotePickup()
+    {
+        if (Instance == null) yield break;
+        yield return Instance.StartCoroutine(Instance.WaitDoorNotePickup());
+    }
+
+    /// <summary>쪽지를 주웠다 — 검증 드라이버가 리플렉션으로 세울 수 있다(배치에서는 키를 누를 수 없다).</summary>
+    bool _notePicked;
+
+    IEnumerator WaitDoorNotePickup()
+    {
+        if (doorNote == null) yield break;
+        _notePicked = false;
+        doorNote.gameObject.SetActive(true);
+        if (luRoomDoorTriggers != null)
+            foreach (var t in luRoomDoorTriggers) if (t != null) t.enabled = false;
+        PlayerInputLock.Instance?.Unlock();
+
+        yield return null;   // 줄을 넘긴 키 입력이 같은 프레임에 줍기로 읽히지 않게
+        KeyCode key = SettingsManager.Instance?.keyInteract ?? KeyCode.E;
+        while (!_notePicked)
+        {
+            var lu = LuPose.Lu;
+            if (lu != null && Input.GetKeyDown(key)
+                && Vector2.Distance(lu.position, doorNote.transform.position) <= doorNote.Range)
+                _notePicked = true;
+            yield return null;
+        }
+
+        PlayerInputLock.Instance?.Lock();
+        doorNote.gameObject.SetActive(false);   // 줍고 나면 사라진다 — 재조사 대상이 없다
+        if (luRoomDoorTriggers != null)
+            foreach (var t in luRoomDoorTriggers) if (t != null) t.enabled = true;
+        Dbg.Log("[KitchenTriggerCutscene] S#04D 문틈 쪽지를 주웠다");
     }
 
     // <<sera_face "lu|up|down|left|right">>
