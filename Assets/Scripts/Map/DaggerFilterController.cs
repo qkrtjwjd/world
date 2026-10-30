@@ -83,11 +83,25 @@ public class DaggerFilterController : MonoBehaviour
         }
         else
         {
+            // 씬을 다시 불러오면(BE#01 복귀 · 불러오기) 씬의 교체 쌍은 이 중복 쪽에 붙어 있고, 살아 있는 쪽은
+            // 첫 로드 때의 (이미 파괴된) 오브젝트를 가리킨다. 파괴하기 전에 쌍을 넘긴다(2026-10-31 실측).
+            Instance.AdoptFilterPairs(GetComponent<RealityFilterObject>());
             Destroy(gameObject);
             return;
         }
 
         SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    /// <summary>새로 불러온 씬의 교체 쌍을 이쪽 <see cref="RealityFilterObject"/> 가 넘겨받는다.</summary>
+    void AdoptFilterPairs(RealityFilterObject from)
+    {
+        var mine = GetComponent<RealityFilterObject>();
+        if (mine == null || from == null) return;
+        mine.fantasyObjects = from.fantasyObjects;
+        mine.realityObjects = from.realityObjects;
+        // 중복 쪽은 Start 전에 파괴되므로 씬 기본값(둘 다 켜짐)을 여기서 지금 필터에 맞춘다.
+        mine.SetFilter(IsReality);
     }
 
     void Start()

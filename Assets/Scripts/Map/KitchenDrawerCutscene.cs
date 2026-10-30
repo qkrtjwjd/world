@@ -31,6 +31,8 @@ public class KitchenDrawerCutscene : MonoBehaviour
 
     [Header("Yarn 노드 이름")]
     public string yarnNode = "House_Kitchen_Drawer";
+    [Tooltip("열쇠를 가져간 뒤 다시 조사할 때(D-4-1 집_부엌_밑서랍3 · 재조사 → 「다른건 없다」).")]
+    public string yarnNodeAgain = "house_kitchen_drawer_3_again";
 
     [Header("서랍 안 오버레이 (D S#08 문단 324 · 433)")]
     [Tooltip("⛔ 폐기됨(2026-10-01) — 오버레이 공용 시스템(OverlayCut · house_overlay_kitchen_drawer)으로 옮겼다. " +
@@ -65,7 +67,12 @@ public class KitchenDrawerCutscene : MonoBehaviour
 
     public void BeginCutscene()
     {
-        if (GameState.isAtticKeyFound) return;
+        // 열쇠를 가져간 뒤 다시 조사하면 D-4-1 「다른건 없다」(집_부엌_밑서랍3 · 재조사). 2026-10-31 — 그 전엔 아무 반응이 없었다.
+        if (GameState.isAtticKeyFound)
+        {
+            if (!YarnDialogue.IsRunning) StartCoroutine(YarnDialogue.PlayIfExists(yarnNodeAgain));
+            return;
+        }
         GameState.isAtticKeyFound = true;
         StartCoroutine(PlayCutscene());
     }

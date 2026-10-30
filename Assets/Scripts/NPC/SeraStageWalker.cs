@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -154,6 +155,111 @@ public class SeraStageWalker : MonoBehaviour
         if (d.magnitude > stopShort)
             yield return WalkRoutine(target - d.normalized * stopShort, speed);
         FaceToward(target);
+    }
+
+    // ─── 가구 돌아가기 ────────────────────────────
+
+    /// <summary>
+    /// target 까지 걷되 avoid 사각형(식탁 · 의자 묶음)의 둘레로 돌아간다. 곧게 가도 안 걸리면 <see cref="WalkTo"/> 와 같다.
+    /// 출발점이나 target 이 사각형 안이면(식탁 자리에 앉아 있다 · 앉은 루에게 간다) 가장 가까운 변으로 나와서 / 들어가서 걷는다.
+    /// stopShort 가 0 보다 크면 마지막 구간에서 그만큼 못 미쳐 멈추고 target 을 본다 — <see cref="WalkNear"/> 와 같다.
+    /// </summary>
+    public Coroutine WalkAround(Vector2 target, Rect avoid, float speed = 0f, float stopShort = 0f)
+        => StartCoroutine(WalkAroundRoutine(target, avoid, speed, stopShort));
+
+    IEnumerator WalkAroundRoutine(Vector2 target, Rect avoid, float speed, float stopShort)
+    {
+        var path = Route(Position, target, avoid);
+        for (int i = 0; i < path.Count; i++)
+        {
+            Vector2 p = path[i];
+            if (i == path.Count - 1 && stopShort > 0f)
+            {
+                Vector2 d = target - Position;
+                if (d.magnitude <= stopShort) break;
+                p = target - d.normalized * stopShort;
+            }
+            yield return WalkRoutine(p, speed);
+        }
+        if (stopShort > 0f) FaceToward(target);
+    }
+
+    /// <summary>from → to 경로의 꺾는 점들(to 포함). 사각형 꼭짓점을 최대 둘 거친다.</summary>
+    public static List<Vector2> Route(Vector2 from, Vector2 to, Rect r)
+    {
+        var path = new List<Vector2>();
+        if (r.width <= 0f || r.height <= 0f) { path.Add(to); return path; }
+
+        Vector2 a = r.Contains(from) ? EdgePoint(r, from, to) : from;
+        Vector2 b = r.Contains(to)   ? EdgePoint(r, to, from) : to;
+        if (a != from) path.Add(a);
+
+        if (Crosses(a, b, r))
+        {
+            var corners = new[] { new Vector2(r.xMin, r.yMin), new Vector2(r.xMax, r.yMin), new Vector2(r.xMax, r.yMax), new Vector2(r.xMin, r.yMax) };
+            Vector2[] best = null;
+            float bestCost = float.MaxValue;
+            for (int i = 0; i < 4; i++)
+            {
+                var c = corners[i];
+                if (!Crosses(a, c, r) && !Crosses(c, b, r))
+                    Keep(new[] { c }, Vector2.Distance(a, c) + Vector2.Distance(c, b), ref best, ref bestCost);
+                foreach (int j in new[] { (i + 1) % 4, (i + 3) % 4 })
+                {
+                    var c2 = corners[j];
+                    if (!Crosses(a, c, r) && !Crosses(c2, b, r))
+                        Keep(new[] { c, c2 }, Vector2.Distance(a, c) + Vector2.Distance(c, c2) + Vector2.Distance(c2, b), ref best, ref bestCost);
+                }
+            }
+            if (best != null) path.AddRange(best);
+        }
+
+        path.Add(b);
+        if (b != to) path.Add(to);
+        return path;
+    }
+
+    const float InsideWeight = 4f;
+
+    static void Keep(Vector2[] pts, float cost, ref Vector2[] best, ref float bestCost)
+    {
+        if (cost < bestCost) { best = pts; bestCost = cost; }
+    }
+
+    /// <summary>
+    /// 사각형 안의 p 에서 변으로 수직으로 나가는 점. 안쪽(가구 위)을 걷는 거리를 <see cref="InsideWeight"/> 배로 쳐서
+    /// 가까운 변을 고르고, 비슷하면 toward 쪽 변을 고른다 — 앉은 루에게 갈 때 식탁 반대편 변으로 들어와 식탁을 가로지르지 않게.
+    /// </summary>
+    static Vector2 EdgePoint(Rect r, Vector2 p, Vector2 toward)
+    {
+        var cands = new[] { new Vector2(r.xMin, p.y), new Vector2(r.xMax, p.y), new Vector2(p.x, r.yMin), new Vector2(p.x, r.yMax) };
+        Vector2 best = cands[0];
+        float bestCost = float.MaxValue;
+        foreach (var c in cands)
+        {
+            float cost = InsideWeight * Vector2.Distance(p, c) + Vector2.Distance(c, toward);
+            if (cost < bestCost) { best = c; bestCost = cost; }
+        }
+        return best;
+    }
+
+    /// <summary>선분이 사각형 안쪽을 지나는가(변 위를 따라가는 것은 지나지 않는 것으로 본다).</summary>
+    static bool Crosses(Vector2 a, Vector2 b, Rect r)
+    {
+        const float eps = 0.001f;
+        float x0 = r.xMin + eps, x1 = r.xMax - eps, y0 = r.yMin + eps, y1 = r.yMax - eps;
+        float t0 = 0f, t1 = 1f;
+        Vector2 d = b - a;
+        float[] p = { -d.x, d.x, -d.y, d.y };
+        float[] q = { a.x - x0, x1 - a.x, a.y - y0, y1 - a.y };
+        for (int i = 0; i < 4; i++)
+        {
+            if (Mathf.Abs(p[i]) < 1e-6f) { if (q[i] < 0f) return false; continue; }
+            float t = q[i] / p[i];
+            if (p[i] < 0f) t0 = Mathf.Max(t0, t); else t1 = Mathf.Min(t1, t);
+            if (t0 > t1) return false;
+        }
+        return t1 - t0 > 1e-4f;
     }
 
     /// <summary>걷던 중이면 그 자리에 세운다.</summary>

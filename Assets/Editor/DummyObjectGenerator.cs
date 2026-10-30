@@ -17,7 +17,7 @@ public static class DummyObjectGenerator
     const string OutDir = "Assets/Art/Objects/_dummy";
     const int W = 32, H = 32;
 
-    enum Form { BoxClosed, BoxOpen, Drawer, DrawerOpen, Rack, Dresser, Door, Lock,
+    enum Form { BoxClosed, BoxOpen, Drawer, DrawerOpen, Door, Lock,
                 Plate, Chair, Campfire, Cart, Pot, Sign,
                 CartGone, PotGone, SignGone }
 
@@ -36,8 +36,6 @@ public static class DummyObjectGenerator
         new Spec { Id = "box_open",             Kind = Form.BoxOpen,    Tone = 0.70f, Note = "다락방 상자 — 열림(코트·라디오·단검이 보인다)" },
         new Spec { Id = "kitchen_drawer",       Kind = Form.Drawer,     Tone = 0.45f, Note = "부엌 서랍 — 닫힘" },
         new Spec { Id = "kitchen_drawer_open",  Kind = Form.DrawerOpen, Tone = 0.60f, Note = "부엌 서랍 — 열림" },
-        new Spec { Id = "shoe_rack",            Kind = Form.Rack,       Tone = 0.50f, Note = "신발장" },
-        new Spec { Id = "living_dresser",       Kind = Form.Dresser,    Tone = 0.65f, Note = "거실 서랍장" },
         new Spec { Id = "sera_door",            Kind = Form.Door,       Tone = 0.40f, Note = "세라 방 문" },
         new Spec { Id = "window_lock",          Kind = Form.Lock,       Tone = 0.80f, Note = "창문 잠금장치" },
         new Spec { Id = "plate",                Kind = Form.Plate,      Tone = 0.85f, Note = "식탁 접시" },
@@ -128,17 +126,6 @@ public static class DummyObjectGenerator
             case Form.DrawerOpen:
                 Rect(px, 5, 6, 22, 18, col);
                 Rect(px, 3, 10, 24, 8, dim);              // 빠져나온 서랍
-                break;
-            case Form.Rack:
-                Rect(px, 5, 3, 22, 24, col);
-                Rect(px, 7, 9, 18, 2, dim);
-                Rect(px, 7, 15, 18, 2, dim);
-                Rect(px, 7, 21, 18, 2, dim);              // 선반 3단
-                break;
-            case Form.Dresser:
-                Rect(px, 4, 5, 24, 22, col);
-                Rect(px, 6, 18, 20, 6, dim);
-                Rect(px, 6, 9, 20, 6, dim);               // 서랍 2단
                 break;
             case Form.Door:
                 Rect(px, 9, 2, 14, 28, col);

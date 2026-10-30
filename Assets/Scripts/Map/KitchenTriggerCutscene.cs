@@ -32,6 +32,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
     // ── S#04A~D 대사 ─────────────────────────────
     [Header("S#04A — 세 개의 접시")]
     public string yarnNode_S4A_ThreePlates = "House_Kitchen_ThreePlates";
+    [Tooltip("식탁의 세 접시(E-77-2). 밤에는 없고 S#04A 시작에 차린 뒤 집을 떠날 때까지 둔다. 비우면 건너뛴다.")]
+    public DiningTablePlates diningPlates;
 
     [Header("S#04B — 초인종")]
     public string yarnNode_S4B_Ring  = "House_Doorbell_Ring";
@@ -65,8 +67,9 @@ public class KitchenTriggerCutscene : MonoBehaviour
     // 2026-09-27: 옛 Freeze·ToDoor·Dishwash·LeaveHouse·TurnAround 트리거를 걷어냈다.
     //   Sera.controller 에는 dir·Speed 뿐이라 트리거가 있어도 세라가 움직이지 않았다.
     //   이제 SeraStageWalker 로 아래 자리까지 직접 걷게 한다(S#02 NightSequenceManager 와 공용).
-    //   좌표는 Home.unity 실측(2026-09-27) — 싱크대 (-3.20, 2.29) · 부엌 창문 (-1.15, 2.73) ·
+    //   좌표는 Home.unity 실측(2026-09-27) — 싱크대 (-3.20, 2.29) · 거실 창문 (7.40, -2.83, 아래 벽) ·
     //   현관문 (-0.02, -2.70) · 식탁 자리 = seraDiningSpawn(S_KitchenSpawn).
+    //   부엌에는 창문이 없다(E-77-3) — 창가 자리는 E-72-2 로 거실 창문 앞으로 옮겼다.
     //   yarn 노드 안에서는 <<sera_walk "자리">> · <<sera_face "방향">> 으로 부른다(아래 Yarn 커맨드).
     [Header("세라")]
     public Animator seraAnimator;
@@ -74,13 +77,18 @@ public class KitchenTriggerCutscene : MonoBehaviour
     public Vector2 seraFrontDoorPoint = new Vector2(-0.02f, -2.1f);
     [Tooltip("싱크대 앞. 설거지하는 자리(S#04F·G). 등을 보이고 선다.")]
     public Vector2 seraSinkPoint      = new Vector2(-3.20f, 1.65f);
-    [Tooltip("부엌 창문 앞. 꽃을 바라보고 잠금장치를 다시 잠그는 자리(S#04G).\n" +
-             "창문(x -1.7~-0.6) 왼쪽 끝이다 — 가운데는 S#04F 에서 창밖을 본 루가 서 있어 겹친다.")]
-    public Vector2 seraWindowPoint    = new Vector2(-1.6f, 2.1f);
+    [Tooltip("거실 창문 앞. 꽃을 바라보고 잠금장치를 다시 잠그는 자리(S#04G · E-72-2).\n" +
+             "창문(x 6.85~7.95 · 거실 아래 벽) 가운데 바로 위다. 세라는 싱크대에서 여기까지 걸어온다(D S#04G).")]
+    public Vector2 seraWindowPoint    = new Vector2(7.40f, -2.26f);
     [Tooltip("루에게 다가갈 때 루 앞에서 멈추는 거리(월드 유닛). 머리를 쓰다듬는 거리.")]
     public float   seraNearLuDistance = 0.6f;
     [Tooltip("세라 걷는 속도(월드 유닛/초).")]
     public float   seraWalkSpeed      = 1.2f;
+    [Tooltip("세라가 돌아가는 가구(식탁 · 의자). 콜라이더들을 감싼 사각형을 아래 여유만큼 넓혀 그 둘레로 걷는다.\n" +
+             "비우면 곧게 걷는다. 2026-10-31 — 앉은 루에게 갈 때 식탁을 가로질렀다(실측).")]
+    public Collider2D[] seraAvoidColliders;
+    [Tooltip("돌아갈 때 가구에서 띄우는 거리(월드 유닛). 세라 폭의 절반(0.28)보다 조금 넓게.")]
+    public float   seraAvoidMargin    = 0.3f;
 
     // ── 효과음 ───────────────────────────────────
     [Header("효과음")]
@@ -206,6 +214,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
     IEnumerator PlayCutscene()
     {
         TeleportToDiningTable();
+        if (diningPlates != null) diningPlates.Show(true);
         ObjectiveManager.Instance?.HideHUD();
         var ctrl = YarnDialogue.LockPlayer();
         if (breakfastAreaBlocker != null) breakfastAreaBlocker.SetActive(true);
@@ -473,6 +482,22 @@ public class KitchenTriggerCutscene : MonoBehaviour
 
     SeraStageWalker SeraWalker => SeraStageWalker.On(seraAnimator);
 
+    /// <summary>돌아갈 가구 묶음의 사각형(여유 포함). 가구가 없으면 크기 0 — 곧게 걷는다.</summary>
+    Rect SeraAvoidRect()
+    {
+        Bounds? all = null;
+        if (seraAvoidColliders != null)
+            foreach (var c in seraAvoidColliders)
+            {
+                if (c == null || !c.gameObject.activeInHierarchy) continue;
+                if (all == null) all = c.bounds;
+                else { var b = all.Value; b.Encapsulate(c.bounds); all = b; }
+            }
+        if (all == null) return new Rect();
+        var m = all.Value;
+        return Rect.MinMaxRect(m.min.x - seraAvoidMargin, m.min.y - seraAvoidMargin, m.max.x + seraAvoidMargin, m.max.y + seraAvoidMargin);
+    }
+
     static Vector2 LuPosition()
     {
         var lu = Object.FindAnyObjectByType<ClearSky.SimplePlayerController>();
@@ -483,6 +508,7 @@ public class KitchenTriggerCutscene : MonoBehaviour
     /// 이름 붙은 자리로 세라를 걷게 한다. 도착하면 그 자리에 맞는 쪽을 본다.
     /// door=현관(문을 본다) · sink=싱크대(등) · window=창문(등) · table=식탁 자리(루를 본다) · lu=루 앞(루를 본다).
     /// 모르는 이름은 경고를 남기고 건너뛴다(CLAUDE.md §0-7 — 조용히 버리지 않는다).
+    /// 식탁 · 의자(<see cref="seraAvoidColliders"/>)는 둘레로 돌아간다 — 식탁 자리에서는 가까운 변으로 일어나 나온다.
     /// </summary>
     IEnumerator SeraGo(string mark)
     {
@@ -492,23 +518,23 @@ public class KitchenTriggerCutscene : MonoBehaviour
         switch (mark)
         {
             case "door":
-                yield return w.WalkTo(seraFrontDoorPoint, seraWalkSpeed);
+                yield return w.WalkAround(seraFrontDoorPoint, SeraAvoidRect(), seraWalkSpeed);
                 w.Face(Vector2.down);
                 break;
             case "sink":
-                yield return w.WalkTo(seraSinkPoint, seraWalkSpeed);
+                yield return w.WalkAround(seraSinkPoint, SeraAvoidRect(), seraWalkSpeed);
                 w.Face(Vector2.up);
                 break;
             case "window":
-                yield return w.WalkTo(seraWindowPoint, seraWalkSpeed);
+                yield return w.WalkAround(seraWindowPoint, SeraAvoidRect(), seraWalkSpeed);
                 w.Face(Vector2.up);
                 break;
             case "table":
-                if (seraDiningSpawn != null) yield return w.WalkTo(seraDiningSpawn.position, seraWalkSpeed);
+                if (seraDiningSpawn != null) yield return w.WalkAround(seraDiningSpawn.position, SeraAvoidRect(), seraWalkSpeed);
                 w.FaceToward(LuPosition());
                 break;
             case "lu":
-                yield return w.WalkNear(LuPosition(), seraNearLuDistance, seraWalkSpeed);
+                yield return w.WalkAround(LuPosition(), SeraAvoidRect(), seraWalkSpeed, seraNearLuDistance);
                 break;
             default:
                 Debug.LogWarning($"[KitchenTriggerCutscene] sera_walk: 모르는 자리 '{mark}' — door·sink·window·table·lu 중 하나");
@@ -601,7 +627,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
         if (Instance != null) Instance.SeraFaceMark(mark);
     }
 
-    // <<kitchen_window_lock>> — S#04G 세라가 부엌 창문 잠금장치를 다시 잠근다. 딸깍.
+    // <<kitchen_window_lock>> — S#04G 세라가 거실 창문 잠금장치를 다시 잠근다. 딸깍.
+    //   명령 이름은 부엌 창문 시절 것을 그대로 둔다(yarn 이 부른다). 부엌에는 창문이 없다(E-77-3).
     [YarnCommand("kitchen_window_lock")]
     public static void YarnKitchenWindowLock()
     {
@@ -672,7 +699,8 @@ public class KitchenTriggerCutscene : MonoBehaviour
     }
 
     /// <summary>
-    /// 플레이어가 부엌 창문에 다가가기를 기다린다. 강제하지 않고 유도한다(정본).
+    /// 플레이어가 거실 창문을 조사하기를 기다린다(S#04F · reachOnInspectOnly). 강제하지 않고 유도한다(정본).
+    /// 필드 이름 kitchenWindowTrigger 는 옛 이름 그대로다 — 씬에서는 거실 창문을 가리킨다(E-72-2).
     /// 트리거가 없거나 yardLookTimeout 을 넘기면 자동으로 진행해 소프트락을 막는다.
     /// </summary>
     IEnumerator WaitForWindowLook()

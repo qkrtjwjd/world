@@ -113,9 +113,10 @@ public class BadEndingDirector : MonoBehaviour
 
     // ── 식탁 ────────────────────────────────────────────────────────────────
     [Header("식탁 접시 — 비워 두면 건드리지 않는다")]
-    [Tooltip("BE#01-d. 접시 3개(루 · 세라 · 유) 상태.")]
+    [Tooltip("BE#01-d. 접시 3개(루 · 세라 · 유) — 부엌 ▸ 식탁 접시. S#04A 와 같은 식기 한 벌이다(E-77-1).")]
     public GameObject platesThree;
-    [Tooltip("BE#02-c. 접시 2개(세라 · 유). 루의 자리는 처음부터 없었던 것처럼 차린다(정본 문단 673).")]
+    [Tooltip("BE#02-c. 접시 2개(세라 · 유) — platesThree 안의 세라 · 유 묶음. 루의 자리는 처음부터 없었던 것처럼 차린다(정본 문단 673).\n" +
+             "같은 접시를 쓰므로 루 접시만 끈다 — 유의 접시가 두 장 겹치지 않는다(E-77-1).")]
     public GameObject platesTwo;
 
     // ── BE#01-b 조명 ────────────────────────────────────────────────────────
@@ -938,8 +939,14 @@ public class BadEndingDirector : MonoBehaviour
 
     void SetPlates(bool three)
     {
-        if (platesThree != null) platesThree.SetActive(three);
-        if (platesTwo   != null) platesTwo.SetActive(!three);
+        // platesTwo 는 platesThree 안의 묶음이다(E-77-1 — 식기 한 벌). 2개 = 그 묶음 밖(루 자리)만 끈다.
+        if (platesThree != null)
+        {
+            platesThree.SetActive(true);
+            foreach (Transform child in platesThree.transform)
+                child.gameObject.SetActive(three || (platesTwo != null && platesTwo.transform.IsChildOf(child)));
+        }
+        if (platesTwo != null) platesTwo.SetActive(true);
     }
 
     void PlaySfxIfNamed(string soundName)
